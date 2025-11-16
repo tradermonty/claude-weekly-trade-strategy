@@ -1,8 +1,211 @@
 # Weekly Trade Strategy Blog Generator
 
-米国株の週間トレード戦略ブログを自動生成するAIエージェントシステム
+An AI agent system that automatically generates weekly trading strategy blog posts for US stock markets using Claude Agents.
 
 [English](#english) | [日本語](#japanese)
+
+---
+
+## <a name="english"></a>English
+
+### Overview
+
+An AI agent system that automatically generates weekly trading strategy blog posts for US stock markets using Claude Agents. The system performs step-by-step chart analysis, market environment evaluation, and news analysis to produce actionable strategy reports for part-time traders.
+
+### Key Features
+
+- **Technical Analysis**: Weekly chart analysis of VIX, yields, breadth indicators, major indices, and commodities
+- **Market Environment Assessment**: Bubble risk detection, sentiment analysis, sector rotation analysis
+- **News & Event Analysis**: Past 10 days news impact evaluation, upcoming 7 days economic indicators and earnings forecasts
+- **Weekly Strategy Blog Generation**: Integrates three analysis reports into a 200-300 line Markdown format trading strategy
+- **Medium-Term Strategy Report** (Optional): 18-month Druckenmiller-style investment strategy with 4 scenarios (Base/Bull/Bear/Tail Risk)
+
+### Prerequisites
+
+- **Claude Code CLI** (Required)
+  - This project uses `.claude/agents/` feature, which is exclusive to Claude Code
+  - Installation: https://docs.claude.ai/claude-code
+- **FMP API** (Optional)
+  - For automatic earnings and economic calendar retrieval
+  - Free plan: 250 requests/day
+
+**Note**: This project does not work with Claude Desktop as it does not support `.claude/agents/`. Please use Claude Code CLI.
+
+### Quick Start
+
+1. **Clone the repository**
+```bash
+git clone https://github.com/tradermonty/weekly-trade-strategy.git
+cd weekly-trade-strategy
+```
+
+2. **Set up environment variables (Optional)**
+
+**FMP API is not required** but recommended for automatic earnings and economic calendar retrieval.
+
+| Feature | Without FMP API | With FMP API |
+|---------|----------------|--------------|
+| Chart Analysis | ✅ Fully functional | ✅ Fully functional |
+| Market Environment | ✅ Fully functional | ✅ Fully functional |
+| News Analysis | ⚠️ Partial | ✅ Full |
+| Earnings Calendar | ❌ Manual check needed | ✅ Auto-retrieved |
+| Economic Calendar | ❌ Manual check needed | ✅ Auto-retrieved |
+
+**To use FMP API** (recommended):
+
+```bash
+echo "FMP_API_KEY=your_api_key_here" > .env
+```
+
+- Free plan: 250 requests/day (sufficient for weekly analysis)
+- Sign up: https://site.financialmodelingprep.com/
+- Setup time: ~5 minutes
+
+**To use without FMP API**:
+
+No `.env` file needed. You'll need to manually check earnings and economic calendars.
+
+3. **Prepare chart images** (Recommended: 16 charts)
+
+Create date folder and place weekly chart images:
+```bash
+mkdir -p charts/2025-11-17
+# Add your chart images (.jpeg or .png) to charts/2025-11-17/
+```
+
+**Recommended Charts** (Weekly timeframe):
+- **Volatility & Rates** (2): VIX, US 10-Year Treasury Yield
+- **Major Indices** (4): Nasdaq 100, S&P 500, Russell 2000, Dow Jones
+- **Commodities** (5): Gold, Copper, WTI Crude Oil, Natural Gas, Uranium ETF (URA)
+- **Sectors** (3): Sector Performance (1-week, 1-month), Industry Performance
+- **Breadth** (2, Optional): S&P 500 Breadth Index, Uptrend Stock Ratio
+
+**Chart Sources**: TradingView, FinViz, StockCharts
+
+4. **Run the complete workflow via Claude Code**
+
+Example prompt for weekly blog generation:
+```
+Create a weekly trade strategy blog for the week of 2025-11-17.
+
+1. Run technical-market-analyst on all charts in charts/2025-11-17/
+   → reports/2025-11-17/technical-market-analysis.md
+
+2. Run us-market-analyst for market environment assessment
+   → reports/2025-11-17/us-market-analysis.md
+
+3. Run market-news-analyzer for news/event analysis
+   → reports/2025-11-17/market-news-analysis.md
+
+4. Run weekly-trade-blog-writer to generate final blog post
+   → blogs/2025-11-17-weekly-strategy.md
+
+Execute each step sequentially and verify reports before proceeding to the next step.
+```
+
+**Optional: Medium-Term Strategy Report**
+
+Generate an 18-month Druckenmiller-style investment strategy (recommended quarterly):
+
+```
+Use druckenmiller-strategy-planner to create an 18-month strategy as of 2025-11-17.
+
+Analyze the 3 reports under reports/2025-11-17/, apply Druckenmiller's strategic framework,
+and save to reports/2025-11-17/druckenmiller-strategy.md.
+```
+
+Features:
+- 18-month forward-looking macro analysis
+- 4 scenarios (Base/Bull/Bear/Tail Risk) with probability estimates
+- Conviction-based position sizing recommendations
+- Identification of macro turning points (monetary policy, economic cycles)
+- Clear invalidation conditions for each scenario
+
+### Project Structure
+
+```
+weekly-trade-strategy/
+│
+├── charts/                          # Chart images (user-provided)
+│   └── YYYY-MM-DD/
+│       ├── vix.jpeg
+│       ├── 10year_yield.jpeg
+│       └── ...
+│
+├── reports/                         # Analysis reports (auto-generated)
+│   └── YYYY-MM-DD/
+│       ├── technical-market-analysis.md
+│       ├── us-market-analysis.md
+│       ├── market-news-analysis.md
+│       └── druckenmiller-strategy.md  # (Optional: medium-term strategy)
+│
+├── blogs/                           # Final blog posts (auto-generated)
+│   └── YYYY-MM-DD-weekly-strategy.md
+│
+├── .claude/
+│   ├── agents/                      # Claude agent definitions (5 agents)
+│   │   ├── technical-market-analyst.md
+│   │   ├── us-market-analyst.md
+│   │   ├── market-news-analyzer.md
+│   │   ├── weekly-trade-blog-writer.md
+│   │   └── druckenmiller-strategy-planner.md
+│   │
+│   └── skills/                      # Claude skill definitions (9 skills)
+│       ├── technical-analyst/
+│       ├── breadth-chart-analyst/
+│       ├── sector-analyst/
+│       ├── market-environment-analysis/
+│       ├── us-market-bubble-detector/
+│       ├── market-news-analyst/
+│       ├── economic-calendar-fetcher/
+│       ├── earnings-calendar/
+│       └── stanley-druckenmiller-investment/
+│
+├── CLAUDE.md                        # Detailed workflow guide
+├── README.md                        # This file
+├── .env                             # Environment variables (create this)
+└── .gitignore
+```
+
+### Agents
+
+| Agent | Role | Output |
+|-------|------|--------|
+| `technical-market-analyst` | Chart-based technical analysis | `technical-market-analysis.md` |
+| `us-market-analyst` | Market environment and bubble risk evaluation | `us-market-analysis.md` |
+| `market-news-analyzer` | News impact and event forecasting | `market-news-analysis.md` |
+| `weekly-trade-blog-writer` | Final blog post generation | `YYYY-MM-DD-weekly-strategy.md` |
+| `druckenmiller-strategy-planner` (Optional) | Medium-term (18-month) strategy planning (4-scenario analysis) | `druckenmiller-strategy.md` |
+
+### Troubleshooting
+
+**Q: Agent can't find charts**
+- Verify `charts/YYYY-MM-DD/` folder exists
+- Ensure image format is `.jpeg` or `.png`
+
+**Q: Reports not generated**
+- Check `reports/YYYY-MM-DD/` folder is created
+- Verify previous step's report was generated successfully
+
+**Q: Blog sector allocation changes drastically**
+- Check previous week's blog exists in `blogs/` directory
+- Agents are designed for gradual adjustments (±10-15%)
+
+**Q: FMP API errors**
+- Verify `FMP_API_KEY` is correctly set in `.env` file
+- Check API key validity at [Financial Modeling Prep](https://site.financialmodelingprep.com/)
+
+### Documentation
+
+- **Workflow Guide**: See `CLAUDE.md` for detailed step-by-step workflow instructions
+
+### License
+
+This project is licensed under the MIT License.
+
+### Contributing
+
+Pull requests are welcome. For major changes, please open an issue first to discuss what you would like to change.
 
 ---
 
@@ -36,7 +239,7 @@
 1. **リポジトリのクローン**
 
 ```bash
-git clone <repository-url>
+git clone https://github.com/tradermonty/weekly-trade-strategy.git
 cd weekly-trade-strategy
 ```
 
@@ -141,25 +344,25 @@ mkdir -p charts/2025-11-17
 2. **レポートフォルダを作成**
 
 ```bash
-mkdir -p reports/2025-11-03
+mkdir -p reports/2025-11-17
 ```
 
 3. **一括実行プロンプト** (Claude Codeで実行)
 
 ```
-2025-11-03週のトレード戦略ブログを作成してください。
+2025-11-17週のトレード戦略ブログを作成してください。
 
-1. technical-market-analystでcharts/2025-11-03/の全チャートを分析
-   → reports/2025-11-03/technical-market-analysis.md
+1. technical-market-analystでcharts/2025-11-17/の全チャートを分析
+   → reports/2025-11-17/technical-market-analysis.md
 
 2. us-market-analystで市場環境を総合評価
-   → reports/2025-11-03/us-market-analysis.md
+   → reports/2025-11-17/us-market-analysis.md
 
 3. market-news-analyzerでニュース/イベント分析
-   → reports/2025-11-03/market-news-analysis.md
+   → reports/2025-11-17/market-news-analysis.md
 
 4. weekly-trade-blog-writerで最終ブログ記事を生成
-   → blogs/2025-11-03-weekly-strategy.md
+   → blogs/2025-11-17-weekly-strategy.md
 
 各ステップを順次実行し、レポートを確認してから次に進んでください。
 ```
@@ -169,11 +372,11 @@ mkdir -p reports/2025-11-03
 週間ブログとは別に、18ヶ月の中長期投資戦略レポートを生成できます（四半期ごと推奨）。
 
 ```
-druckenmiller-strategy-plannerエージェントで2025年11月3日時点の18ヶ月戦略を策定してください。
+druckenmiller-strategy-plannerエージェントで2025年11月17日時点の18ヶ月戦略を策定してください。
 
-reports/2025-11-03/配下の3つのレポートを総合的に分析し、
+reports/2025-11-17/配下の3つのレポートを総合的に分析し、
 Druckenmiller流の戦略フレームワークを適用して、
-reports/2025-11-03/druckenmiller-strategy.mdに保存してください。
+reports/2025-11-17/druckenmiller-strategy.mdに保存してください。
 ```
 
 **特徴**:
@@ -189,49 +392,7 @@ reports/2025-11-03/druckenmiller-strategy.mdに保存してください。
 
 ### プロジェクト構造
 
-```
-weekly-trade-strategy/
-│
-├── charts/                          # チャート画像（ユーザーが配置）
-│   └── YYYY-MM-DD/
-│       ├── vix.jpeg
-│       ├── 10year_yield.jpeg
-│       └── ...
-│
-├── reports/                         # 分析レポート（自動生成）
-│   └── YYYY-MM-DD/
-│       ├── technical-market-analysis.md
-│       ├── us-market-analysis.md
-│       ├── market-news-analysis.md
-│       └── druckenmiller-strategy.md  # (オプション: 中長期戦略)
-│
-├── blogs/                           # 最終ブログ記事（自動生成）
-│   └── YYYY-MM-DD-weekly-strategy.md
-│
-├── .claude/
-│   ├── agents/                      # Claudeエージェント定義（5エージェント）
-│   │   ├── technical-market-analyst.md
-│   │   ├── us-market-analyst.md
-│   │   ├── market-news-analyzer.md
-│   │   ├── weekly-trade-blog-writer.md
-│   │   └── druckenmiller-strategy-planner.md
-│   │
-│   └── skills/                      # Claudeスキル定義（9スキル）
-│       ├── technical-analyst/
-│       ├── breadth-chart-analyst/
-│       ├── sector-analyst/
-│       ├── market-environment-analysis/
-│       ├── us-market-bubble-detector/
-│       ├── market-news-analyst/
-│       ├── economic-calendar-fetcher/
-│       ├── earnings-calendar/
-│       └── stanley-druckenmiller-investment/
-│
-├── CLAUDE.md                        # 詳細な実行手順ガイド
-├── README.md                        # このファイル
-├── .env                             # 環境変数 (要作成)
-└── .gitignore
-```
+詳細は英語セクションの「Project Structure」を参照してください。
 
 ### エージェント一覧
 
@@ -271,124 +432,26 @@ weekly-trade-strategy/
 
 ---
 
-## <a name="english"></a>English
-
-### Overview
-
-An AI agent system that automatically generates weekly trading strategy blog posts for US stock markets using Claude Agents. The system performs step-by-step chart analysis, market environment evaluation, and news analysis to produce actionable strategy reports for part-time traders.
-
-### Key Features
-
-- **Technical Analysis**: Weekly chart analysis of VIX, yields, breadth indicators, major indices, and commodities
-- **Market Environment Assessment**: Bubble risk detection, sentiment analysis, sector rotation analysis
-- **News & Event Analysis**: Past 10 days news impact evaluation, upcoming 7 days economic indicators and earnings forecasts
-- **Weekly Strategy Blog Generation**: Integrates three analysis reports into a 200-300 line Markdown format trading strategy
-- **Medium-Term Strategy Report** (Optional): 18-month Druckenmiller-style investment strategy with 4 scenarios (Base/Bull/Bear/Tail Risk)
-
-### Prerequisites
-
-- **Claude Code CLI** (Required)
-  - This project uses `.claude/agents/` feature, which is exclusive to Claude Code
-  - Installation: https://docs.claude.ai/claude-code
-- **FMP API** (Optional)
-  - For automatic earnings and economic calendar retrieval
-  - Free plan: 250 requests/day
-
-**Note**: This project does not work with Claude Desktop as it does not support `.claude/agents/`. Please use Claude Code CLI.
-
-### Quick Start
-
-1. **Clone the repository**
-```bash
-git clone https://github.com/tradermonty/weekly-trade-strategy.git
-cd weekly-trade-strategy
-```
-
-2. **Set up environment variables (Optional)**
-
-**FMP API is not required** but recommended for automatic earnings and economic calendar retrieval.
-
-| Feature | Without FMP API | With FMP API |
-|---------|----------------|--------------|
-| Chart Analysis | ✅ Fully functional | ✅ Fully functional |
-| Market Environment | ✅ Fully functional | ✅ Fully functional |
-| News Analysis | ⚠️ Partial | ✅ Full |
-| Earnings Calendar | ❌ Manual check needed | ✅ Auto-retrieved |
-| Economic Calendar | ❌ Manual check needed | ✅ Auto-retrieved |
-
-**To use FMP API** (recommended):
-
-```bash
-echo "FMP_API_KEY=your_api_key_here" > .env
-```
-
-- Free plan: 250 requests/day (sufficient for weekly analysis)
-- Sign up: https://site.financialmodelingprep.com/
-- Setup time: ~5 minutes
-
-**To use without FMP API**:
-
-No `.env` file needed. You'll need to manually check earnings and economic calendars.
-
-3. **Prepare chart images** (Recommended: 16 charts)
-
-Create date folder and place weekly chart images:
-```bash
-mkdir -p charts/2025-11-17
-# Add your chart images (.jpeg or .png) to charts/2025-11-17/
-```
-
-**Recommended Charts** (Weekly timeframe):
-- **Volatility & Rates** (2): VIX, US 10-Year Treasury Yield
-- **Major Indices** (4): Nasdaq 100, S&P 500, Russell 2000, Dow Jones
-- **Commodities** (5): Gold, Copper, WTI Crude Oil, Natural Gas, Uranium ETF (URA)
-- **Sectors** (3): Sector Performance (1-week, 1-month), Industry Performance
-- **Breadth** (2, Optional): S&P 500 Breadth Index, Uptrend Stock Ratio
-
-**Chart Sources**: TradingView, FinViz, StockCharts
-
-4. **Run the complete workflow via Claude Code**
-
-See the Japanese section above for detailed execution prompts and workflow.
-
-### Project Structure
-
-See the Japanese section above for detailed structure.
-
-### Agents
-
-- **technical-market-analyst**: Chart-based technical analysis
-- **us-market-analyst**: Market environment and bubble risk evaluation
-- **market-news-analyzer**: News impact and event forecasting
-- **weekly-trade-blog-writer**: Final blog post generation
-- **druckenmiller-strategy-planner** (Optional): Medium-term (18-month) strategy planning with 4-scenario analysis
-
-### Documentation
-
-- **Workflow Guide**: See `CLAUDE.md` for detailed step-by-step workflow instructions
-- **Code Review**: See `CODE_REVIEW.md` for comprehensive codebase review and best practices
-
-### License
-
-This project is licensed under the MIT License.
-
-### Contributing
-
-Pull requests are welcome. For major changes, please open an issue first to discuss what you would like to change.
-
----
-
 ## Acknowledgments
 
 This project leverages Claude's advanced AI capabilities for financial market analysis. All trading strategies generated are for educational purposes only and should not be considered as financial advice.
 
 ---
 
-**Version**: 1.1
+**Version**: 1.2
 **Last Updated**: 2025-11-17
 
-## Recent Updates (v1.1 - 2025-11-17)
+## Recent Updates
 
+### v1.2 (2025-11-17)
+- ✅ Reorganized README: English first, Japanese second
+- ✅ Added `.claude/settings.local.json` to enable auto-approval of project tools
+- ✅ Fixed market breadth misinterpretation (50-60% is normal, not "worst ever")
+- ✅ Added anti-fear-mongering guidelines to prevent sensationalist language
+- ✅ Clarified Claude Code CLI is required (not Claude Desktop)
+- ✅ Clarified FMP API is optional (not required)
+
+### v1.1 (2025-11-17)
 - ✅ Added comprehensive "Monty Style" guide with 11 rules for consistent blog formatting
 - ✅ Improved allocation percentage clarity (75-80% risk assets vs 20-25% cash)
 - ✅ Standardized indicator levels (VIX: 17/20/23/26, 10Y: 4.11/4.36/4.50/4.60)
