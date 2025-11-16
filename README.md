@@ -59,9 +59,13 @@ weekly-trade-strategy/
 ├── charts/              # チャート画像格納フォルダ
 ├── reports/             # 分析レポート格納フォルダ
 ├── blogs/               # 最終ブログ記事格納フォルダ
-├── skills/              # Claudeスキル定義
-└── .claude/
-    └── agents/          # Claudeエージェント定義
+├── .claude/
+│   ├── agents/          # Claudeエージェント定義（5エージェント）
+│   └── skills/          # Claudeスキル定義（9スキル）
+├── CLAUDE.md            # 詳細なワークフローガイド
+├── README.md            # このファイル
+├── .env                 # 環境変数（要作成）
+└── .gitignore
 ```
 
 ### 使い方
@@ -171,37 +175,40 @@ reports/2025-11-03/druckenmiller-strategy.mdに保存してください。
 ```
 weekly-trade-strategy/
 │
-├── charts/                          # チャート画像
+├── charts/                          # チャート画像（ユーザーが配置）
 │   └── YYYY-MM-DD/
 │       ├── vix.jpeg
 │       ├── 10year_yield.jpeg
 │       └── ...
 │
-├── reports/                         # 分析レポート
+├── reports/                         # 分析レポート（自動生成）
 │   └── YYYY-MM-DD/
 │       ├── technical-market-analysis.md
 │       ├── us-market-analysis.md
 │       ├── market-news-analysis.md
 │       └── druckenmiller-strategy.md  # (オプション: 中長期戦略)
 │
-├── blogs/                           # 最終ブログ記事
+├── blogs/                           # 最終ブログ記事（自動生成）
 │   └── YYYY-MM-DD-weekly-strategy.md
 │
-├── skills/                          # Claudeスキル定義
-│   ├── technical-analyst/
-│   ├── breadth-chart-analyst/
-│   ├── sector-analyst/
-│   ├── market-news-analyst/
-│   ├── us-market-bubble-detector/
-│   └── ...
-│
 ├── .claude/
-│   └── agents/                      # Claudeエージェント定義
-│       ├── technical-market-analyst.md
-│       ├── us-market-analyst.md
-│       ├── market-news-analyzer.md
-│       ├── weekly-trade-blog-writer.md
-│       └── druckenmiller-strategy-planner.md  # (オプション: 中長期戦略)
+│   ├── agents/                      # Claudeエージェント定義（5エージェント）
+│   │   ├── technical-market-analyst.md
+│   │   ├── us-market-analyst.md
+│   │   ├── market-news-analyzer.md
+│   │   ├── weekly-trade-blog-writer.md
+│   │   └── druckenmiller-strategy-planner.md
+│   │
+│   └── skills/                      # Claudeスキル定義（9スキル）
+│       ├── technical-analyst/
+│       ├── breadth-chart-analyst/
+│       ├── sector-analyst/
+│       ├── market-environment-analysis/
+│       ├── us-market-bubble-detector/
+│       ├── market-news-analyst/
+│       ├── economic-calendar-fetcher/
+│       ├── earnings-calendar/
+│       └── stanley-druckenmiller-investment/
 │
 ├── CLAUDE.md                        # 詳細な実行手順ガイド
 ├── README.md                        # このファイル
