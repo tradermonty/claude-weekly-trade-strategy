@@ -20,6 +20,75 @@ An AI agent system that automatically generates weekly trading strategy blog pos
 - **Weekly Strategy Blog Generation**: Integrates three analysis reports into a 200-300 line Markdown format trading strategy
 - **Medium-Term Strategy Report** (Optional): 18-month Druckenmiller-style investment strategy with 4 scenarios (Base/Bull/Bear/Tail Risk)
 
+### System Architecture
+
+The system consists of specialized agents that leverage multiple skills to perform comprehensive market analysis:
+
+```mermaid
+graph TB
+    subgraph "Agents"
+        A1[technical-market-analyst]
+        A2[us-market-analyst]
+        A3[market-news-analyzer]
+        A4[weekly-trade-blog-writer]
+        A5[druckenmiller-strategy-planner]
+    end
+
+    subgraph "Skills"
+        S1[technical-analyst]
+        S2[breadth-chart-analyst]
+        S3[sector-analyst]
+        S4[market-environment-analysis]
+        S5[us-market-bubble-detector]
+        S6[market-news-analyst]
+        S7[economic-calendar-fetcher]
+        S8[earnings-calendar]
+        S9[stanley-druckenmiller-investment]
+    end
+
+    A1 -->|uses| S1
+    A1 -->|uses| S2
+    A1 -->|uses| S3
+
+    A2 -->|uses| S4
+    A2 -->|uses| S5
+
+    A3 -->|uses| S6
+    A3 -->|uses| S7
+    A3 -->|uses| S8
+
+    A4 -->|synthesizes| A1
+    A4 -->|synthesizes| A2
+    A4 -->|synthesizes| A3
+
+    A5 -->|uses| S9
+    A5 -->|synthesizes| A1
+    A5 -->|synthesizes| A2
+    A5 -->|synthesizes| A3
+
+    style A1 fill:#e1f5ff
+    style A2 fill:#e1f5ff
+    style A3 fill:#e1f5ff
+    style A4 fill:#fff4e1
+    style A5 fill:#f0e1ff
+    style S1 fill:#e8f5e9
+    style S2 fill:#e8f5e9
+    style S3 fill:#e8f5e9
+    style S4 fill:#e8f5e9
+    style S5 fill:#e8f5e9
+    style S6 fill:#e8f5e9
+    style S7 fill:#e8f5e9
+    style S8 fill:#e8f5e9
+    style S9 fill:#e8f5e9
+```
+
+**Agent Responsibilities:**
+- **technical-market-analyst**: Analyzes charts using technical-analyst, breadth-chart-analyst, and sector-analyst skills
+- **us-market-analyst**: Evaluates market environment and bubble risk using market-environment-analysis and us-market-bubble-detector skills
+- **market-news-analyzer**: Analyzes news/events using market-news-analyst, economic-calendar-fetcher, and earnings-calendar skills
+- **weekly-trade-blog-writer**: Synthesizes all three analyses into actionable weekly strategy
+- **druckenmiller-strategy-planner** (Optional): Creates 18-month strategy using stanley-druckenmiller-investment skill
+
 ### Prerequisites
 
 - **Claude Code CLI** (Required)
@@ -234,6 +303,75 @@ Pull requests are welcome. For major changes, please open an issue first to disc
 - **ニュース・イベント分析**: 過去10日間のニュース影響評価、今後7日間の経済指標・決算予測
 - **週間戦略ブログ生成**: 3つの分析レポートを統合し、実践的なトレード戦略を200-300行のMarkdown形式で出力
 - **中長期戦略レポート**（オプション）: Druckenmiller流の18ヶ月投資戦略を4シナリオ（Base/Bull/Bear/Tail Risk）で生成
+
+### システムアーキテクチャ
+
+このシステムは、複数のスキルを活用する専門エージェントで構成され、包括的な市場分析を実行します。
+
+```mermaid
+graph TB
+    subgraph "エージェント"
+        A1[technical-market-analyst]
+        A2[us-market-analyst]
+        A3[market-news-analyzer]
+        A4[weekly-trade-blog-writer]
+        A5[druckenmiller-strategy-planner]
+    end
+
+    subgraph "スキル"
+        S1[technical-analyst]
+        S2[breadth-chart-analyst]
+        S3[sector-analyst]
+        S4[market-environment-analysis]
+        S5[us-market-bubble-detector]
+        S6[market-news-analyst]
+        S7[economic-calendar-fetcher]
+        S8[earnings-calendar]
+        S9[stanley-druckenmiller-investment]
+    end
+
+    A1 -->|使用| S1
+    A1 -->|使用| S2
+    A1 -->|使用| S3
+
+    A2 -->|使用| S4
+    A2 -->|使用| S5
+
+    A3 -->|使用| S6
+    A3 -->|使用| S7
+    A3 -->|使用| S8
+
+    A4 -->|統合| A1
+    A4 -->|統合| A2
+    A4 -->|統合| A3
+
+    A5 -->|使用| S9
+    A5 -->|統合| A1
+    A5 -->|統合| A2
+    A5 -->|統合| A3
+
+    style A1 fill:#e1f5ff
+    style A2 fill:#e1f5ff
+    style A3 fill:#e1f5ff
+    style A4 fill:#fff4e1
+    style A5 fill:#f0e1ff
+    style S1 fill:#e8f5e9
+    style S2 fill:#e8f5e9
+    style S3 fill:#e8f5e9
+    style S4 fill:#e8f5e9
+    style S5 fill:#e8f5e9
+    style S6 fill:#e8f5e9
+    style S7 fill:#e8f5e9
+    style S8 fill:#e8f5e9
+    style S9 fill:#e8f5e9
+```
+
+**エージェントの役割:**
+- **technical-market-analyst**: technical-analyst、breadth-chart-analyst、sector-analystスキルを使用してチャート分析
+- **us-market-analyst**: market-environment-analysis、us-market-bubble-detectorスキルを使用して市場環境とバブルリスク評価
+- **market-news-analyzer**: market-news-analyst、economic-calendar-fetcher、earnings-calendarスキルを使用してニュース・イベント分析
+- **weekly-trade-blog-writer**: 3つの分析を統合して実践的な週間戦略を生成
+- **druckenmiller-strategy-planner**（オプション）: stanley-druckenmiller-investmentスキルを使用して18ヶ月戦略を策定
 
 ### 前提条件
 
