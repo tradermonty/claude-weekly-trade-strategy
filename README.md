@@ -43,14 +43,34 @@ git clone <repository-url>
 cd weekly-trade-strategy
 ```
 
-2. **環境変数の設定**
+2. **環境変数の設定（オプション）**
 
-`.env`ファイルを作成し、必要なAPI キーを設定：
+**FMP APIは必須ではありません**が、今後7日間の決算・経済カレンダーを自動取得するために推奨されます。
+
+| 機能 | FMP APIなし | FMP APIあり |
+|------|------------|------------|
+| チャート分析 | ✅ 完全動作 | ✅ 完全動作 |
+| 市場環境評価 | ✅ 完全動作 | ✅ 完全動作 |
+| ニュース分析 | ⚠️ 部分動作 | ✅ 完全動作 |
+| 決算カレンダー | ❌ 手動確認必要 | ✅ 自動取得 |
+| 経済カレンダー | ❌ 手動確認必要 | ✅ 自動取得 |
+
+**FMP APIを使用する場合**:
+
+`.env`ファイルを作成し、APIキーを設定：
 
 ```bash
 # Financial Modeling Prep API (決算・経済カレンダー取得用)
 FMP_API_KEY=your_api_key_here
 ```
+
+- 無料プラン: 250リクエスト/日（週間分析には十分）
+- 登録: https://site.financialmodelingprep.com/
+- 所要時間: 約5分
+
+**FMP APIなしで使用する場合**:
+
+`.env`ファイルの作成は不要です。決算・経済カレンダーは手動で確認してください。
 
 3. **フォルダ構造の確認**
 
@@ -290,10 +310,31 @@ git clone https://github.com/tradermonty/weekly-trade-strategy.git
 cd weekly-trade-strategy
 ```
 
-2. **Create `.env` file with your FMP API key**
+2. **Set up environment variables (Optional)**
+
+**FMP API is not required** but recommended for automatic earnings and economic calendar retrieval.
+
+| Feature | Without FMP API | With FMP API |
+|---------|----------------|--------------|
+| Chart Analysis | ✅ Fully functional | ✅ Fully functional |
+| Market Environment | ✅ Fully functional | ✅ Fully functional |
+| News Analysis | ⚠️ Partial | ✅ Full |
+| Earnings Calendar | ❌ Manual check needed | ✅ Auto-retrieved |
+| Economic Calendar | ❌ Manual check needed | ✅ Auto-retrieved |
+
+**To use FMP API** (recommended):
+
 ```bash
 echo "FMP_API_KEY=your_api_key_here" > .env
 ```
+
+- Free plan: 250 requests/day (sufficient for weekly analysis)
+- Sign up: https://site.financialmodelingprep.com/
+- Setup time: ~5 minutes
+
+**To use without FMP API**:
+
+No `.env` file needed. You'll need to manually check earnings and economic calendars.
 
 3. **Prepare chart images** (Recommended: 16 charts)
 
