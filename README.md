@@ -22,72 +22,85 @@ An AI agent system that automatically generates weekly trading strategy blog pos
 
 ### System Architecture
 
-The system consists of specialized agents that leverage multiple skills to perform comprehensive market analysis:
+The system uses a 4-step workflow to generate weekly trading strategy blog posts:
 
 ```mermaid
 graph TB
-    subgraph "Agents"
-        A1[technical-market-analyst]
-        A2[us-market-analyst]
-        A3[market-news-analyzer]
-        A4[weekly-trade-blog-writer]
-        A5[druckenmiller-strategy-planner]
-    end
+    Charts[📊 Chart Images<br/>charts/YYYY-MM-DD/] --> Step1
 
-    subgraph "Skills"
+    subgraph Step1["Step 1: Technical Analysis"]
+        A1[technical-market-analyst]
         S1[technical-analyst]
         S2[breadth-chart-analyst]
         S3[sector-analyst]
+        A1 -.uses.-> S1
+        A1 -.uses.-> S2
+        A1 -.uses.-> S3
+    end
+
+    Step1 --> R1[technical-market-analysis.md]
+    R1 --> Step2
+
+    subgraph Step2["Step 2: Market Environment"]
+        A2[us-market-analyst]
         S4[market-environment-analysis]
         S5[us-market-bubble-detector]
+        A2 -.uses.-> S4
+        A2 -.uses.-> S5
+    end
+
+    Step2 --> R2[us-market-analysis.md]
+    R2 --> Step3
+
+    subgraph Step3["Step 3: News & Events"]
+        A3[market-news-analyzer]
         S6[market-news-analyst]
         S7[economic-calendar-fetcher]
         S8[earnings-calendar]
-        S9[stanley-druckenmiller-investment]
+        A3 -.uses.-> S6
+        A3 -.uses.-> S7
+        A3 -.uses.-> S8
     end
 
-    A1 -->|uses| S1
-    A1 -->|uses| S2
-    A1 -->|uses| S3
+    Step3 --> R3[market-news-analysis.md]
 
-    A2 -->|uses| S4
-    A2 -->|uses| S5
+    R1 --> Step4
+    R2 --> Step4
+    R3 --> Step4
+    PrevBlog[📝 Previous Week's Blog] --> Step4
 
-    A3 -->|uses| S6
-    A3 -->|uses| S7
-    A3 -->|uses| S8
+    subgraph Step4["Step 4: Blog Generation"]
+        A4[weekly-trade-blog-writer]
+    end
 
-    A4 -->|synthesizes| A1
-    A4 -->|synthesizes| A2
-    A4 -->|synthesizes| A3
+    Step4 --> Blog[✅ Weekly Strategy Blog<br/>blogs/YYYY-MM-DD-weekly-strategy.md]
 
-    A5 -->|uses| S9
-    A5 -->|synthesizes| A1
-    A5 -->|synthesizes| A2
-    A5 -->|synthesizes| A3
-
-    style A1 fill:#e1f5ff
-    style A2 fill:#e1f5ff
-    style A3 fill:#e1f5ff
-    style A4 fill:#fff4e1
-    style A5 fill:#f0e1ff
-    style S1 fill:#e8f5e9
-    style S2 fill:#e8f5e9
-    style S3 fill:#e8f5e9
-    style S4 fill:#e8f5e9
-    style S5 fill:#e8f5e9
-    style S6 fill:#e8f5e9
-    style S7 fill:#e8f5e9
-    style S8 fill:#e8f5e9
-    style S9 fill:#e8f5e9
+    style Step1 fill:#e1f5ff,stroke:#0288d1,stroke-width:2px
+    style Step2 fill:#fff3e0,stroke:#f57c00,stroke-width:2px
+    style Step3 fill:#f3e5f5,stroke:#7b1fa2,stroke-width:2px
+    style Step4 fill:#e8f5e9,stroke:#388e3c,stroke-width:3px
+    style Blog fill:#fff9c4,stroke:#f9a825,stroke-width:3px
+    style Charts fill:#fff,stroke:#666,stroke-width:2px
+    style PrevBlog fill:#fff,stroke:#666,stroke-width:2px
+    style A1 fill:#b3e5fc
+    style A2 fill:#ffe0b2
+    style A3 fill:#e1bee7
+    style A4 fill:#c8e6c9
+    style S1 fill:#e0f2f1
+    style S2 fill:#e0f2f1
+    style S3 fill:#e0f2f1
+    style S4 fill:#e0f2f1
+    style S5 fill:#e0f2f1
+    style S6 fill:#e0f2f1
+    style S7 fill:#e0f2f1
+    style S8 fill:#e0f2f1
 ```
 
-**Agent Responsibilities:**
-- **technical-market-analyst**: Analyzes charts using technical-analyst, breadth-chart-analyst, and sector-analyst skills
-- **us-market-analyst**: Evaluates market environment and bubble risk using market-environment-analysis and us-market-bubble-detector skills
-- **market-news-analyzer**: Analyzes news/events using market-news-analyst, economic-calendar-fetcher, and earnings-calendar skills
-- **weekly-trade-blog-writer**: Synthesizes all three analyses into actionable weekly strategy
-- **druckenmiller-strategy-planner** (Optional): Creates 18-month strategy using stanley-druckenmiller-investment skill
+**Workflow Overview:**
+1. **Step 1**: `technical-market-analyst` analyzes charts using 3 skills → `technical-market-analysis.md`
+2. **Step 2**: `us-market-analyst` evaluates market environment using 2 skills → `us-market-analysis.md`
+3. **Step 3**: `market-news-analyzer` analyzes news/events using 3 skills → `market-news-analysis.md`
+4. **Step 4**: `weekly-trade-blog-writer` synthesizes all reports + previous week's blog → Final weekly strategy blog
 
 ### Prerequisites
 
@@ -306,72 +319,85 @@ Pull requests are welcome. For major changes, please open an issue first to disc
 
 ### システムアーキテクチャ
 
-このシステムは、複数のスキルを活用する専門エージェントで構成され、包括的な市場分析を実行します。
+このシステムは4ステップのワークフローで週間トレード戦略ブログを生成します。
 
 ```mermaid
 graph TB
-    subgraph "エージェント"
-        A1[technical-market-analyst]
-        A2[us-market-analyst]
-        A3[market-news-analyzer]
-        A4[weekly-trade-blog-writer]
-        A5[druckenmiller-strategy-planner]
-    end
+    Charts[📊 チャート画像<br/>charts/YYYY-MM-DD/] --> Step1
 
-    subgraph "スキル"
+    subgraph Step1["ステップ1: テクニカル分析"]
+        A1[technical-market-analyst]
         S1[technical-analyst]
         S2[breadth-chart-analyst]
         S3[sector-analyst]
+        A1 -.使用.-> S1
+        A1 -.使用.-> S2
+        A1 -.使用.-> S3
+    end
+
+    Step1 --> R1[technical-market-analysis.md]
+    R1 --> Step2
+
+    subgraph Step2["ステップ2: 市場環境評価"]
+        A2[us-market-analyst]
         S4[market-environment-analysis]
         S5[us-market-bubble-detector]
+        A2 -.使用.-> S4
+        A2 -.使用.-> S5
+    end
+
+    Step2 --> R2[us-market-analysis.md]
+    R2 --> Step3
+
+    subgraph Step3["ステップ3: ニュース・イベント分析"]
+        A3[market-news-analyzer]
         S6[market-news-analyst]
         S7[economic-calendar-fetcher]
         S8[earnings-calendar]
-        S9[stanley-druckenmiller-investment]
+        A3 -.使用.-> S6
+        A3 -.使用.-> S7
+        A3 -.使用.-> S8
     end
 
-    A1 -->|使用| S1
-    A1 -->|使用| S2
-    A1 -->|使用| S3
+    Step3 --> R3[market-news-analysis.md]
 
-    A2 -->|使用| S4
-    A2 -->|使用| S5
+    R1 --> Step4
+    R2 --> Step4
+    R3 --> Step4
+    PrevBlog[📝 前週のブログ] --> Step4
 
-    A3 -->|使用| S6
-    A3 -->|使用| S7
-    A3 -->|使用| S8
+    subgraph Step4["ステップ4: ブログ生成"]
+        A4[weekly-trade-blog-writer]
+    end
 
-    A4 -->|統合| A1
-    A4 -->|統合| A2
-    A4 -->|統合| A3
+    Step4 --> Blog[✅ 週間戦略ブログ<br/>blogs/YYYY-MM-DD-weekly-strategy.md]
 
-    A5 -->|使用| S9
-    A5 -->|統合| A1
-    A5 -->|統合| A2
-    A5 -->|統合| A3
-
-    style A1 fill:#e1f5ff
-    style A2 fill:#e1f5ff
-    style A3 fill:#e1f5ff
-    style A4 fill:#fff4e1
-    style A5 fill:#f0e1ff
-    style S1 fill:#e8f5e9
-    style S2 fill:#e8f5e9
-    style S3 fill:#e8f5e9
-    style S4 fill:#e8f5e9
-    style S5 fill:#e8f5e9
-    style S6 fill:#e8f5e9
-    style S7 fill:#e8f5e9
-    style S8 fill:#e8f5e9
-    style S9 fill:#e8f5e9
+    style Step1 fill:#e1f5ff,stroke:#0288d1,stroke-width:2px
+    style Step2 fill:#fff3e0,stroke:#f57c00,stroke-width:2px
+    style Step3 fill:#f3e5f5,stroke:#7b1fa2,stroke-width:2px
+    style Step4 fill:#e8f5e9,stroke:#388e3c,stroke-width:3px
+    style Blog fill:#fff9c4,stroke:#f9a825,stroke-width:3px
+    style Charts fill:#fff,stroke:#666,stroke-width:2px
+    style PrevBlog fill:#fff,stroke:#666,stroke-width:2px
+    style A1 fill:#b3e5fc
+    style A2 fill:#ffe0b2
+    style A3 fill:#e1bee7
+    style A4 fill:#c8e6c9
+    style S1 fill:#e0f2f1
+    style S2 fill:#e0f2f1
+    style S3 fill:#e0f2f1
+    style S4 fill:#e0f2f1
+    style S5 fill:#e0f2f1
+    style S6 fill:#e0f2f1
+    style S7 fill:#e0f2f1
+    style S8 fill:#e0f2f1
 ```
 
-**エージェントの役割:**
-- **technical-market-analyst**: technical-analyst、breadth-chart-analyst、sector-analystスキルを使用してチャート分析
-- **us-market-analyst**: market-environment-analysis、us-market-bubble-detectorスキルを使用して市場環境とバブルリスク評価
-- **market-news-analyzer**: market-news-analyst、economic-calendar-fetcher、earnings-calendarスキルを使用してニュース・イベント分析
-- **weekly-trade-blog-writer**: 3つの分析を統合して実践的な週間戦略を生成
-- **druckenmiller-strategy-planner**（オプション）: stanley-druckenmiller-investmentスキルを使用して18ヶ月戦略を策定
+**ワークフロー概要:**
+1. **ステップ1**: `technical-market-analyst`が3つのスキルを使用してチャート分析 → `technical-market-analysis.md`
+2. **ステップ2**: `us-market-analyst`が2つのスキルを使用して市場環境評価 → `us-market-analysis.md`
+3. **ステップ3**: `market-news-analyzer`が3つのスキルを使用してニュース・イベント分析 → `market-news-analysis.md`
+4. **ステップ4**: `weekly-trade-blog-writer`が全レポート+前週ブログを統合 → 週間戦略ブログ完成
 
 ### 前提条件
 
