@@ -280,19 +280,19 @@ class StockAnalyzer:
         return round(((end_value / start_value) ** (1 / years) - 1) * 100, 2)
 
     @staticmethod
-    def analyze_dividend_growth(dividend_history: List[Dict]) -> Tuple[Optional[float], bool, Optional[float]]:
+    def analyze_dividend_growth(dividend_history: List[Dict]) -> Tuple[Optional[float], bool, Optional[float], int]:
         """
         Analyze dividend growth rate (3-year CAGR and consistency) and return latest annual dividend.
 
         Returns:
-            Tuple of (CAGR%, consistent_growth, latest_annual_dividend)
+            Tuple of (CAGR%, consistent_growth, latest_annual_dividend, years_of_growth)
         """
         if not dividend_history or 'historical' not in dividend_history:
-            return None, False, None
+            return None, False, None, 0
 
         dividends = dividend_history['historical']
         if len(dividends) < 4:
-            return None, False, None
+            return None, False, None, 0
 
         # Sort by date and aggregate by year
         dividends = sorted(dividends, key=lambda x: x['date'])
@@ -302,10 +302,14 @@ class StockAnalyzer:
             annual_dividends[year] = annual_dividends.get(year, 0) + div.get('dividend', 0)
 
         if len(annual_dividends) < 4:
-            return None, False, None
+            return None, False, None, 0
 
-        # Get last 4 years
-        years = sorted(annual_dividends.keys())[-4:]
+        # Get all available years sorted (oldest first)
+        all_years = sorted(annual_dividends.keys())
+        all_div_values = [annual_dividends[y] for y in all_years]
+
+        # Get last 4 years for CAGR calculation
+        years = all_years[-4:]
         div_values = [annual_dividends[y] for y in years]
 
         # Calculate 3-year CAGR
@@ -314,10 +318,18 @@ class StockAnalyzer:
         # Check consistency (no significant cuts)
         consistent = all(div_values[i] >= div_values[i-1] * 0.95 for i in range(1, len(div_values)))
 
+        # Count consecutive years of growth (from most recent going back)
+        years_of_growth = 0
+        for i in range(len(all_div_values) - 1, 0, -1):
+            if all_div_values[i] >= all_div_values[i-1] * 0.95:  # Allow 5% tolerance
+                years_of_growth += 1
+            else:
+                break
+
         # Latest annual dividend
         latest_annual_dividend = div_values[-1]
 
-        return cagr, consistent, latest_annual_dividend
+        return cagr, consistent, latest_annual_dividend, years_of_growth
 
     @staticmethod
     def is_reit(stock_data: Dict) -> bool:
@@ -698,7 +710,7 @@ def screen_dividend_growth_pullbacks(
             continue
 
         # Analyze dividend growth
-        div_cagr, div_consistent, annual_dividend = analyzer.analyze_dividend_growth(dividend_history)
+        div_cagr, div_consistent, annual_dividend, div_years_of_growth = analyzer.analyze_dividend_growth(dividend_history)
         if not div_cagr or div_cagr < min_div_growth:
             print(f"  ⚠️  Dividend CAGR {div_cagr}% < {min_div_growth}%", file=sys.stderr)
             continue
@@ -798,6 +810,14 @@ def screen_dividend_growth_pullbacks(
         if payout_ratio is None and not is_reit:
             payout_ratio = analyzer.get_payout_ratio_from_metrics(key_metrics if key_metrics else [])
 
+        # Determine dividend sustainability
+        # Sustainable if payout ratio < 80% and FCF covers dividends
+        dividend_sustainable = False
+        if payout_ratio and fcf_payout_ratio:
+            dividend_sustainable = (payout_ratio < 80 and fcf_payout_ratio < 100)
+        elif payout_ratio:
+            dividend_sustainable = payout_ratio < 80
+
         # Build result object
         result = {
             'symbol': symbol,
@@ -809,6 +829,8 @@ def screen_dividend_growth_pullbacks(
             'annual_dividend': round(annual_dividend, 2),
             'dividend_cagr_3y': div_cagr,
             'dividend_consistent': div_consistent,
+            'dividend_sustainable': dividend_sustainable,
+            'dividend_years_of_growth': div_years_of_growth,
             'rsi': rsi,
             'pe_ratio': latest_metrics.get('peRatio', 0),
             'pb_ratio': latest_metrics.get('pbRatio', 0),

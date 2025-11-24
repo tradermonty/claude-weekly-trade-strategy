@@ -187,3 +187,150 @@ class TestStockRowFormatting:
         assert '4.5' in result
         assert '12' in result  # P/E
         assert '38' in result  # RSI
+
+
+class TestPayoutRatioAndStabilityDisplay:
+    """Test payout ratio and dividend stability display in reports."""
+
+    def test_payout_ratio_displays_when_present(self):
+        """Payout ratio should display when available in stock data."""
+        from report_generator import format_growth_stock_row
+
+        stock = {
+            'symbol': 'TEST',
+            'company_name': 'Test Corp',
+            'dividend_yield': 2.5,
+            'dividend_cagr_3y': 15.0,
+            'rsi': 35,
+            'price': 100.0,
+            'sector': 'Technology',
+            'payout_ratio': 45.5,
+        }
+
+        result = format_growth_stock_row(stock)
+
+        assert '46%' in result or '45%' in result  # Should show payout ratio
+
+    def test_payout_ratio_shows_na_when_missing(self):
+        """Payout ratio should show N/A when not available."""
+        from report_generator import format_growth_stock_row
+
+        stock = {
+            'symbol': 'TEST',
+            'company_name': 'Test Corp',
+            'dividend_yield': 2.5,
+            'dividend_cagr_3y': 15.0,
+            'rsi': 35,
+            'price': 100.0,
+            'sector': 'Technology',
+            'payout_ratio': None,
+        }
+
+        result = format_growth_stock_row(stock)
+
+        assert 'N/A' in result
+
+    def test_stability_badge_sustainable_when_dividend_sustainable(self):
+        """Should show Sustainable badge when dividend_sustainable is True."""
+        from report_generator import format_stability_badge
+
+        stock = {
+            'dividend_sustainable': True,
+            'dividend_consistent': True,
+        }
+
+        result = format_stability_badge(stock)
+
+        assert 'Sustainable' in result
+        assert '#27ae60' in result  # Green color
+
+    def test_stability_badge_consistent_when_only_consistent(self):
+        """Should show Consistent badge when dividend_consistent but not sustainable."""
+        from report_generator import format_stability_badge
+
+        stock = {
+            'dividend_sustainable': False,
+            'dividend_consistent': True,
+        }
+
+        result = format_stability_badge(stock)
+
+        assert 'Consistent' in result
+        assert '#f39c12' in result  # Orange color
+
+    def test_stability_badge_variable_when_neither(self):
+        """Should show Variable badge when neither sustainable nor consistent."""
+        from report_generator import format_stability_badge
+
+        stock = {
+            'dividend_sustainable': False,
+            'dividend_consistent': False,
+        }
+
+        result = format_stability_badge(stock)
+
+        assert 'Variable' in result
+        assert '#95a5a6' in result  # Grey color
+
+    def test_years_of_growth_displays_correctly(self):
+        """Years of dividend growth should display in stability column."""
+        from report_generator import format_growth_stock_row
+
+        stock = {
+            'symbol': 'TEST',
+            'company_name': 'Test Corp',
+            'dividend_yield': 2.5,
+            'dividend_cagr_3y': 15.0,
+            'rsi': 35,
+            'price': 100.0,
+            'sector': 'Technology',
+            'dividend_years_of_growth': 10,
+            'dividend_consistent': True,
+        }
+
+        result = format_growth_stock_row(stock)
+
+        assert '10Y' in result  # Should show 10 years of growth
+
+    def test_fcf_payout_used_when_payout_ratio_over_100(self):
+        """When payout ratio > 100%, FCF payout ratio should be used instead."""
+        from report_generator import format_payout_ratio
+
+        # Yieldco/REIT case: high accounting payout, reasonable FCF payout
+        payout = 380.0
+        fcf_payout = 69.0
+
+        result = format_payout_ratio(payout, fcf_payout)
+
+        assert '69%' in result  # Should show FCF payout
+        assert '380' not in result  # Should NOT show the inflated payout ratio
+
+    def test_normal_payout_ratio_displayed_when_under_100(self):
+        """When payout ratio <= 100%, normal payout ratio should be displayed."""
+        from report_generator import format_payout_ratio
+
+        payout = 45.0
+        fcf_payout = 50.0
+
+        result = format_payout_ratio(payout, fcf_payout)
+
+        assert '45%' in result  # Should show normal payout ratio
+
+    def test_fcf_payout_used_when_payout_none_but_fcf_available(self):
+        """When payout ratio is None but FCF payout is available, use FCF."""
+        from report_generator import format_payout_ratio
+
+        payout = None
+        fcf_payout = 55.0
+
+        result = format_payout_ratio(payout, fcf_payout)
+
+        assert '55%' in result
+
+    def test_na_when_both_payout_ratios_none(self):
+        """When both payout ratios are None, show N/A."""
+        from report_generator import format_payout_ratio
+
+        result = format_payout_ratio(None, None)
+
+        assert 'N/A' in result

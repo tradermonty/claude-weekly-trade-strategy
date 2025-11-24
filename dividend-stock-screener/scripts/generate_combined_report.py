@@ -44,7 +44,7 @@ def load_dividend_growth_results(search_dirs: List[str]) -> List[dict]:
 
     stocks = data.get('stocks', [])
 
-    # Transform to common format
+    # Transform to common format - include all fields needed for report
     results = []
     for stock in stocks:
         results.append({
@@ -58,6 +58,13 @@ def load_dividend_growth_results(search_dirs: List[str]) -> List[dict]:
             'pe_ratio': stock.get('pe_ratio', 0),
             'pb_ratio': stock.get('pb_ratio', 0),
             'composite_score': stock.get('composite_score', 0),
+            # Payout ratio and sustainability fields
+            'payout_ratio': stock.get('payout_ratio'),
+            'fcf_payout_ratio': stock.get('fcf_payout_ratio'),
+            'dividend_sustainable': stock.get('dividend_sustainable', False),
+            'dividend_consistent': stock.get('dividend_consistent', False),
+            'dividend_years_of_growth': stock.get('dividend_years_of_growth', 0),
+            'financially_healthy': stock.get('financially_healthy', False),
         })
 
     return results
@@ -88,9 +95,7 @@ def load_value_dividend_results(search_dirs: List[str]) -> List[dict]:
 
     stocks = data.get('stocks', [])
 
-    # Transform to common format
-    # Note: RSI may not be present in value-dividend-screener output
-    # RSI filtering is done at FINVIZ pre-screening stage
+    # Transform to common format - include all fields needed for report
     results = []
     for stock in stocks:
         results.append({
@@ -102,8 +107,15 @@ def load_value_dividend_results(search_dirs: List[str]) -> List[dict]:
             'dividend_cagr_3y': stock.get('dividend_cagr_3y', 0),
             'pe_ratio': stock.get('pe_ratio', 0),
             'pb_ratio': stock.get('pb_ratio', 0),
-            'rsi': stock.get('rsi', 0),  # May be 0 if not available
+            'rsi': stock.get('rsi', 0),
             'composite_score': stock.get('composite_score', 0),
+            # Payout ratio and sustainability fields
+            'payout_ratio': stock.get('payout_ratio'),
+            'fcf_payout_ratio': stock.get('fcf_payout_ratio'),
+            'dividend_sustainable': stock.get('dividend_sustainable', False),
+            'dividend_consistent': stock.get('dividend_consistent', False),
+            'dividend_years_of_growth': stock.get('dividend_years_of_growth', 0),
+            'financially_healthy': stock.get('financially_healthy', False),
         })
 
     return results

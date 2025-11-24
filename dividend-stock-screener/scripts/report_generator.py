@@ -39,12 +39,45 @@ def format_score_cell(score: float) -> str:
         return f'<td>{score:.1f}</td>'
 
 
+def format_payout_ratio(payout_ratio: float, fcf_payout_ratio: float) -> str:
+    """
+    Format payout ratio for display.
+
+    When payout ratio > 100% (common for Yieldcos/REITs/MLPs due to accounting),
+    use FCF payout ratio instead as it better reflects actual sustainability.
+
+    Args:
+        payout_ratio: Traditional payout ratio (dividends / net income)
+        fcf_payout_ratio: FCF-based payout ratio (dividends / free cash flow)
+
+    Returns:
+        Formatted string like "45%" or "N/A"
+    """
+    # If payout ratio > 100%, prefer FCF payout ratio
+    if payout_ratio is not None and payout_ratio > 100:
+        if fcf_payout_ratio is not None:
+            return f"{fcf_payout_ratio:.0f}%"
+        else:
+            return f"{payout_ratio:.0f}%"
+
+    # Normal case: use payout ratio if available
+    if payout_ratio is not None:
+        return f"{payout_ratio:.0f}%"
+
+    # Fallback to FCF payout if payout ratio not available
+    if fcf_payout_ratio is not None:
+        return f"{fcf_payout_ratio:.0f}%"
+
+    return "N/A"
+
+
 def format_growth_stock_row(stock: dict) -> str:
     """
     Format a dividend growth stock as an HTML table row.
     """
     payout = stock.get('payout_ratio')
-    payout_str = f"{payout:.0f}%" if payout else "N/A"
+    fcf_payout = stock.get('fcf_payout_ratio')
+    payout_str = format_payout_ratio(payout, fcf_payout)
 
     years_growth = stock.get('dividend_years_of_growth', 0)
     stability = format_stability_badge(stock)
@@ -71,7 +104,8 @@ def format_value_stock_row(stock: dict) -> str:
     Format a value dividend stock as an HTML table row.
     """
     payout = stock.get('payout_ratio')
-    payout_str = f"{payout:.0f}%" if payout else "N/A"
+    fcf_payout = stock.get('fcf_payout_ratio')
+    payout_str = format_payout_ratio(payout, fcf_payout)
 
     years_growth = stock.get('dividend_years_of_growth', 0)
     stability = format_stability_badge(stock)
