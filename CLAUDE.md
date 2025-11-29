@@ -104,12 +104,13 @@ charts/2025-11-03/にあるチャートを分析してください。
 
 ### ステップ2: US Market Analysis
 
-**目的**: 市場環境の総合評価とバブルリスク検出
+**目的**: 市場環境の総合評価とバブルリスク検出、**Breadthチャートの詳細分析**
 
 **エージェント**: `us-market-analyst`
 
 **入力**:
 - `reports/YYYY-MM-DD/technical-market-analysis.md` (ステップ1の結果)
+- `charts/YYYY-MM-DD/` 内のBreadthチャート画像（**必ず実際に読み取ること**）
 - 市場データ（VIX, Breadth, 金利等）
 
 **出力**:
@@ -119,15 +120,21 @@ charts/2025-11-03/にあるチャートを分析してください。
 ```
 us-market-analystエージェントで米国市場の総合分析を実行してください。
 reports/2025-11-03/technical-market-analysis.mdを参照し、
+charts/2025-11-03/内のBreadthチャート（S&P 500 Breadth Index, Uptrend Stock Ratio）を
+必ず実際に読み取って分析してください。
 市場環境とバブルリスクを評価してreports/2025-11-03/us-market-analysis.mdに保存してください。
 ```
 
 **分析内容**:
 - 現在の市場フェーズ（Risk-On / Base / Caution / Stress）
 - バブル検出スコア（0-16スケール）
+- **Breadth Index（200日MA）の現在値とトレンド**
+- **Uptrend Stock Ratioの現在値、色（緑/赤）、底打ち反転シグナル**
 - セクターローテーションパターン
 - ボラティリティレジーム
-- リスク要因とカタリスト
+
+**⚠️ 重要**: Uptrend Stock Ratioは**先行指標**。底打ち反転（赤→緑転換、20%台からの反発）は
+Breadth 200MAより1-2週間早く改善を示すことが多い。**推測や過去データではなく、実際のチャート画像を読み取ること**。
 
 ---
 
@@ -297,7 +304,49 @@ blogs/2025-11-03-weekly-strategy.mdに保存してください。
 
 ---
 
-### ステップ5（オプション）: Druckenmiller Strategy Planning
+### ステップ5（必須）: Strategy Review - 品質保証レビュー
+
+**目的**: 第三者視点で戦略ブログの品質保証を実施し、データ誤読・論理矛盾・シグナル見落としを検出
+
+**エージェント**: `strategy-reviewer`
+
+**入力**:
+- `charts/YYYY-MM-DD/` 内の全チャート画像（**再読み取り必須**）
+- `reports/YYYY-MM-DD/technical-market-analysis.md`
+- `reports/YYYY-MM-DD/us-market-analysis.md`
+- `reports/YYYY-MM-DD/market-news-analysis.md`
+- `blogs/YYYY-MM-DD-weekly-strategy.md` (レビュー対象)
+- 前週のブログ記事（連続性チェック用）
+
+**出力**:
+- `reports/YYYY-MM-DD/strategy-review.md`
+
+**実行コマンド例**:
+```
+strategy-reviewerエージェントで2025-12-01週のブログ記事をレビューしてください。
+charts/2025-12-01/内のチャートを再読み取りし、
+blogs/2025-12-01-weekly-strategy.mdの品質を検証してください。
+レビュー結果をreports/2025-12-01/strategy-review.mdに保存してください。
+```
+
+**レビュー内容**:
+- **データ検証**: チャート画像を再読み取りし、ブログ記載値と照合
+- **Uptrend Ratio確認**: 底打ち反転シグナルの見落としがないか（最重要）
+- **配分計算チェック**: 4本柱が100%になっているか
+- **シナリオ整合性**: レポート間で確率・スタンスが一致しているか
+- **連続性チェック**: 前週から±10-15%以内の段階的調整か
+
+**判定結果**:
+- **PASS**: 公開OK
+- **PASS WITH NOTES**: 軽微な問題あり、認識の上で公開可
+- **REVISION REQUIRED**: 修正必須、公開不可
+
+**⚠️ 重要**: このステップは**必須**です。ブログ記事を公開する前に必ず実行してください。
+今回のUptrend Ratio見落とし問題もこのレビューで検出できます。
+
+---
+
+### ステップ6（オプション）: Druckenmiller Strategy Planning
 
 **目的**: 3つの分析レポートを統合し、18ヶ月の中長期投資戦略を策定
 
@@ -431,13 +480,13 @@ DATE="2025-11-03"
 # ステップ0: フォルダ準備
 mkdir -p charts/$DATE reports/$DATE
 
-# ステップ1-4を一括実行するプロンプト例：
+# ステップ1-5を一括実行するプロンプト例：
 「$DATE週のトレード戦略ブログを作成してください。
 
 1. technical-market-analystでcharts/$DATE/の全チャートを分析
    → reports/$DATE/technical-market-analysis.md
 
-2. us-market-analystで市場環境を総合評価
+2. us-market-analystで市場環境を総合評価（Breadthチャート再読み取り含む）
    → reports/$DATE/us-market-analysis.md
 
 3. market-news-analyzerでニュース/イベント分析
@@ -446,7 +495,12 @@ mkdir -p charts/$DATE reports/$DATE
 4. weekly-trade-blog-writerで最終ブログ記事を生成
    → blogs/$DATE-weekly-strategy.md
 
-各ステップを順次実行し、レポートを確認してから次に進んでください。」
+5. strategy-reviewerで品質レビュー（必須）
+   → reports/$DATE/strategy-review.md
+   → PASS/PASS WITH NOTES/REVISION REQUIREDを判定
+
+各ステップを順次実行し、レポートを確認してから次に進んでください。
+ステップ5でREVISION REQUIREDの場合は、修正後に再レビューしてください。」
 ```
 
 ---
@@ -460,7 +514,7 @@ charts/YYYY-MM-DD/
   ├─> [technical-market-analyst]
   │      └─> reports/YYYY-MM-DD/technical-market-analysis.md
   │            │
-  │            ├─> [us-market-analyst]
+  │            ├─> [us-market-analyst] ←── charts/も再読み取り（breadth-chart-analyst）
   │            │      └─> reports/YYYY-MM-DD/us-market-analysis.md
   │            │            │
   │            │            ├─> [market-news-analyzer]
@@ -468,6 +522,15 @@ charts/YYYY-MM-DD/
   │            │            │            │
   │            └────────────┴────────────┴─> [weekly-trade-blog-writer]
   │                                                └─> blogs/YYYY-MM-DD-weekly-strategy.md
+  │                                                      │
+  │                                                      ▼
+  ├─────────────────────────────────────────────> [strategy-reviewer] ←── 必須レビュー
+  │                                                      │
+  │                                                      └─> reports/YYYY-MM-DD/strategy-review.md
+  │                                                           │
+  │                                                           ├─ PASS → 公開OK
+  │                                                           ├─ PASS WITH NOTES → 認識の上で公開
+  │                                                           └─ REVISION REQUIRED → 修正後再レビュー
   │
   └─> (前週のブログ記事も参照)
        blogs/YYYY-MM-DD-weekly-strategy.md (先週)
@@ -516,7 +579,8 @@ reports/YYYY-MM-DD/
 4. us-market-analyst、market-news-analyzerを実行
 5. 3つのレポートをレビュー
 6. weekly-trade-blog-writerでブログ生成
-7. 最終レビューと公開
+7. **strategy-reviewerで品質レビュー（必須）**
+8. レビュー結果に応じて修正または公開
 
 ---
 
@@ -528,9 +592,10 @@ reports/YYYY-MM-DD/
 - **出力形式**: Markdown、シナリオ別確率付き
 
 ### us-market-analyst
-- **スキル**: market-environment-analysis, us-market-bubble-detector
-- **分析対象**: 市場フェーズ、バブルスコア、センチメント
+- **スキル**: market-environment-analysis, us-market-bubble-detector, **breadth-chart-analyst**
+- **分析対象**: 市場フェーズ、バブルスコア、センチメント、**Breadthチャート（Uptrend Ratio含む）**
 - **出力形式**: Markdown、リスク評価
+- **重要**: Breadthチャート画像を**実際に読み取り**、Uptrend Ratioの底打ち反転など先行指標を識別すること
 
 ### market-news-analyzer
 - **スキル**: market-news-analyst, economic-calendar-fetcher, earnings-calendar
@@ -541,6 +606,14 @@ reports/YYYY-MM-DD/
 - **入力**: 上記3レポート + 前週ブログ
 - **制約**: 200-300行、段階的調整（±10-15%）
 - **出力形式**: 兼業トレーダー向けMarkdown（5-10分読了）
+
+### strategy-reviewer（必須）
+- **スキル**: breadth-chart-analyst
+- **役割**: 第三者視点での品質保証レビュー
+- **入力**: 全チャート画像（再読み取り）、全レポート、ブログ記事、前週ブログ
+- **出力形式**: Markdown、PASS/PASS WITH NOTES/REVISION REQUIREDの判定
+- **検証項目**: データ精度、Uptrend Ratio確認、配分計算、シナリオ整合性、連続性
+- **重要**: ブログ公開前に**必ず実行**。今回のUptrend Ratio見落としもこのレビューで検出可能
 
 ### druckenmiller-strategy-planner（オプション）
 - **スキル**: stanley-druckenmiller-investment
