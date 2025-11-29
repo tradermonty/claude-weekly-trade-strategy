@@ -14,27 +14,27 @@ An AI agent system that automatically generates weekly trading strategy blog pos
 
 ### Key Features
 
-- **Technical Analysis**: Weekly chart analysis of VIX, yields, breadth indicators, major indices, and commodities
-- **Market Environment Assessment**: Bubble risk detection, sentiment analysis, sector rotation analysis
+- **Technical Analysis**: Weekly chart analysis of VIX, yields, major indices, and commodities
+- **Market Environment Assessment**: Bubble risk detection, sentiment analysis, sector rotation analysis, **Breadth chart analysis**
 - **News & Event Analysis**: Past 10 days news impact evaluation, upcoming 7 days economic indicators and earnings forecasts
 - **Weekly Strategy Blog Generation**: Integrates three analysis reports into a 200-300 line Markdown format trading strategy
+- **Quality Assurance Review**: Mandatory strategy review step to verify chart readings accuracy before publication
 - **Medium-Term Strategy Report** (Optional): 18-month Druckenmiller-style investment strategy with 4 scenarios (Base/Bull/Bear/Tail Risk)
 
 ### System Architecture
 
-The system uses a 4-step workflow to generate weekly trading strategy blog posts:
+The system uses a 5-step workflow to generate weekly trading strategy blog posts:
 
 ```mermaid
 graph TB
     Charts[📊 Chart Images<br/>charts/YYYY-MM-DD/] --> Step1
+    Charts --> Step2
 
     subgraph Step1["Step 1: Technical Analysis"]
         A1[technical-market-analyst]
         S1[technical-analyst]
-        S2[breadth-chart-analyst]
         S3[sector-analyst]
         A1 -.uses.-> S1
-        A1 -.uses.-> S2
         A1 -.uses.-> S3
     end
 
@@ -45,8 +45,10 @@ graph TB
         A2[us-market-analyst]
         S4[market-environment-analysis]
         S5[us-market-bubble-detector]
+        S2[breadth-chart-analyst]
         A2 -.uses.-> S4
         A2 -.uses.-> S5
+        A2 -.uses.-> S2
     end
 
     Step2 --> R2[us-market-analysis.md]
@@ -73,19 +75,38 @@ graph TB
         A4[weekly-trade-blog-writer]
     end
 
-    Step4 --> Blog[✅ Weekly Strategy Blog<br/>blogs/YYYY-MM-DD-weekly-strategy.md]
+    Step4 --> Blog[📄 Weekly Strategy Blog<br/>blogs/YYYY-MM-DD-weekly-strategy.md]
+
+    Charts --> Step5
+    R2 --> Step5
+    Blog --> Step5
+
+    subgraph Step5["Step 5: Quality Assurance"]
+        A5[strategy-reviewer]
+        S9[breadth-chart-analyst]
+        A5 -.uses.-> S9
+    end
+
+    Step5 --> Review[📋 Strategy Review<br/>reports/YYYY-MM-DD/strategy-review.md]
+    Review --> Decision{Verdict?}
+    Decision -->|PASS| Publish[✅ Ready to Publish]
+    Decision -->|REVISION REQUIRED| Revise[⚠️ Revise Blog]
 
     style Step1 fill:#e1f5ff,stroke:#0288d1,stroke-width:2px
     style Step2 fill:#fff3e0,stroke:#f57c00,stroke-width:2px
     style Step3 fill:#f3e5f5,stroke:#7b1fa2,stroke-width:2px
-    style Step4 fill:#e8f5e9,stroke:#388e3c,stroke-width:3px
-    style Blog fill:#fff9c4,stroke:#f9a825,stroke-width:3px
+    style Step4 fill:#e8f5e9,stroke:#388e3c,stroke-width:2px
+    style Step5 fill:#fffde7,stroke:#fbc02d,stroke-width:3px
+    style Blog fill:#e3f2fd,stroke:#1976d2,stroke-width:2px
+    style Review fill:#fff9c4,stroke:#f9a825,stroke-width:2px
+    style Publish fill:#c8e6c9,stroke:#388e3c,stroke-width:3px
     style Charts fill:#fff,stroke:#666,stroke-width:2px
     style PrevBlog fill:#fff,stroke:#666,stroke-width:2px
     style A1 fill:#b3e5fc
     style A2 fill:#ffe0b2
     style A3 fill:#e1bee7
     style A4 fill:#c8e6c9
+    style A5 fill:#fff59d
     style S1 fill:#e0f2f1
     style S2 fill:#e0f2f1
     style S3 fill:#e0f2f1
@@ -94,13 +115,15 @@ graph TB
     style S6 fill:#e0f2f1
     style S7 fill:#e0f2f1
     style S8 fill:#e0f2f1
+    style S9 fill:#e0f2f1
 ```
 
 **Workflow Overview:**
-1. **Step 1**: `technical-market-analyst` analyzes charts using 3 skills → `technical-market-analysis.md`
-2. **Step 2**: `us-market-analyst` evaluates market environment using 2 skills → `us-market-analysis.md`
+1. **Step 1**: `technical-market-analyst` analyzes charts using 2 skills → `technical-market-analysis.md`
+2. **Step 2**: `us-market-analyst` evaluates market environment using 3 skills (including breadth-chart-analyst) → `us-market-analysis.md`
 3. **Step 3**: `market-news-analyzer` analyzes news/events using 3 skills → `market-news-analysis.md`
-4. **Step 4**: `weekly-trade-blog-writer` synthesizes all reports + previous week's blog → Final weekly strategy blog
+4. **Step 4**: `weekly-trade-blog-writer` synthesizes all reports + previous week's blog → Weekly strategy blog
+5. **Step 5**: `strategy-reviewer` verifies chart readings and strategy consistency → Quality assurance before publication
 
 ### Prerequisites
 
@@ -174,6 +197,7 @@ Create a weekly trade strategy blog for the week of 2025-11-17.
    → reports/2025-11-17/technical-market-analysis.md
 
 2. Run us-market-analyst for market environment assessment
+   (IMPORTANT: Must read actual Breadth chart images using breadth-chart-analyst skill)
    → reports/2025-11-17/us-market-analysis.md
 
 3. Run market-news-analyzer for news/event analysis
@@ -182,7 +206,12 @@ Create a weekly trade strategy blog for the week of 2025-11-17.
 4. Run weekly-trade-blog-writer to generate final blog post
    → blogs/2025-11-17-weekly-strategy.md
 
+5. Run strategy-reviewer for quality assurance
+   (Re-verify Breadth chart readings and strategy consistency)
+   → reports/2025-11-17/strategy-review.md
+
 Execute each step sequentially and verify reports before proceeding to the next step.
+Do NOT publish the blog until strategy-reviewer returns PASS verdict.
 ```
 
 **Optional: Medium-Term Strategy Report**
@@ -225,11 +254,12 @@ weekly-trade-strategy/
 │   └── YYYY-MM-DD-weekly-strategy.md
 │
 ├── .claude/
-│   ├── agents/                      # Claude agent definitions (5 agents)
+│   ├── agents/                      # Claude agent definitions (6 agents)
 │   │   ├── technical-market-analyst.md
 │   │   ├── us-market-analyst.md
 │   │   ├── market-news-analyzer.md
 │   │   ├── weekly-trade-blog-writer.md
+│   │   ├── strategy-reviewer.md     # Quality assurance (Step 5)
 │   │   └── druckenmiller-strategy-planner.md
 │   │
 │   └── skills/                      # Claude skill definitions (9 skills)
@@ -254,9 +284,10 @@ weekly-trade-strategy/
 | Agent | Role | Output |
 |-------|------|--------|
 | `technical-market-analyst` | Chart-based technical analysis | `technical-market-analysis.md` |
-| `us-market-analyst` | Market environment and bubble risk evaluation | `us-market-analysis.md` |
+| `us-market-analyst` | Market environment, bubble risk, and **Breadth chart analysis** | `us-market-analysis.md` |
 | `market-news-analyzer` | News impact and event forecasting | `market-news-analysis.md` |
 | `weekly-trade-blog-writer` | Final blog post generation | `YYYY-MM-DD-weekly-strategy.md` |
+| `strategy-reviewer` | **Quality assurance** - verify chart readings before publication | `strategy-review.md` |
 | `druckenmiller-strategy-planner` (Optional) | Medium-term (18-month) strategy planning (4-scenario analysis) | `druckenmiller-strategy.md` |
 
 ### Troubleshooting
@@ -311,27 +342,27 @@ Pull requests are welcome. For major changes, please open an issue first to disc
 
 ### 主な機能
 
-- **テクニカル分析**: VIX、金利、Breadth指標、主要指数、コモディティの週足チャート分析
-- **市場環境評価**: バブルリスク検出、センチメント分析、セクターローテーション分析
+- **テクニカル分析**: VIX、金利、主要指数、コモディティの週足チャート分析
+- **市場環境評価**: バブルリスク検出、センチメント分析、セクターローテーション分析、**Breadthチャート分析**
 - **ニュース・イベント分析**: 過去10日間のニュース影響評価、今後7日間の経済指標・決算予測
 - **週間戦略ブログ生成**: 3つの分析レポートを統合し、実践的なトレード戦略を200-300行のMarkdown形式で出力
+- **品質保証レビュー**: ブログ公開前にチャート読み取り精度を検証する必須のレビューステップ
 - **中長期戦略レポート**（オプション）: Druckenmiller流の18ヶ月投資戦略を4シナリオ（Base/Bull/Bear/Tail Risk）で生成
 
 ### システムアーキテクチャ
 
-このシステムは4ステップのワークフローで週間トレード戦略ブログを生成します。
+このシステムは5ステップのワークフローで週間トレード戦略ブログを生成します。
 
 ```mermaid
 graph TB
     Charts[📊 チャート画像<br/>charts/YYYY-MM-DD/] --> Step1
+    Charts --> Step2
 
     subgraph Step1["ステップ1: テクニカル分析"]
         A1[technical-market-analyst]
         S1[technical-analyst]
-        S2[breadth-chart-analyst]
         S3[sector-analyst]
         A1 -.使用.-> S1
-        A1 -.使用.-> S2
         A1 -.使用.-> S3
     end
 
@@ -342,8 +373,10 @@ graph TB
         A2[us-market-analyst]
         S4[market-environment-analysis]
         S5[us-market-bubble-detector]
+        S2[breadth-chart-analyst]
         A2 -.使用.-> S4
         A2 -.使用.-> S5
+        A2 -.使用.-> S2
     end
 
     Step2 --> R2[us-market-analysis.md]
@@ -370,19 +403,38 @@ graph TB
         A4[weekly-trade-blog-writer]
     end
 
-    Step4 --> Blog[✅ 週間戦略ブログ<br/>blogs/YYYY-MM-DD-weekly-strategy.md]
+    Step4 --> Blog[📄 週間戦略ブログ<br/>blogs/YYYY-MM-DD-weekly-strategy.md]
+
+    Charts --> Step5
+    R2 --> Step5
+    Blog --> Step5
+
+    subgraph Step5["ステップ5: 品質保証"]
+        A5[strategy-reviewer]
+        S9[breadth-chart-analyst]
+        A5 -.使用.-> S9
+    end
+
+    Step5 --> Review[📋 戦略レビュー<br/>reports/YYYY-MM-DD/strategy-review.md]
+    Review --> Decision{判定?}
+    Decision -->|PASS| Publish[✅ 公開可能]
+    Decision -->|REVISION REQUIRED| Revise[⚠️ 要修正]
 
     style Step1 fill:#e1f5ff,stroke:#0288d1,stroke-width:2px
     style Step2 fill:#fff3e0,stroke:#f57c00,stroke-width:2px
     style Step3 fill:#f3e5f5,stroke:#7b1fa2,stroke-width:2px
-    style Step4 fill:#e8f5e9,stroke:#388e3c,stroke-width:3px
-    style Blog fill:#fff9c4,stroke:#f9a825,stroke-width:3px
+    style Step4 fill:#e8f5e9,stroke:#388e3c,stroke-width:2px
+    style Step5 fill:#fffde7,stroke:#fbc02d,stroke-width:3px
+    style Blog fill:#e3f2fd,stroke:#1976d2,stroke-width:2px
+    style Review fill:#fff9c4,stroke:#f9a825,stroke-width:2px
+    style Publish fill:#c8e6c9,stroke:#388e3c,stroke-width:3px
     style Charts fill:#fff,stroke:#666,stroke-width:2px
     style PrevBlog fill:#fff,stroke:#666,stroke-width:2px
     style A1 fill:#b3e5fc
     style A2 fill:#ffe0b2
     style A3 fill:#e1bee7
     style A4 fill:#c8e6c9
+    style A5 fill:#fff59d
     style S1 fill:#e0f2f1
     style S2 fill:#e0f2f1
     style S3 fill:#e0f2f1
@@ -391,13 +443,15 @@ graph TB
     style S6 fill:#e0f2f1
     style S7 fill:#e0f2f1
     style S8 fill:#e0f2f1
+    style S9 fill:#e0f2f1
 ```
 
 **ワークフロー概要:**
-1. **ステップ1**: `technical-market-analyst`が3つのスキルを使用してチャート分析 → `technical-market-analysis.md`
-2. **ステップ2**: `us-market-analyst`が2つのスキルを使用して市場環境評価 → `us-market-analysis.md`
+1. **ステップ1**: `technical-market-analyst`が2つのスキルを使用してチャート分析 → `technical-market-analysis.md`
+2. **ステップ2**: `us-market-analyst`が3つのスキル（breadth-chart-analyst含む）を使用して市場環境評価 → `us-market-analysis.md`
 3. **ステップ3**: `market-news-analyzer`が3つのスキルを使用してニュース・イベント分析 → `market-news-analysis.md`
-4. **ステップ4**: `weekly-trade-blog-writer`が全レポート+前週ブログを統合 → 週間戦略ブログ完成
+4. **ステップ4**: `weekly-trade-blog-writer`が全レポート+前週ブログを統合 → 週間戦略ブログ
+5. **ステップ5**: `strategy-reviewer`がチャート読み取りと戦略の整合性を検証 → 公開前の品質保証
 
 ### 前提条件
 
@@ -456,7 +510,7 @@ weekly-trade-strategy/
 ├── reports/             # 分析レポート格納フォルダ
 ├── blogs/               # 最終ブログ記事格納フォルダ
 ├── .claude/
-│   ├── agents/          # Claudeエージェント定義（5エージェント）
+│   ├── agents/          # Claudeエージェント定義（6エージェント）
 │   └── skills/          # Claudeスキル定義（9スキル）
 ├── CLAUDE.md            # 詳細なワークフローガイド
 ├── README.md            # このファイル
@@ -532,6 +586,7 @@ mkdir -p reports/2025-11-17
    → reports/2025-11-17/technical-market-analysis.md
 
 2. us-market-analystで市場環境を総合評価
+   （重要: breadth-chart-analystスキルで実際のBreadthチャートを必ず読み取ること）
    → reports/2025-11-17/us-market-analysis.md
 
 3. market-news-analyzerでニュース/イベント分析
@@ -540,7 +595,12 @@ mkdir -p reports/2025-11-17
 4. weekly-trade-blog-writerで最終ブログ記事を生成
    → blogs/2025-11-17-weekly-strategy.md
 
+5. strategy-reviewerで品質保証レビューを実行
+   （Breadthチャート読み取りと戦略の整合性を再検証）
+   → reports/2025-11-17/strategy-review.md
+
 各ステップを順次実行し、レポートを確認してから次に進んでください。
+strategy-reviewerがPASS判定を出すまでブログを公開しないでください。
 ```
 
 4. **オプション: 中長期戦略レポート生成**
@@ -575,9 +635,10 @@ reports/2025-11-17/druckenmiller-strategy.mdに保存してください。
 | エージェント | 役割 | 出力 |
 |---------|------|------|
 | `technical-market-analyst` | チャート画像からテクニカル分析を実行 | `technical-market-analysis.md` |
-| `us-market-analyst` | 市場環境とバブルリスクを評価 | `us-market-analysis.md` |
+| `us-market-analyst` | 市場環境、バブルリスク、**Breadthチャート分析** | `us-market-analysis.md` |
 | `market-news-analyzer` | ニュース影響とイベント予測を分析 | `market-news-analysis.md` |
 | `weekly-trade-blog-writer` | 3つのレポートを統合してブログ記事を生成 | `YYYY-MM-DD-weekly-strategy.md` |
+| `strategy-reviewer` | **品質保証** - 公開前にチャート読み取り精度を検証 | `strategy-review.md` |
 | `druckenmiller-strategy-planner`（オプション） | 中長期（18ヶ月）戦略プランニング（4シナリオ分析） | `druckenmiller-strategy.md` |
 
 ### トラブルシューティング

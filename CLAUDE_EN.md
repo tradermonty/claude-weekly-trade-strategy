@@ -104,12 +104,13 @@ Save the report to reports/2025-11-03/technical-market-analysis.md.
 
 ### Step 2: US Market Analysis
 
-**Purpose**: Comprehensive market environment assessment and bubble risk detection
+**Purpose**: Comprehensive market environment assessment, bubble risk detection, **and detailed Breadth chart analysis**
 
 **Agent**: `us-market-analyst`
 
 **Input**:
 - `reports/YYYY-MM-DD/technical-market-analysis.md` (Step 1 results)
+- `charts/YYYY-MM-DD/` Breadth chart images (**must be actually read**)
 - Market data (VIX, Breadth, interest rates, etc.)
 
 **Output**:
@@ -119,15 +120,20 @@ Save the report to reports/2025-11-03/technical-market-analysis.md.
 ```
 Execute comprehensive US market analysis using the us-market-analyst agent.
 Reference reports/2025-11-03/technical-market-analysis.md,
-assess market environment and bubble risk, and save to reports/2025-11-03/us-market-analysis.md.
+and make sure to actually read and analyze the Breadth charts (S&P 500 Breadth Index, Uptrend Stock Ratio)
+in charts/2025-11-03/.
+Assess market environment and bubble risk, and save to reports/2025-11-03/us-market-analysis.md.
 ```
 
 **Analysis Content**:
 - Current market phase (Risk-On / Base / Caution / Stress)
 - Bubble detection score (0-16 scale)
+- **Breadth Index (200-day MA) current value and trend**
+- **Uptrend Stock Ratio current value, color (green/red), bottom reversal signals**
 - Sector rotation patterns
 - Volatility regime
-- Risk factors and catalysts
+
+**⚠️ Important**: Uptrend Stock Ratio is a **leading indicator**. Bottom reversals (red→green transition, bounce from 20% range) often indicate improvement 1-2 weeks before Breadth 200MA. **Read actual chart images, do not estimate or guess.**
 
 ---
 
@@ -297,7 +303,52 @@ To maintain the established "Monty Style" in past blog posts, strictly adhere to
 
 ---
 
-### Step 5 (Optional): Druckenmiller Strategy Planning
+### Step 5: Strategy Review (Quality Assurance)
+
+**Purpose**: Final quality gate before blog publication - verify that all chart readings are accurate and the strategy correctly reflects market conditions
+
+**Agent**: `strategy-reviewer`
+
+**Input**:
+- `charts/YYYY-MM-DD/` (Breadth chart images for re-verification)
+- `reports/YYYY-MM-DD/us-market-analysis.md` (Step 2 results)
+- `blogs/YYYY-MM-DD-weekly-strategy.md` (Step 4 output)
+
+**Output**:
+- `reports/YYYY-MM-DD/strategy-review.md`
+- Verdict: PASS / PASS WITH NOTES / REVISION REQUIRED
+
+**Example Command**:
+```
+Review the weekly strategy blog for 2025-11-03 using the strategy-reviewer agent.
+Re-verify the Breadth chart readings in charts/2025-11-03/,
+compare against reports/2025-11-03/us-market-analysis.md and blogs/2025-11-03-weekly-strategy.md,
+and save the review to reports/2025-11-03/strategy-review.md.
+```
+
+**Review Focus Areas**:
+1. **Breadth Chart Verification**:
+   - Re-read actual Breadth chart images using breadth-chart-analyst skill
+   - Verify Uptrend Stock Ratio current value and trend direction
+   - Check for bottom reversal signals (red→green transition)
+   - Compare against values in us-market-analysis.md
+
+2. **Strategy Consistency Check**:
+   - Verify blog strategy aligns with actual chart readings
+   - Check that phase assessment (Risk-On/Base/Caution/Stress) matches market data
+   - Validate sector allocation against market conditions
+   - Confirm scenario probabilities are justified by technical evidence
+
+3. **Verdict Determination**:
+   - **PASS**: All chart readings accurate, strategy correctly reflects market conditions
+   - **PASS WITH NOTES**: Minor inconsistencies, blog acceptable with noted caveats
+   - **REVISION REQUIRED**: Significant discrepancies found, blog must be revised before publication
+
+**⚠️ Critical**: If discrepancies are found between chart readings and strategy, this agent will provide specific correction recommendations.
+
+---
+
+### Step 6 (Optional): Druckenmiller Strategy Planning
 
 **Purpose**: Integrate 3 analysis reports and formulate 18-month medium-to-long-term investment strategy
 
@@ -431,13 +482,14 @@ DATE="2025-11-03"
 # Step 0: Prepare folders
 mkdir -p charts/$DATE reports/$DATE
 
-# Example prompt for batch execution of Steps 1-4:
+# Example prompt for batch execution of Steps 1-5:
 "Create a trade strategy blog for the week of $DATE.
 
 1. technical-market-analyst analyzes all charts in charts/$DATE/
    → reports/$DATE/technical-market-analysis.md
 
 2. us-market-analyst provides comprehensive market environment assessment
+   (IMPORTANT: Must read actual Breadth chart images using breadth-chart-analyst skill)
    → reports/$DATE/us-market-analysis.md
 
 3. market-news-analyzer analyzes news/events
@@ -446,28 +498,43 @@ mkdir -p charts/$DATE reports/$DATE
 4. weekly-trade-blog-writer generates final blog post
    → blogs/$DATE-weekly-strategy.md
 
-Execute each step sequentially, reviewing reports before proceeding to the next."
+5. strategy-reviewer performs quality assurance review
+   (Re-verifies Breadth chart readings and strategy consistency)
+   → reports/$DATE/strategy-review.md
+
+Execute each step sequentially, reviewing reports before proceeding to the next.
+Do NOT publish the blog until strategy-reviewer returns PASS verdict."
 ```
 
 ---
 
 ## Data Flow Between Agents
 
-### Weekly Blog Generation Flow
+### Weekly Blog Generation Flow (5-Step Workflow)
 
 ```
 charts/YYYY-MM-DD/
-  ├─> [technical-market-analyst]
+  ├─> [Step 1: technical-market-analyst]
   │      └─> reports/YYYY-MM-DD/technical-market-analysis.md
   │            │
-  │            ├─> [us-market-analyst]
+  │            ├─> [Step 2: us-market-analyst] ← Also reads Breadth charts directly
   │            │      └─> reports/YYYY-MM-DD/us-market-analysis.md
   │            │            │
-  │            │            ├─> [market-news-analyzer]
+  │            │            ├─> [Step 3: market-news-analyzer]
   │            │            │      └─> reports/YYYY-MM-DD/market-news-analysis.md
   │            │            │            │
-  │            └────────────┴────────────┴─> [weekly-trade-blog-writer]
+  │            └────────────┴────────────┴─> [Step 4: weekly-trade-blog-writer]
+  │                                                │
   │                                                └─> blogs/YYYY-MM-DD-weekly-strategy.md
+  │                                                          │
+  │                                                          ▼
+  ├────────────────────────────────────────> [Step 5: strategy-reviewer]
+  │   (Re-reads Breadth charts)                       │
+  │                                                   ├─> reports/YYYY-MM-DD/strategy-review.md
+  │                                                   │
+  │                                                   ▼
+  │                                          PASS → ✅ Ready to Publish
+  │                                          REVISION REQUIRED → ⚠️ Revise Blog
   │
   └─> (Also references previous week's blog)
        blogs/YYYY-MM-DD-weekly-strategy.md (last week)
@@ -513,24 +580,29 @@ reports/YYYY-MM-DD/
 3. Review results before proceeding to next step
 
 ### Monday Morning
-4. Run us-market-analyst and market-news-analyzer
-5. Review all 3 reports
-6. Generate blog with weekly-trade-blog-writer
-7. Final review and publish
+4. Run us-market-analyst (ensure Breadth charts are read)
+5. Run market-news-analyzer
+6. Review all 3 reports
+7. Generate blog with weekly-trade-blog-writer
+8. Run strategy-reviewer for quality assurance
+9. If PASS: Final review and publish
+   If REVISION REQUIRED: Revise blog and re-run strategy-reviewer
 
 ---
 
 ## Detailed Specifications of Each Agent
 
 ### technical-market-analyst
-- **Skills**: technical-analyst, breadth-chart-analyst, sector-analyst
-- **Analysis Targets**: Weekly charts, Breadth indicators, Sector performance
+- **Skills**: technical-analyst, sector-analyst
+- **Analysis Targets**: Weekly charts (VIX, yields, indices, commodities), Sector performance
 - **Output Format**: Markdown with scenario-based probabilities
+- **Note**: Skips Breadth charts (S&P 500 Breadth Index, Uptrend Ratio) - these are analyzed in Step 2
 
 ### us-market-analyst
-- **Skills**: market-environment-analysis, us-market-bubble-detector
-- **Analysis Targets**: Market phase, bubble score, sentiment
+- **Skills**: market-environment-analysis, us-market-bubble-detector, breadth-chart-analyst
+- **Analysis Targets**: Market phase, bubble score, sentiment, **Breadth chart images**
 - **Output Format**: Markdown with risk assessment
+- **⚠️ Critical**: Must read actual Breadth chart images using breadth-chart-analyst skill. Never estimate or guess Uptrend Stock Ratio values.
 
 ### market-news-analyzer
 - **Skills**: market-news-analyst, economic-calendar-fetcher, earnings-calendar
@@ -541,6 +613,13 @@ reports/YYYY-MM-DD/
 - **Input**: Above 3 reports + previous week's blog
 - **Constraints**: 200-300 lines, gradual adjustment (±10-15%)
 - **Output Format**: Markdown for part-time traders (5-10 min read)
+
+### strategy-reviewer (Quality Assurance - Mandatory)
+- **Skills**: breadth-chart-analyst
+- **Analysis Targets**: Re-verify Breadth chart readings, strategy consistency
+- **Input**: Breadth charts, us-market-analysis.md, weekly blog
+- **Output Format**: Markdown review report with PASS/PASS WITH NOTES/REVISION REQUIRED verdict
+- **Purpose**: Final quality gate to catch discrepancies between chart readings and strategy before publication
 
 ### druckenmiller-strategy-planner (Optional)
 - **Skills**: stanley-druckenmiller-investment
@@ -554,8 +633,11 @@ reports/YYYY-MM-DD/
 
 ## Version Control
 
-- **Project Version**: 1.0
-- **Last Updated**: 2025-11-02
+- **Project Version**: 1.1
+- **Last Updated**: 2025-11-28
+- **Changelog**:
+  - v1.1: Added strategy-reviewer agent (Step 5) for quality assurance, updated us-market-analyst to require breadth-chart-analyst skill
+  - v1.0: Initial release with 4-step workflow
 - **Maintenance**: This document should be updated regularly
 
 ---
