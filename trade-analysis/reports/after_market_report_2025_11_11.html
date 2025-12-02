@@ -1,0 +1,664 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>After-Market Report - November 11, 2025</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            color: white;
+            padding: 40px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .header .date {
+            font-size: 1.2em;
+            opacity: 0.9;
+        }
+
+        .summary {
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            padding: 30px;
+            border-left: 5px solid #2a5298;
+            margin: 30px;
+            border-radius: 10px;
+        }
+
+        .summary h2 {
+            color: #1e3c72;
+            margin-bottom: 15px;
+            font-size: 1.8em;
+        }
+
+        .summary p {
+            font-size: 1.1em;
+            line-height: 1.8;
+            color: #444;
+        }
+
+        .section {
+            padding: 30px;
+            margin: 20px 0;
+        }
+
+        .section h2 {
+            color: #1e3c72;
+            font-size: 2em;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 3px solid #2a5298;
+        }
+
+        .indices-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin: 20px 0;
+        }
+
+        .index-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+            transition: transform 0.3s ease;
+        }
+
+        .index-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .index-card h3 {
+            font-size: 1.5em;
+            margin-bottom: 10px;
+        }
+
+        .index-value {
+            font-size: 2.5em;
+            font-weight: bold;
+            margin: 10px 0;
+        }
+
+        .index-change {
+            font-size: 1.3em;
+            padding: 8px 15px;
+            border-radius: 20px;
+            display: inline-block;
+            margin-top: 10px;
+        }
+
+        .positive {
+            background: rgba(16, 185, 129, 0.3);
+            color: #10b981;
+        }
+
+        .negative {
+            background: rgba(239, 68, 68, 0.3);
+            color: #ef4444;
+        }
+
+        .sector-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            background: white;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        .sector-table th {
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            color: white;
+            padding: 15px;
+            text-align: left;
+            font-weight: 600;
+        }
+
+        .sector-table td {
+            padding: 12px 15px;
+            border-bottom: 1px solid #e5e7eb;
+        }
+
+        .sector-table tr:hover {
+            background: #f9fafb;
+        }
+
+        .stock-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+
+        .stock-item {
+            background: white;
+            border: 2px solid #e5e7eb;
+            padding: 20px;
+            border-radius: 10px;
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+
+        .stock-item:hover {
+            border-color: #2a5298;
+            transform: translateY(-3px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+
+        .stock-symbol {
+            font-size: 1.4em;
+            font-weight: bold;
+            color: #1e3c72;
+            margin-bottom: 8px;
+        }
+
+        .stock-name {
+            color: #666;
+            font-size: 0.9em;
+            margin-bottom: 12px;
+        }
+
+        .stock-price {
+            font-size: 1.8em;
+            font-weight: bold;
+            margin: 10px 0;
+        }
+
+        .stock-change {
+            font-size: 1.2em;
+            font-weight: 600;
+            padding: 5px 12px;
+            border-radius: 15px;
+            display: inline-block;
+        }
+
+        .technical-box {
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            padding: 25px;
+            border-radius: 12px;
+            margin: 20px 0;
+            border-left: 5px solid #667eea;
+        }
+
+        .technical-box h3 {
+            color: #1e3c72;
+            margin-bottom: 15px;
+            font-size: 1.5em;
+        }
+
+        .technical-box ul {
+            list-style: none;
+            padding-left: 0;
+        }
+
+        .technical-box li {
+            padding: 10px 0;
+            border-bottom: 1px solid rgba(0,0,0,0.1);
+            font-size: 1.05em;
+        }
+
+        .technical-box li:last-child {
+            border-bottom: none;
+        }
+
+        .highlight {
+            background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+            border-left: 5px solid #f59e0b;
+        }
+
+        .highlight h3 {
+            color: #92400e;
+            margin-bottom: 10px;
+        }
+
+        .footer {
+            background: #1f2937;
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .footer p {
+            margin: 5px 0;
+            opacity: 0.8;
+        }
+
+        .metric-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+
+        .metric-card {
+            background: white;
+            border: 2px solid #e5e7eb;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+        }
+
+        .metric-label {
+            color: #666;
+            font-size: 0.9em;
+            margin-bottom: 8px;
+        }
+
+        .metric-value {
+            font-size: 1.8em;
+            font-weight: bold;
+            color: #1e3c72;
+        }
+
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 1.8em;
+            }
+
+            .indices-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .section {
+                padding: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>US Market After-Hours Report</h1>
+            <div class="date">Monday, November 11, 2025 - Market Close Analysis</div>
+        </div>
+
+        <div class="summary">
+            <h2>Executive Summary</h2>
+            <p>
+                <strong>Sector Rotation Powers Dow to Record High While Tech Stumbles</strong> -
+                The Dow Jones Industrial Average surged 1.18% to a fresh record high of 47,927.96,
+                driven by strong gains in healthcare and industrial stocks. However, the rally was uneven
+                as investors rotated out of high-flying technology stocks, sending the NASDAQ down 0.23%
+                to 23,473.13. The S&P 500 managed a modest 0.23% gain to 6,848.09, reflecting the market's
+                mixed sentiment. This rotation suggests investors are seeking value opportunities after
+                tech's prolonged outperformance, while FedEx's bullish guidance provided a boost to
+                transportation and logistics sectors.
+            </p>
+        </div>
+
+        <div class="section">
+            <h2>Major Indices Performance</h2>
+            <div class="indices-grid">
+                <div class="index-card">
+                    <h3>Dow Jones Industrial Average</h3>
+                    <div class="index-value">47,927.96</div>
+                    <div class="index-change positive">+559.33 (+1.18%)</div>
+                    <p style="margin-top: 15px; font-size: 0.95em;">New Record High - Healthcare and Industrials Lead</p>
+                </div>
+
+                <div class="index-card">
+                    <h3>S&P 500</h3>
+                    <div class="index-value">6,848.09</div>
+                    <div class="index-change positive">+15.66 (+0.23%)</div>
+                    <p style="margin-top: 15px; font-size: 0.95em;">Modest Gain Amid Sector Rotation</p>
+                </div>
+
+                <div class="index-card">
+                    <h3>NASDAQ Composite</h3>
+                    <div class="index-value">23,473.13</div>
+                    <div class="index-change negative">-54.04 (-0.23%)</div>
+                    <p style="margin-top: 15px; font-size: 0.95em;">Tech Weakness as SoftBank Exits NVIDIA</p>
+                </div>
+            </div>
+
+            <div class="metric-grid">
+                <div class="metric-card">
+                    <div class="metric-label">VIX (Volatility Index)</div>
+                    <div class="metric-value" style="color: #10b981;">17.30</div>
+                    <div style="color: #10b981; margin-top: 5px;">-0.30 (-1.71%)</div>
+                </div>
+
+                <div class="metric-card">
+                    <div class="metric-label">SPY Volume</div>
+                    <div class="metric-value" style="color: #1e3c72;">57.6M</div>
+                    <div style="color: #666; margin-top: 5px; font-size: 0.9em;">Below Average</div>
+                </div>
+
+                <div class="metric-card">
+                    <div class="metric-label">Volume Surge Stocks</div>
+                    <div class="metric-value" style="color: #f59e0b;">102</div>
+                    <div style="color: #666; margin-top: 5px; font-size: 0.9em;">Active Session</div>
+                </div>
+
+                <div class="metric-card">
+                    <div class="metric-label">Uptrend Stocks</div>
+                    <div class="metric-value" style="color: #10b981;">764</div>
+                    <div style="color: #666; margin-top: 5px; font-size: 0.9em;">Broad Participation</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>Sector Performance Analysis</h2>
+            <table class="sector-table">
+                <thead>
+                    <tr>
+                        <th>Sector</th>
+                        <th>Market Cap</th>
+                        <th>P/E Ratio</th>
+                        <th>Div Yield</th>
+                        <th>Change</th>
+                        <th>Stocks</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>Healthcare</strong> ⭐</td>
+                        <td>$8.34T</td>
+                        <td>25.39</td>
+                        <td>1.55%</td>
+                        <td style="color: #10b981; font-weight: bold;">+2.40%</td>
+                        <td>1,109</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Consumer Defensive</strong></td>
+                        <td>$4.13T</td>
+                        <td>25.82</td>
+                        <td>2.58%</td>
+                        <td style="color: #10b981; font-weight: bold;">+1.21%</td>
+                        <td>245</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Energy</strong></td>
+                        <td>$3.64T</td>
+                        <td>16.47</td>
+                        <td>4.10%</td>
+                        <td style="color: #10b981; font-weight: bold;">+1.20%</td>
+                        <td>254</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Real Estate</strong></td>
+                        <td>$1.69T</td>
+                        <td>34.43</td>
+                        <td>3.86%</td>
+                        <td style="color: #10b981; font-weight: bold;">+1.06%</td>
+                        <td>262</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Basic Materials</strong></td>
+                        <td>$2.33T</td>
+                        <td>23.12</td>
+                        <td>2.01%</td>
+                        <td style="color: #10b981; font-weight: bold;">+0.59%</td>
+                        <td>272</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Financial</strong></td>
+                        <td>$13.87T</td>
+                        <td>18.92</td>
+                        <td>1.80%</td>
+                        <td style="color: #10b981; font-weight: bold;">+0.48%</td>
+                        <td>977</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Communication Services</strong></td>
+                        <td>$11.80T</td>
+                        <td>37.45</td>
+                        <td>0.54%</td>
+                        <td style="color: #10b981; font-weight: bold;">+0.35%</td>
+                        <td>274</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Utilities</strong></td>
+                        <td>$1.82T</td>
+                        <td>21.63</td>
+                        <td>2.82%</td>
+                        <td style="color: #10b981; font-weight: bold;">+0.08%</td>
+                        <td>108</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Consumer Cyclical</strong></td>
+                        <td>$9.46T</td>
+                        <td>29.30</td>
+                        <td>0.74%</td>
+                        <td style="color: #f59e0b; font-weight: bold;">+0.04%</td>
+                        <td>575</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Industrials</strong></td>
+                        <td>$6.62T</td>
+                        <td>28.52</td>
+                        <td>1.20%</td>
+                        <td style="color: #ef4444; font-weight: bold;">-0.12%</td>
+                        <td>689</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Technology</strong> ⚠️</td>
+                        <td>$26.88T</td>
+                        <td>41.80</td>
+                        <td>0.55%</td>
+                        <td style="color: #ef4444; font-weight: bold;">-0.75%</td>
+                        <td>782</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <div class="highlight">
+                <h3>Sector Rotation Insight</h3>
+                <p>
+                    <strong>Healthcare emerged as the clear winner</strong> with a 2.40% gain, leading all sectors.
+                    This defensive rotation suggests investors are taking profits from expensive tech stocks
+                    (P/E 41.80) and moving into more reasonably valued sectors. Energy (+1.20%) benefited from
+                    stable commodity prices, while Technology's decline (-0.75%) was amplified by NVIDIA's weakness
+                    following SoftBank's stake sale. The breadth of positive sectors (9 out of 11) indicates
+                    healthy market participation despite tech's stumble.
+                </p>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>Notable Stock Movements</h2>
+
+            <h3 style="color: #10b981; margin-top: 30px; margin-bottom: 15px;">Top Gainers</h3>
+            <div class="stock-list">
+                <div class="stock-item">
+                    <div class="stock-symbol">FDX</div>
+                    <div class="stock-name">FedEx Corporation</div>
+                    <div class="stock-price">$267.55</div>
+                    <div class="stock-change positive">+6.22% (1W)</div>
+                    <p style="margin-top: 10px; color: #666; font-size: 0.9em;">
+                        Strong quarterly guidance drove 6% intraday rally. Trading at 15.64 P/E with 2.14% dividend yield.
+                    </p>
+                </div>
+
+                <div class="stock-item">
+                    <div class="stock-symbol">PFE</div>
+                    <div class="stock-name">Pfizer Inc.</div>
+                    <div class="stock-price">$25.50</div>
+                    <div class="stock-change positive">+4.96% (1W)</div>
+                    <p style="margin-top: 10px; color: #666; font-size: 0.9em;">
+                        Healthcare rotation beneficiary. Exceptional 6.65% dividend yield with 37.53% EPS surprise last quarter.
+                    </p>
+                </div>
+
+                <div class="stock-item">
+                    <div class="stock-symbol">SRDX</div>
+                    <div class="stock-name">Surmodics Inc.</div>
+                    <div class="stock-price">$40.94</div>
+                    <div class="stock-change positive">+49.72%</div>
+                    <p style="margin-top: 10px; color: #666; font-size: 0.9em;">
+                        Volume surge leader with 250%+ day gain. Small-cap medical device maker.
+                    </p>
+                </div>
+
+                <div class="stock-item">
+                    <div class="stock-symbol">PUBM</div>
+                    <div class="stock-name">PubMatic Inc.</div>
+                    <div class="stock-price">$10.97</div>
+                    <div class="stock-change positive">+43.40%</div>
+                    <p style="margin-top: 10px; color: #666; font-size: 0.9em;">
+                        Digital advertising platform showing strong recovery momentum.
+                    </p>
+                </div>
+            </div>
+
+            <h3 style="color: #ef4444; margin-top: 30px; margin-bottom: 15px;">Notable Decliners</h3>
+            <div class="stock-list">
+                <div class="stock-item">
+                    <div class="stock-symbol">NVDA</div>
+                    <div class="stock-name">NVIDIA Corporation</div>
+                    <div class="stock-price">$193.28</div>
+                    <div class="stock-change negative">-2.72% (1W)</div>
+                    <p style="margin-top: 10px; color: #666; font-size: 0.9em;">
+                        SoftBank sold entire $5.83B stake. Still up 43.93% YTD. Earnings on Nov 19. RSI: 52.06.
+                    </p>
+                </div>
+
+                <div class="stock-item">
+                    <div class="stock-symbol">OM</div>
+                    <div class="stock-name">Outset Medical Inc.</div>
+                    <div class="stock-price">$6.22</div>
+                    <div class="stock-change negative">-48.47%</div>
+                    <p style="margin-top: 10px; color: #666; font-size: 0.9em;">
+                        Biggest loser with nearly 50% decline. Healthcare device maker facing challenges.
+                    </p>
+                </div>
+
+                <div class="stock-item">
+                    <div class="stock-symbol">VOR</div>
+                    <div class="stock-name">Vor Biopharma Inc.</div>
+                    <div class="stock-price">$9.84</div>
+                    <div class="stock-change negative">-47.66%</div>
+                    <p style="margin-top: 10px; color: #666; font-size: 0.9em;">
+                        Biotechnology sell-off following negative clinical trial data or regulatory news.
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>Market Breadth and Technical Analysis</h2>
+
+            <div class="technical-box">
+                <h3>Market Internals</h3>
+                <ul>
+                    <li><strong>Volume Surge Stocks:</strong> 102 stocks showing 1.5x+ relative volume with 2%+ gains</li>
+                    <li><strong>Uptrend Stocks:</strong> 764 stocks above 200-day moving average with positive momentum</li>
+                    <li><strong>Sector Breadth:</strong> 9 of 11 sectors positive - excellent market participation</li>
+                    <li><strong>Average Relative Volume:</strong> 2.5x normal levels indicating active trading</li>
+                    <li><strong>Healthcare Leadership:</strong> 154 uptrend stocks in healthcare sector alone</li>
+                </ul>
+            </div>
+
+            <div class="technical-box">
+                <h3>Key Technical Observations</h3>
+                <ul>
+                    <li><strong>S&P 500 (SPY):</strong> Closed at $683.00, holding above 20/50/200-day SMAs. Support at $678.73 (today's low)</li>
+                    <li><strong>VIX at 17.30:</strong> Low volatility environment continues. Below 20 suggests complacency</li>
+                    <li><strong>Dow New High:</strong> Breakout above previous resistance at 47,400. Next target: 48,500</li>
+                    <li><strong>NASDAQ Relative Weakness:</strong> Underperforming broad market by 45 basis points</li>
+                    <li><strong>Volume Analysis:</strong> SPY volume of 57.6M below average - lack of conviction on the upside</li>
+                </ul>
+            </div>
+
+            <div class="technical-box">
+                <h3>Risk Factors to Monitor</h3>
+                <ul>
+                    <li><strong>Tech Valuation Concerns:</strong> Technology sector P/E at 41.80 vs. market average of 25-30</li>
+                    <li><strong>Rotation Sustainability:</strong> Can healthcare/defensive sectors maintain leadership?</li>
+                    <li><strong>NVIDIA Earnings Risk:</strong> Nov 19 earnings crucial for sentiment given today's weakness</li>
+                    <li><strong>Volume Weakness:</strong> Below-average volume suggests tentative participation</li>
+                    <li><strong>Holiday Week Ahead:</strong> Thanksgiving week historically sees lower liquidity</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>Key Market Events and News</h2>
+
+            <div class="highlight">
+                <h3>Major Headlines</h3>
+                <ul style="margin-top: 15px; list-style-position: inside;">
+                    <li style="margin: 10px 0;"><strong>SoftBank Exits NVIDIA:</strong> Sold entire $5.83B stake to fund AI investments, putting pressure on shares</li>
+                    <li style="margin: 10px 0;"><strong>FedEx Bullish Guidance:</strong> Logistics giant expects improved Q3 profits, signaling economic resilience</li>
+                    <li style="margin: 10px 0;"><strong>Healthcare Rotation Accelerates:</strong> Merck, Amgen, Johnson & Johnson led Dow gains</li>
+                    <li style="margin: 10px 0;"><strong>CoreWeave Disappoints:</strong> AI infrastructure company dropped 15% on weak guidance</li>
+                    <li style="margin: 10px 0;"><strong>Earnings Season Wind-Down:</strong> 596 companies reporting earnings this week</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>Forward-Looking Analysis</h2>
+
+            <div class="summary" style="background: linear-gradient(135deg, #e0f2fe 0%, #bae6fd 100%); border-left-color: #0284c7;">
+                <h2 style="color: #0c4a6e;">Key Levels to Watch</h2>
+                <p><strong>S&P 500:</strong> Support at 6,800 / Resistance at 6,920 (all-time high)</p>
+                <p><strong>Dow Jones:</strong> New highs - next resistance at 48,500</p>
+                <p><strong>NASDAQ:</strong> Support at 23,315 (today's low) / Resistance at 24,020</p>
+                <p><strong>VIX:</strong> Watch for break above 20 as warning signal</p>
+            </div>
+
+            <div class="highlight">
+                <h3>Trading Outlook for Tuesday</h3>
+                <p>
+                    <strong>Expected Catalysts:</strong> Watch for continuation of sector rotation theme. Healthcare and
+                    industrial stocks may extend gains if value rotation continues. Tech sector faces headwinds ahead
+                    of NVIDIA earnings on Nov 19. FedEx's positive guidance should support transportation and logistics
+                    stocks. With VIX at 17.30, market remains complacent - any negative surprise could trigger
+                    volatility spike.
+                </p>
+                <p style="margin-top: 15px;">
+                    <strong>Risk/Reward Setup:</strong> Favor defensive sectors (healthcare, consumer staples, utilities)
+                    over growth/tech given valuation concerns. Watch for potential buying opportunity in NVDA if it
+                    stabilizes ahead of earnings. Holiday week approaching suggests range-bound trading likely.
+                </p>
+            </div>
+        </div>
+
+        <div class="footer">
+            <p><strong>Report Generated:</strong> November 11, 2025 at 4:15 PM ET</p>
+            <p><strong>Data Sources:</strong> Finviz, Alpaca Markets, Financial Modeling Prep API</p>
+            <p style="margin-top: 15px; font-size: 0.9em;">
+                This report is for informational purposes only and does not constitute investment advice.
+                Past performance is not indicative of future results.
+            </p>
+        </div>
+    </div>
+</body>
+</html>

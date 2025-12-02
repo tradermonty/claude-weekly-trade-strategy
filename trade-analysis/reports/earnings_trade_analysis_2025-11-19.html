@@ -1,0 +1,849 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Earnings Trade Analysis - November 19, 2025</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+            min-height: 100vh;
+            color: #e8e8e8;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            padding: 30px 0;
+            border-bottom: 2px solid #e94560;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            color: #fff;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .header .subtitle {
+            color: #a8a8a8;
+            font-size: 1.1rem;
+        }
+
+        .header .date {
+            color: #e94560;
+            font-weight: bold;
+            margin-top: 10px;
+        }
+
+        .market-overview {
+            background: rgba(255,255,255,0.05);
+            border-radius: 15px;
+            padding: 25px;
+            margin-bottom: 30px;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .market-overview h2 {
+            color: #00d4ff;
+            margin-bottom: 15px;
+            font-size: 1.4rem;
+        }
+
+        .market-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+        }
+
+        .stat-item {
+            background: rgba(0,0,0,0.3);
+            padding: 15px;
+            border-radius: 10px;
+            text-align: center;
+        }
+
+        .stat-item .label {
+            font-size: 0.85rem;
+            color: #a8a8a8;
+            margin-bottom: 5px;
+        }
+
+        .stat-item .value {
+            font-size: 1.3rem;
+            font-weight: bold;
+        }
+
+        .stat-item .value.positive { color: #00ff88; }
+        .stat-item .value.negative { color: #ff4757; }
+        .stat-item .value.neutral { color: #ffd700; }
+
+        .section-title {
+            font-size: 1.6rem;
+            color: #fff;
+            margin: 30px 0 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #e94560;
+        }
+
+        .nvda-spotlight {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 15px;
+            padding: 30px;
+            margin: 30px 0;
+            text-align: center;
+            border: 2px solid #a855f7;
+        }
+
+        .nvda-spotlight h2 {
+            color: #fff;
+            font-size: 1.8rem;
+            margin-bottom: 10px;
+        }
+
+        .nvda-spotlight p {
+            color: rgba(255,255,255,0.9);
+            font-size: 1rem;
+        }
+
+        .nvda-spotlight .date {
+            font-weight: bold;
+            color: #ffd700;
+            font-size: 1.2rem;
+            margin-top: 10px;
+        }
+
+        .morning-summary {
+            background: rgba(233, 69, 96, 0.1);
+            border: 1px solid rgba(233, 69, 96, 0.3);
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 30px;
+        }
+
+        .morning-summary h3 {
+            color: #e94560;
+            margin-bottom: 15px;
+        }
+
+        .morning-stocks {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .morning-stock {
+            background: rgba(0,0,0,0.3);
+            padding: 10px 15px;
+            border-radius: 8px;
+            font-size: 0.9rem;
+        }
+
+        .morning-stock .ticker {
+            font-weight: bold;
+            color: #00d4ff;
+        }
+
+        .morning-stock .grade {
+            margin-left: 5px;
+        }
+
+        .morning-stock .grade.a { color: #00ff88; }
+        .morning-stock .grade.c { color: #ffd700; }
+        .morning-stock .grade.d { color: #ff4757; }
+
+        .stocks-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 25px;
+            margin-bottom: 40px;
+        }
+
+        .stock-card {
+            background: rgba(255,255,255,0.05);
+            border-radius: 15px;
+            padding: 25px;
+            border: 1px solid rgba(255,255,255,0.1);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .stock-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        }
+
+        .stock-card.grade-a { border-left: 4px solid #00ff88; }
+        .stock-card.grade-b { border-left: 4px solid #00d4ff; }
+        .stock-card.grade-c { border-left: 4px solid #ffd700; }
+        .stock-card.grade-d { border-left: 4px solid #ff4757; }
+
+        .stock-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 20px;
+        }
+
+        .stock-info h3 {
+            font-size: 1.8rem;
+            color: #fff;
+            margin-bottom: 5px;
+        }
+
+        .stock-info .company {
+            color: #a8a8a8;
+            font-size: 0.9rem;
+        }
+
+        .stock-info .sector {
+            color: #00d4ff;
+            font-size: 0.8rem;
+            margin-top: 3px;
+        }
+
+        .grade-badge {
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-weight: bold;
+            font-size: 0.9rem;
+        }
+
+        .grade-badge.a { background: #00ff88; color: #000; }
+        .grade-badge.b { background: #00d4ff; color: #000; }
+        .grade-badge.c { background: #ffd700; color: #000; }
+        .grade-badge.d { background: #ff4757; color: #fff; }
+
+        .stock-metrics {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .metric {
+            background: rgba(0,0,0,0.3);
+            padding: 12px;
+            border-radius: 8px;
+        }
+
+        .metric .label {
+            font-size: 0.75rem;
+            color: #a8a8a8;
+            margin-bottom: 5px;
+            text-transform: uppercase;
+        }
+
+        .metric .value {
+            font-size: 1.1rem;
+            font-weight: bold;
+        }
+
+        .score-breakdown {
+            margin-top: 20px;
+        }
+
+        .score-breakdown h4 {
+            color: #00d4ff;
+            margin-bottom: 15px;
+            font-size: 1rem;
+        }
+
+        .score-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .score-item:last-child {
+            border-bottom: none;
+        }
+
+        .score-item .name {
+            color: #a8a8a8;
+            font-size: 0.85rem;
+        }
+
+        .score-item .points {
+            font-weight: bold;
+        }
+
+        .total-score {
+            background: rgba(0,212,255,0.1);
+            padding: 15px;
+            border-radius: 10px;
+            margin-top: 15px;
+            text-align: center;
+        }
+
+        .total-score .label {
+            font-size: 0.9rem;
+            color: #a8a8a8;
+        }
+
+        .total-score .value {
+            font-size: 1.8rem;
+            font-weight: bold;
+            color: #00d4ff;
+        }
+
+        .earnings-info {
+            background: rgba(233, 69, 96, 0.1);
+            padding: 12px;
+            border-radius: 8px;
+            margin-top: 15px;
+            font-size: 0.85rem;
+        }
+
+        .earnings-info .label {
+            color: #e94560;
+            font-weight: bold;
+        }
+
+        .earnings-info .surprise {
+            margin-top: 5px;
+        }
+
+        .surprise.positive { color: #00ff88; }
+        .surprise.negative { color: #ff4757; }
+
+        .bmo-notice {
+            background: linear-gradient(135deg, #2d3436 0%, #000000 100%);
+            border: 2px solid #e94560;
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+
+        .bmo-notice h3 {
+            color: #e94560;
+            margin-bottom: 10px;
+        }
+
+        .bmo-notice p {
+            color: #a8a8a8;
+        }
+
+        .methodology {
+            background: rgba(255,255,255,0.05);
+            border-radius: 15px;
+            padding: 25px;
+            margin-top: 30px;
+        }
+
+        .methodology h3 {
+            color: #00d4ff;
+            margin-bottom: 15px;
+        }
+
+        .methodology ul {
+            list-style: none;
+            padding: 0;
+        }
+
+        .methodology li {
+            padding: 8px 0;
+            padding-left: 20px;
+            position: relative;
+            color: #a8a8a8;
+            font-size: 0.9rem;
+        }
+
+        .methodology li::before {
+            content: "";
+            position: absolute;
+            left: 0;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 8px;
+            height: 8px;
+            background: #e94560;
+            border-radius: 50%;
+        }
+
+        .rating-legend {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .legend-badge {
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 0.8rem;
+        }
+
+        .legend-badge.a { background: #00ff88; color: #000; }
+        .legend-badge.b { background: #00d4ff; color: #000; }
+        .legend-badge.c { background: #ffd700; color: #000; }
+        .legend-badge.d { background: #ff4757; color: #fff; }
+
+        .legend-text {
+            font-size: 0.85rem;
+            color: #a8a8a8;
+        }
+
+        .disclaimer {
+            background: rgba(255, 71, 87, 0.1);
+            border: 1px solid rgba(255, 71, 87, 0.3);
+            border-radius: 10px;
+            padding: 20px;
+            margin-top: 30px;
+            font-size: 0.85rem;
+            color: #a8a8a8;
+        }
+
+        .disclaimer h4 {
+            color: #ff4757;
+            margin-bottom: 10px;
+        }
+
+        .footer {
+            text-align: center;
+            padding: 30px 0;
+            margin-top: 40px;
+            border-top: 1px solid rgba(255,255,255,0.1);
+            color: #a8a8a8;
+            font-size: 0.85rem;
+        }
+
+        .footer a {
+            color: #00d4ff;
+            text-decoration: none;
+        }
+
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 1.8rem;
+            }
+
+            .stocks-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .stock-metrics {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <h1>Post-Earnings Gap-Up Stock Analysis</h1>
+            <p class="subtitle">Backtest-Based Earnings Trading Strategy</p>
+            <p class="date">November 19, 2025 - Trading Session</p>
+        </header>
+
+        <section class="market-overview">
+            <h2>Pre-Market Overview</h2>
+            <div class="market-stats">
+                <div class="stat-item">
+                    <div class="label">SPY</div>
+                    <div class="value positive">$661.20 (+0.17%)</div>
+                </div>
+                <div class="stat-item">
+                    <div class="label">QQQ</div>
+                    <div class="value positive">$597.91 (+0.27%)</div>
+                </div>
+                <div class="stat-item">
+                    <div class="label">IWM</div>
+                    <div class="value positive">$234.01 (+0.23%)</div>
+                </div>
+                <div class="stat-item">
+                    <div class="label">Technology</div>
+                    <div class="value positive">+0.27%</div>
+                </div>
+                <div class="stat-item">
+                    <div class="label">Consumer Cyclical</div>
+                    <div class="value positive">+0.47%</div>
+                </div>
+                <div class="stat-item">
+                    <div class="label">Earnings This Week</div>
+                    <div class="value neutral">176</div>
+                </div>
+            </div>
+        </section>
+
+        <div class="nvda-spotlight">
+            <h2>NVIDIA (NVDA) - Major Market Catalyst</h2>
+            <p>The most anticipated earnings report of the quarter. AI demand expectations remain extremely high.</p>
+            <p class="date">Reports: TONIGHT After Market Close (Nov 19)</p>
+        </div>
+
+        <section class="morning-summary">
+            <h3>Yesterday's BMO Analysis Summary (Nov 18)</h3>
+            <div class="morning-stocks">
+                <div class="morning-stock">
+                    <span class="ticker">AS</span>
+                    <span class="grade a">A-Grade (85.0 pts)</span>
+                </div>
+                <div class="morning-stock">
+                    <span class="ticker">MDT</span>
+                    <span class="grade c">C-Grade (62.5 pts)</span>
+                </div>
+                <div class="morning-stock">
+                    <span class="ticker">HD</span>
+                    <span class="grade d">D-Grade</span>
+                </div>
+                <div class="morning-stock">
+                    <span class="ticker">PDD</span>
+                    <span class="grade d">D-Grade</span>
+                </div>
+                <div class="morning-stock">
+                    <span class="ticker">BIDU</span>
+                    <span class="grade d">D-Grade</span>
+                </div>
+                <div class="morning-stock">
+                    <span class="ticker">BZ</span>
+                    <span class="grade d">D-Grade</span>
+                </div>
+            </div>
+        </section>
+
+        <h2 class="section-title">Last Night's AMC Earnings (Trading Nov 19)</h2>
+
+        <div class="bmo-notice">
+            <h3>Limited AMC Candidates</h3>
+            <p>Based on screening criteria (EPS upward revision, volume surge, recovery candidates), only one stock met criteria. Most activity concentrated in BMO reports.</p>
+        </div>
+
+        <div class="stocks-grid">
+            <div class="stock-card grade-d">
+                <div class="stock-header">
+                    <div class="stock-info">
+                        <h3>LZB</h3>
+                        <p class="company">La-Z-Boy Inc</p>
+                        <p class="sector">Consumer Cyclical - Furnishings</p>
+                    </div>
+                    <span class="grade-badge d">D-Grade</span>
+                </div>
+
+                <div class="stock-metrics">
+                    <div class="metric">
+                        <div class="label">Price</div>
+                        <div class="value">$33.64</div>
+                    </div>
+                    <div class="metric">
+                        <div class="label">Week Perf</div>
+                        <div class="value" style="color: #00ff88;">+8.13%</div>
+                    </div>
+                    <div class="metric">
+                        <div class="label">Market Cap</div>
+                        <div class="value">$1.39B</div>
+                    </div>
+                    <div class="metric">
+                        <div class="label">P/E Ratio</div>
+                        <div class="value">15.52</div>
+                    </div>
+                </div>
+
+                <div class="earnings-info">
+                    <span class="label">Earnings: Nov 18 AMC</span>
+                    <div class="surprise positive">EPS Surprise: +31.48%</div>
+                    <div class="surprise positive">Revenue Surprise: +0.94%</div>
+                </div>
+
+                <div class="score-breakdown">
+                    <h4>5-Factor Backtest Score</h4>
+                    <div class="score-item">
+                        <span class="name">Gap Size (25%)</span>
+                        <span class="points">2 pts</span>
+                    </div>
+                    <div class="score-item">
+                        <span class="name">Pre-Earnings Trend (30%)</span>
+                        <span class="points">2 pts (-9.7%)</span>
+                    </div>
+                    <div class="score-item">
+                        <span class="name">Volume Trend (20%)</span>
+                        <span class="points">1 pt (163%)</span>
+                    </div>
+                    <div class="score-item">
+                        <span class="name">MA200 Position (15%)</span>
+                        <span class="points">1 pt (-11.42%)</span>
+                    </div>
+                    <div class="score-item">
+                        <span class="name">MA50 Position (10%)</span>
+                        <span class="points">3 pts (+2.84%)</span>
+                    </div>
+
+                    <div class="total-score">
+                        <div class="label">Total Score</div>
+                        <div class="value">35.0 pts</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <h2 class="section-title">Today's BMO Earnings (Trading Nov 19)</h2>
+
+        <div class="stocks-grid">
+            <div class="stock-card grade-c">
+                <div class="stock-header">
+                    <div class="stock-info">
+                        <h3>TJX</h3>
+                        <p class="company">TJX Companies Inc</p>
+                        <p class="sector">Consumer Cyclical - Apparel Retail</p>
+                    </div>
+                    <span class="grade-badge c">C-Grade</span>
+                </div>
+
+                <div class="stock-metrics">
+                    <div class="metric">
+                        <div class="label">Price</div>
+                        <div class="value">$150.05</div>
+                    </div>
+                    <div class="metric">
+                        <div class="label">Week Perf</div>
+                        <div class="value" style="color: #00ff88;">+1.64%</div>
+                    </div>
+                    <div class="metric">
+                        <div class="label">Market Cap</div>
+                        <div class="value">$167.0B</div>
+                    </div>
+                    <div class="metric">
+                        <div class="label">P/E Ratio</div>
+                        <div class="value">34.24</div>
+                    </div>
+                </div>
+
+                <div class="earnings-info">
+                    <span class="label">Earnings: Nov 19 BMO</span>
+                    <div class="surprise positive">Historical EPS Surprise: +4.45%</div>
+                    <div class="surprise positive">Revenue Surprise: +1.77%</div>
+                    <div class="surprise positive">EPS QoQ Growth: +14.71%</div>
+                </div>
+
+                <div class="score-breakdown">
+                    <h4>5-Factor Backtest Score</h4>
+                    <div class="score-item">
+                        <span class="name">Gap Size (25%)</span>
+                        <span class="points">3 pts</span>
+                    </div>
+                    <div class="score-item">
+                        <span class="name">Pre-Earnings Trend (30%)</span>
+                        <span class="points">3 pts (+1.2%)</span>
+                    </div>
+                    <div class="score-item">
+                        <span class="name">Volume Trend (20%)</span>
+                        <span class="points">1 pt (200%)</span>
+                    </div>
+                    <div class="score-item">
+                        <span class="name">MA200 Position (15%)</span>
+                        <span class="points">5 pts (+14.87%)</span>
+                    </div>
+                    <div class="score-item">
+                        <span class="name">MA50 Position (10%)</span>
+                        <span class="points">4 pts (+5.11%)</span>
+                    </div>
+
+                    <div class="total-score">
+                        <div class="label">Total Score</div>
+                        <div class="value">60.0 pts</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="stock-card grade-c">
+                <div class="stock-header">
+                    <div class="stock-info">
+                        <h3>GLBE</h3>
+                        <p class="company">Global-e Online Ltd</p>
+                        <p class="sector">Consumer Cyclical - Internet Retail</p>
+                    </div>
+                    <span class="grade-badge c">C-Grade</span>
+                </div>
+
+                <div class="stock-metrics">
+                    <div class="metric">
+                        <div class="label">Price</div>
+                        <div class="value">$37.56</div>
+                    </div>
+                    <div class="metric">
+                        <div class="label">Month Perf</div>
+                        <div class="value" style="color: #00ff88;">+9.47%</div>
+                    </div>
+                    <div class="metric">
+                        <div class="label">Market Cap</div>
+                        <div class="value">$6.36B</div>
+                    </div>
+                    <div class="metric">
+                        <div class="label">Fwd P/E</div>
+                        <div class="value">40.42</div>
+                    </div>
+                </div>
+
+                <div class="earnings-info">
+                    <span class="label">Earnings: Nov 19 BMO</span>
+                    <div class="surprise positive">Historical EPS Surprise: +98.68%</div>
+                    <div class="surprise positive">Revenue Surprise: +3.32%</div>
+                    <div class="surprise positive">EPS QoQ Growth: +145.98%</div>
+                </div>
+
+                <div class="score-breakdown">
+                    <h4>5-Factor Backtest Score</h4>
+                    <div class="score-item">
+                        <span class="name">Gap Size (25%)</span>
+                        <span class="points">3 pts</span>
+                    </div>
+                    <div class="score-item">
+                        <span class="name">Pre-Earnings Trend (30%)</span>
+                        <span class="points">4 pts (+11.1%)</span>
+                    </div>
+                    <div class="score-item">
+                        <span class="name">Volume Trend (20%)</span>
+                        <span class="points">1 pt (200%)</span>
+                    </div>
+                    <div class="score-item">
+                        <span class="name">MA200 Position (15%)</span>
+                        <span class="points">3 pts (+3.58%)</span>
+                    </div>
+                    <div class="score-item">
+                        <span class="name">MA50 Position (10%)</span>
+                        <span class="points">4 pts (+5.40%)</span>
+                    </div>
+
+                    <div class="total-score">
+                        <div class="label">Total Score</div>
+                        <div class="value">60.0 pts</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="stock-card grade-c">
+                <div class="stock-header">
+                    <div class="stock-info">
+                        <h3>DY</h3>
+                        <p class="company">Dycom Industries Inc</p>
+                        <p class="sector">Industrials - Engineering & Construction</p>
+                    </div>
+                    <span class="grade-badge c">C-Grade</span>
+                </div>
+
+                <div class="stock-metrics">
+                    <div class="metric">
+                        <div class="label">Price</div>
+                        <div class="value">$322.55</div>
+                    </div>
+                    <div class="metric">
+                        <div class="label">YTD Perf</div>
+                        <div class="value" style="color: #00ff88;">+85.31%</div>
+                    </div>
+                    <div class="metric">
+                        <div class="label">Market Cap</div>
+                        <div class="value">$9.34B</div>
+                    </div>
+                    <div class="metric">
+                        <div class="label">P/E Ratio</div>
+                        <div class="value">36.26</div>
+                    </div>
+                </div>
+
+                <div class="earnings-info">
+                    <span class="label">Earnings: Nov 19 BMO</span>
+                    <div class="surprise positive">Historical EPS Surprise: +13.13%</div>
+                    <div class="surprise negative">Revenue Surprise: -4.74%</div>
+                    <div class="surprise positive">EPS QoQ Growth: +43.46%</div>
+                </div>
+
+                <div class="score-breakdown">
+                    <h4>5-Factor Backtest Score</h4>
+                    <div class="score-item">
+                        <span class="name">Gap Size (25%)</span>
+                        <span class="points">2 pts</span>
+                    </div>
+                    <div class="score-item">
+                        <span class="name">Pre-Earnings Trend (30%)</span>
+                        <span class="points">3 pts (+2.0%)</span>
+                    </div>
+                    <div class="score-item">
+                        <span class="name">Volume Trend (20%)</span>
+                        <span class="points">1 pt (126%)</span>
+                    </div>
+                    <div class="score-item">
+                        <span class="name">MA200 Position (15%)</span>
+                        <span class="points">5 pts (+41.07%)</span>
+                    </div>
+                    <div class="score-item">
+                        <span class="name">MA50 Position (10%)</span>
+                        <span class="points">5 pts (+13.02%)</span>
+                    </div>
+
+                    <div class="total-score">
+                        <div class="label">Total Score</div>
+                        <div class="value">57.0 pts</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <section class="methodology">
+            <h3>5-Factor Backtest Scoring Methodology</h3>
+            <ul>
+                <li><strong>Gap Size (25% weight)</strong>: Historical success rate by gap percentage (2-5% optimal)</li>
+                <li><strong>Pre-Earnings Trend (30% weight)</strong>: 20-day price momentum leading into earnings</li>
+                <li><strong>Volume Trend (20% weight)</strong>: Recent vs historical volume comparison (100-110% optimal)</li>
+                <li><strong>MA200 Position (15% weight)</strong>: Long-term trend indicator</li>
+                <li><strong>MA50 Position (10% weight)</strong>: Medium-term trend indicator</li>
+            </ul>
+
+            <div class="rating-legend">
+                <div class="legend-item">
+                    <span class="legend-badge a">A</span>
+                    <span class="legend-text">85+ pts (70%+ success rate)</span>
+                </div>
+                <div class="legend-item">
+                    <span class="legend-badge b">B</span>
+                    <span class="legend-text">70-84 pts (55-69% success rate)</span>
+                </div>
+                <div class="legend-item">
+                    <span class="legend-badge c">C</span>
+                    <span class="legend-text">55-69 pts (40-54% success rate)</span>
+                </div>
+                <div class="legend-item">
+                    <span class="legend-badge d">D</span>
+                    <span class="legend-text">54 pts or below (less than 40% success rate)</span>
+                </div>
+            </div>
+        </section>
+
+        <div class="disclaimer">
+            <h4>Risk Disclaimer</h4>
+            <p>This analysis is for educational purposes only and does not constitute investment advice. Earnings trading involves significant risk including potential loss of principal. Past performance does not guarantee future results. The backtest scoring system is based on historical patterns which may not repeat. Always conduct your own research and consider your risk tolerance before trading. Position sizing and stop-loss discipline are essential for risk management.</p>
+        </div>
+
+        <footer class="footer">
+            <p>Analysis generated on November 19, 2025 at 06:24 UTC</p>
+            <p>Data sources: Finviz Elite, Alpaca Markets</p>
+            <p><a href="https://elite.finviz.com/screener.ashx?v=211&o=-change&t=TJX,GLBE,DY,LZB">View on Finviz</a></p>
+        </footer>
+    </div>
+</body>
+</html>

@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Post-Earnings Gap-Up Stock Analysis - September 9, 2025</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #2c3e50 0%, #3498db 100%);
+            color: white;
+            padding: 40px 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            font-weight: 700;
+        }
+
+        .header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        .summary-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            padding: 30px;
+            background: #f8f9fa;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 20px;
+            border-radius: 15px;
+            text-align: center;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.08);
+        }
+
+        .stat-number {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #2c3e50;
+        }
+
+        .stat-label {
+            color: #7f8c8d;
+            margin-top: 5px;
+        }
+
+        .stocks-container {
+            padding: 30px;
+        }
+
+        .stock-card {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            margin-bottom: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            border-left: 5px solid #3498db;
+        }
+
+        .stock-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 25px;
+        }
+
+        .stock-title {
+            font-size: 1.8rem;
+            color: #2c3e50;
+            font-weight: bold;
+        }
+
+        .stock-ticker {
+            font-size: 1.2rem;
+            color: #7f8c8d;
+        }
+
+        .grade-badge {
+            font-size: 1.5rem;
+            font-weight: bold;
+            padding: 10px 20px;
+            border-radius: 50px;
+            color: white;
+        }
+
+        .grade-c {
+            background: linear-gradient(135deg, #f39c12 0%, #e67e22 100%);
+        }
+
+        .score-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin-bottom: 25px;
+        }
+
+        .score-item {
+            background: #ecf0f1;
+            padding: 15px;
+            border-radius: 10px;
+            text-align: center;
+        }
+
+        .score-value {
+            font-size: 1.4rem;
+            font-weight: bold;
+            color: #2c3e50;
+        }
+
+        .score-label {
+            font-size: 0.9rem;
+            color: #7f8c8d;
+            margin-top: 5px;
+        }
+
+        .analysis-section {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+
+        .section-title {
+            font-size: 1.2rem;
+            color: #2c3e50;
+            margin-bottom: 15px;
+            font-weight: bold;
+        }
+
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+        }
+
+        .metric-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px 0;
+            border-bottom: 1px solid #ecf0f1;
+        }
+
+        .positive {
+            color: #27ae60;
+            font-weight: bold;
+        }
+
+        .negative {
+            color: #e74c3c;
+            font-weight: bold;
+        }
+
+        .news-section {
+            background: #e8f5e8;
+            padding: 20px;
+            border-radius: 10px;
+            border-left: 4px solid #27ae60;
+        }
+
+        .risk-warning {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            padding: 20px;
+            border-radius: 10px;
+            margin-top: 30px;
+            text-align: center;
+        }
+
+        .warning-text {
+            color: #856404;
+            font-weight: bold;
+        }
+
+        .timestamp {
+            text-align: center;
+            color: #7f8c8d;
+            padding: 20px;
+            font-size: 0.9rem;
+        }
+
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 2rem;
+            }
+            
+            .stock-header {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 15px;
+            }
+            
+            .score-grid {
+                grid-template-columns: 1fr 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Post-Earnings Gap-Up Stock Analysis</h1>
+            <p>September 9, 2025 | Data-Driven Earnings Trading Opportunities</p>
+        </div>
+
+        <div class="summary-stats">
+            <div class="stat-card">
+                <div class="stat-number">2</div>
+                <div class="stat-label">Stocks Analyzed</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">0</div>
+                <div class="stat-label">A-Grade Stocks</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">0</div>
+                <div class="stat-label">B-Grade Stocks</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">2</div>
+                <div class="stat-label">C-Grade Stocks</div>
+            </div>
+        </div>
+
+        <div class="stocks-container">
+            <!-- AVO Stock Analysis -->
+            <div class="stock-card">
+                <div class="stock-header">
+                    <div>
+                        <div class="stock-title">Mission Produce Inc</div>
+                        <div class="stock-ticker">$AVO - $12.98</div>
+                    </div>
+                    <div class="grade-badge grade-c">C-Grade ⭐⭐⭐</div>
+                </div>
+
+                <div class="score-grid">
+                    <div class="score-item">
+                        <div class="score-value">63</div>
+                        <div class="score-label">Total Score</div>
+                    </div>
+                    <div class="score-item">
+                        <div class="score-value">3/5</div>
+                        <div class="score-label">Gap Size</div>
+                    </div>
+                    <div class="score-item">
+                        <div class="score-value">4/5</div>
+                        <div class="score-label">Pre-Earnings</div>
+                    </div>
+                    <div class="score-item">
+                        <div class="score-value">1/5</div>
+                        <div class="score-label">Volume Trend</div>
+                    </div>
+                    <div class="score-item">
+                        <div class="score-value">4/5</div>
+                        <div class="score-label">MA200</div>
+                    </div>
+                    <div class="score-item">
+                        <div class="score-value">4/5</div>
+                        <div class="score-label">MA50</div>
+                    </div>
+                </div>
+
+                <div class="analysis-section">
+                    <div class="section-title">Earnings Results & Technical Analysis</div>
+                    <div class="metrics-grid">
+                        <div class="metric-item">
+                            <span>EPS Surprise:</span>
+                            <span class="positive">+79.31%</span>
+                        </div>
+                        <div class="metric-item">
+                            <span>Revenue Surprise:</span>
+                            <span class="positive">+11.69%</span>
+                        </div>
+                        <div class="metric-item">
+                            <span>EPS Growth QoQ:</span>
+                            <span class="positive">+18.30%</span>
+                        </div>
+                        <div class="metric-item">
+                            <span>Sales Growth QoQ:</span>
+                            <span class="positive">+10.40%</span>
+                        </div>
+                        <div class="metric-item">
+                            <span>3M Performance:</span>
+                            <span class="positive">+12.87%</span>
+                        </div>
+                        <div class="metric-item">
+                            <span>RSI:</span>
+                            <span>64.27</span>
+                        </div>
+                        <div class="metric-item">
+                            <span>Relative Volume:</span>
+                            <span>1.50x</span>
+                        </div>
+                        <div class="metric-item">
+                            <span>Above MA200:</span>
+                            <span class="positive">+9.91%</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="news-section">
+                    <div class="section-title">Recent News & Market Sentiment</div>
+                    <p><strong>Positive Earnings Beat:</strong> Mission Produce delivered strong Q3 results with significant EPS surprise of 79.31% and solid revenue growth. The company operates in the avocado distribution sector, benefiting from increased consumer demand for healthy foods.</p>
+                    <p><strong>Risk Factors:</strong> High relative volume (150%) indicates potential volatility. Consumer defensive sector positioning provides some stability.</p>
+                    <p><strong>Success Probability:</strong> 40-54% (C-Grade range based on backtest data)</p>
+                </div>
+            </div>
+
+            <!-- KFY Stock Analysis -->
+            <div class="stock-card">
+                <div class="stock-header">
+                    <div>
+                        <div class="stock-title">Korn Ferry</div>
+                        <div class="stock-ticker">$KFY - $77.23</div>
+                    </div>
+                    <div class="grade-badge grade-c">C-Grade ⭐⭐⭐</div>
+                </div>
+
+                <div class="score-grid">
+                    <div class="score-item">
+                        <div class="score-value">65</div>
+                        <div class="score-label">Total Score</div>
+                    </div>
+                    <div class="score-item">
+                        <div class="score-value">2/5</div>
+                        <div class="score-label">Gap Size</div>
+                    </div>
+                    <div class="score-item">
+                        <div class="score-value">4/5</div>
+                        <div class="score-label">Pre-Earnings</div>
+                    </div>
+                    <div class="score-item">
+                        <div class="score-value">2/5</div>
+                        <div class="score-label">Volume Trend</div>
+                    </div>
+                    <div class="score-item">
+                        <div class="score-value">5/5</div>
+                        <div class="score-label">MA200</div>
+                    </div>
+                    <div class="score-item">
+                        <div class="score-value">4/5</div>
+                        <div class="score-label">MA50</div>
+                    </div>
+                </div>
+
+                <div class="analysis-section">
+                    <div class="section-title">Earnings Results & Technical Analysis</div>
+                    <div class="metrics-grid">
+                        <div class="metric-item">
+                            <span>EPS Surprise:</span>
+                            <span class="positive">+4.72%</span>
+                        </div>
+                        <div class="metric-item">
+                            <span>Revenue Surprise:</span>
+                            <span class="positive">+3.21%</span>
+                        </div>
+                        <div class="metric-item">
+                            <span>EPS Growth QoQ:</span>
+                            <span class="negative">-2.76%</span>
+                        </div>
+                        <div class="metric-item">
+                            <span>Sales Growth QoQ:</span>
+                            <span class="positive">+2.84%</span>
+                        </div>
+                        <div class="metric-item">
+                            <span>3M Performance:</span>
+                            <span class="positive">+10.66%</span>
+                        </div>
+                        <div class="metric-item">
+                            <span>RSI:</span>
+                            <span>63.79</span>
+                        </div>
+                        <div class="metric-item">
+                            <span>Relative Volume:</span>
+                            <span>0.49x</span>
+                        </div>
+                        <div class="metric-item">
+                            <span>Above MA200:</span>
+                            <span class="positive">+11.36%</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="news-section">
+                    <div class="section-title">Recent News & Market Sentiment</div>
+                    <p><strong>Solid Earnings Beat:</strong> Korn Ferry reported Q1 FY2026 results with modest EPS and revenue beats. The staffing and employment services company is well-positioned above both major moving averages.</p>
+                    <p><strong>Dividend Growth:</strong> Company declared quarterly cash dividend, showing commitment to shareholder returns with 2.33% yield.</p>
+                    <p><strong>Risk Factors:</strong> Low relative volume (49%) suggests limited immediate interest. Industrial sector exposure to economic cycles.</p>
+                    <p><strong>Success Probability:</strong> 40-54% (C-Grade range based on backtest data)</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="risk-warning">
+            <div class="warning-text">⚠️ IMPORTANT DISCLAIMER ⚠️</div>
+            <p>This analysis is based on historical backtesting data and technical indicators. Past performance does not guarantee future results. Both stocks show C-Grade ratings with 40-54% success probability. Always use proper position sizing, stop-losses, and risk management. Trading involves substantial risk of loss.</p>
+        </div>
+
+        <div class="timestamp">
+            Analysis Generated: September 9, 2025 | Data Sources: Finviz, Market APIs<br>
+            Methodology: 20-Year Swing Trading Experience + Quantitative Backtest Scoring
+        </div>
+    </div>
+</body>
+</html>

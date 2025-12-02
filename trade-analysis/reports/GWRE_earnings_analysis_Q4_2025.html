@@ -1,0 +1,712 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Guidewire Software (GWRE) Q4 2025 Earnings Analysis</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background: rgba(255, 255, 255, 0.95);
+            margin-top: 20px;
+            margin-bottom: 20px;
+            border-radius: 15px;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.1);
+        }
+        
+        header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding: 30px 0;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            color: white;
+            border-radius: 10px;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+            transition: left 0.8s;
+        }
+        
+        header:hover::before {
+            left: 100%;
+        }
+        
+        h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+        
+        .subtitle {
+            font-size: 1.2em;
+            opacity: 0.9;
+            font-weight: 300;
+        }
+        
+        .earnings-date {
+            background: rgba(255,255,255,0.2);
+            padding: 10px 20px;
+            border-radius: 25px;
+            display: inline-block;
+            margin-top: 15px;
+            font-weight: 500;
+        }
+        
+        .key-metrics {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin: 30px 0;
+        }
+        
+        .metric-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 25px;
+            border-radius: 15px;
+            text-align: center;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .metric-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
+            transition: left 0.6s;
+        }
+        
+        .metric-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 35px rgba(0,0,0,0.2);
+        }
+        
+        .metric-card:hover::before {
+            left: 100%;
+        }
+        
+        .metric-value {
+            font-size: 2em;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        
+        .metric-label {
+            font-size: 0.9em;
+            opacity: 0.9;
+        }
+        
+        .beat-indicator {
+            display: inline-block;
+            padding: 3px 8px;
+            border-radius: 12px;
+            font-size: 0.8em;
+            font-weight: bold;
+            margin-left: 8px;
+        }
+        
+        .beat {
+            background: #4CAF50;
+            color: white;
+        }
+        
+        .miss {
+            background: #f44336;
+            color: white;
+        }
+        
+        .section {
+            margin: 40px 0;
+            padding: 30px;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.08);
+            border-left: 5px solid #667eea;
+        }
+        
+        .section h2 {
+            color: #1e3c72;
+            margin-bottom: 20px;
+            font-size: 1.8em;
+            position: relative;
+        }
+        
+        .section h2::after {
+            content: '';
+            position: absolute;
+            bottom: -5px;
+            left: 0;
+            width: 50px;
+            height: 3px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 2px;
+        }
+        
+        .comparison-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            overflow: hidden;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+        
+        .comparison-table th,
+        .comparison-table td {
+            padding: 15px;
+            text-align: center;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .comparison-table th {
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            color: white;
+            font-weight: 600;
+            text-transform: uppercase;
+            font-size: 0.9em;
+            letter-spacing: 1px;
+        }
+        
+        .comparison-table tr:hover {
+            background: #f8f9fa;
+            transform: scale(1.01);
+            transition: all 0.2s ease;
+        }
+        
+        .positive {
+            color: #4CAF50;
+            font-weight: bold;
+        }
+        
+        .negative {
+            color: #f44336;
+            font-weight: bold;
+        }
+        
+        .chart-container {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            margin: 20px 0;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+        
+        .price-movement {
+            text-align: center;
+            padding: 20px;
+            background: linear-gradient(135deg, #ff6b6b 0%, #ffa500 100%);
+            color: white;
+            border-radius: 15px;
+            margin: 20px 0;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .price-movement::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
+            animation: shimmer 3s infinite;
+        }
+        
+        @keyframes shimmer {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .analyst-section {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            color: white;
+            padding: 30px;
+            border-radius: 15px;
+            margin: 20px 0;
+        }
+        
+        .highlight {
+            background: linear-gradient(135deg, #ffeaa7 0%, #fab1a0 100%);
+            padding: 20px;
+            border-radius: 10px;
+            margin: 15px 0;
+            border-left: 4px solid #e17055;
+        }
+        
+        .risk-factors {
+            background: #fff5f5;
+            border: 2px solid #feb2b2;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+        }
+        
+        .opportunities {
+            background: #f0fff4;
+            border: 2px solid #9ae6b4;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+        }
+        
+        ul li {
+            margin: 10px 0;
+            padding-left: 10px;
+            position: relative;
+        }
+        
+        ul li::before {
+            content: '▸';
+            position: absolute;
+            left: -10px;
+            color: #667eea;
+            font-weight: bold;
+        }
+        
+        .footer {
+            text-align: center;
+            padding: 30px;
+            background: #1e3c72;
+            color: white;
+            border-radius: 10px;
+            margin-top: 40px;
+        }
+        
+        .timestamp {
+            font-size: 0.9em;
+            opacity: 0.8;
+            margin-top: 10px;
+        }
+        
+        .executive-summary {
+            background: linear-gradient(135deg, #74b9ff 0%, #0984e3 100%);
+            color: white;
+            padding: 30px;
+            border-radius: 15px;
+            margin: 20px 0;
+            font-size: 1.1em;
+            line-height: 1.8;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .executive-summary::before {
+            content: '📊';
+            position: absolute;
+            top: -20px;
+            right: -20px;
+            font-size: 6em;
+            opacity: 0.1;
+        }
+        
+        @media (max-width: 768px) {
+            .container {
+                padding: 10px;
+                margin: 10px;
+            }
+            
+            h1 {
+                font-size: 2em;
+            }
+            
+            .key-metrics {
+                grid-template-columns: 1fr;
+            }
+            
+            .comparison-table {
+                font-size: 0.9em;
+            }
+            
+            .comparison-table th,
+            .comparison-table td {
+                padding: 10px 8px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Guidewire Software Inc. (GWRE)</h1>
+            <div class="subtitle">Q4 2025 Earnings Analysis Report</div>
+            <div class="earnings-date">Earnings Released: September 4, 2025</div>
+        </header>
+
+        <div class="executive-summary">
+            <h2 style="margin-bottom: 15px;">Executive Summary</h2>
+            <p><strong>Guidewire Software delivered outstanding Q4 2025 results that significantly exceeded analyst expectations across all key metrics.</strong> The company reported revenue of $356.57M (+22.3% YoY) vs consensus of $337.86M, and adjusted EPS of $0.84 vs consensus of $0.63, representing beats of 5.5% and 33.3% respectively. The market responded positively with shares surging over 13% in after-hours trading from ~$217 to $246+, reflecting investor confidence in the company's successful cloud transformation and strong recurring revenue growth momentum.</p>
+        </div>
+
+        <div class="key-metrics">
+            <div class="metric-card">
+                <div class="metric-value">$356.57M <span class="beat-indicator beat">BEAT</span></div>
+                <div class="metric-label">Revenue (vs $337.86M est.)</div>
+                <div style="margin-top: 8px; font-size: 0.9em;">+22.3% YoY | +5.5% vs Est.</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-value">$0.84 <span class="beat-indicator beat">BEAT</span></div>
+                <div class="metric-label">Adjusted EPS (vs $0.63 est.)</div>
+                <div style="margin-top: 8px; font-size: 0.9em;">+33.3% vs Est. | +35.5% YoY</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-value">$1.032B</div>
+                <div class="metric-label">Annual Recurring Revenue</div>
+                <div style="margin-top: 8px; font-size: 0.9em;">+19% YoY | Crossed $1B milestone</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-value">74%</div>
+                <div class="metric-label">Cloud ARR Mix</div>
+                <div style="margin-top: 8px; font-size: 0.9em;">Cloud ARR +36% YoY</div>
+            </div>
+        </div>
+
+        <div class="price-movement">
+            <h2 style="margin-bottom: 15px;">Market Reaction</h2>
+            <div style="font-size: 1.5em; margin: 10px 0;"><strong>After-Hours Surge: +13.4% to $246+</strong></div>
+            <div>Regular Trading Close: $216.99 (-1.03%)</div>
+            <div>After-Hours Peak: $248.59 (+13.4%)</div>
+            <div style="margin-top: 15px; font-size: 0.9em; opacity: 0.9;">
+                Strong institutional buying emerged after earnings beat, with volume spiking to 1.39M shares vs 801K average
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>Financial Performance vs Consensus</h2>
+            <table class="comparison-table">
+                <thead>
+                    <tr>
+                        <th>Metric</th>
+                        <th>Q4 2025 Actual</th>
+                        <th>Consensus Estimate</th>
+                        <th>Variance</th>
+                        <th>Prior Year Q4</th>
+                        <th>YoY Growth</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>Total Revenue</strong></td>
+                        <td>$356.57M</td>
+                        <td>$337.86M</td>
+                        <td class="positive">+5.5%</td>
+                        <td>$291.52M</td>
+                        <td class="positive">+22.3%</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Adjusted EPS</strong></td>
+                        <td>$0.84</td>
+                        <td>$0.63</td>
+                        <td class="positive">+33.3%</td>
+                        <td>$0.62</td>
+                        <td class="positive">+35.5%</td>
+                    </tr>
+                    <tr>
+                        <td><strong>GAAP EPS</strong></td>
+                        <td>$0.60</td>
+                        <td>N/A</td>
+                        <td>-</td>
+                        <td>$0.20</td>
+                        <td class="positive">+200%</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Annual Recurring Revenue</strong></td>
+                        <td>$1.032B</td>
+                        <td>~$1.0B</td>
+                        <td class="positive">+3.2%</td>
+                        <td>$867M</td>
+                        <td class="positive">+19%</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Cloud ARR</strong></td>
+                        <td>$764M (74% of total)</td>
+                        <td>N/A</td>
+                        <td>-</td>
+                        <td>$562M</td>
+                        <td class="positive">+36%</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="section">
+            <h2>Key Business Highlights</h2>
+            <div class="highlight">
+                <h3>Cloud Transformation Success</h3>
+                <ul>
+                    <li><strong>Cloud ARR Growth:</strong> 36% YoY increase to $764M, now representing 74% of total ARR</li>
+                    <li><strong>Cloud Deal Momentum:</strong> Signed 19 core cloud deals in Q4, bringing FY2025 total to 57 deals</li>
+                    <li><strong>Subscription Revenue:</strong> 32% growth driven by accelerating cloud adoption</li>
+                </ul>
+            </div>
+            
+            <div class="highlight">
+                <h3>Financial Performance Drivers</h3>
+                <ul>
+                    <li><strong>Revenue Quality:</strong> Subscription and support revenue grew 32% to dominate revenue mix</li>
+                    <li><strong>Margin Expansion:</strong> Operating margins improved significantly year-over-year</li>
+                    <li><strong>Cash Generation:</strong> Strong free cash flow performance supported by subscription model</li>
+                </ul>
+            </div>
+
+            <div class="highlight">
+                <h3>Full Year FY2025 Achievement</h3>
+                <ul>
+                    <li><strong>Total Revenue:</strong> $1.2025B (+23% YoY) - exceeded guidance range</li>
+                    <li><strong>ARR Milestone:</strong> Crossed $1B ARR threshold, validating transition strategy</li>
+                    <li><strong>Profitability:</strong> Full year profit of $69.8M or $0.81 per share</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>Forward Guidance & Outlook</h2>
+            <table class="comparison-table">
+                <thead>
+                    <tr>
+                        <th>Metric</th>
+                        <th>FY2026 Guidance</th>
+                        <th>Growth Rate</th>
+                        <th>Key Assumptions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>Total Revenue</strong></td>
+                        <td>$1.385B - $1.405B</td>
+                        <td class="positive">~15-17%</td>
+                        <td>Continued cloud adoption acceleration</td>
+                    </tr>
+                    <tr>
+                        <td><strong>ARR</strong></td>
+                        <td>$1.21B - $1.22B</td>
+                        <td class="positive">~17%</td>
+                        <td>Constant currency basis</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Subscription Revenue</strong></td>
+                        <td>$888M</td>
+                        <td class="positive">~34%</td>
+                        <td>Cloud transformation momentum</td>
+                    </tr>
+                </tbody>
+            </table>
+            
+            <div class="highlight">
+                <h3>Management Commentary</h3>
+                <p><strong>CEO Mike Rosenbaum:</strong> <em>"We emphatically surpassed the $1 billion ARR milestone, demonstrating the success of our cloud transformation strategy. The strong Q4 performance validates our investments in cloud-native solutions for the P&C insurance industry."</em></p>
+            </div>
+        </div>
+
+        <div class="analyst-section">
+            <h2 style="margin-bottom: 20px;">Analyst Reactions & Price Targets</h2>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px;">
+                <div>
+                    <h3>Recent Price Target Updates</h3>
+                    <ul>
+                        <li><strong>JMP Securities:</strong> $250 (Market Outperform)</li>
+                        <li><strong>Robert W. Baird:</strong> $236 (Outperform)</li>
+                        <li><strong>D.A. Davidson:</strong> $226 (Neutral - Downgraded)</li>
+                        <li><strong>Goldman Sachs:</strong> $235 (Buy - Previous $240)</li>
+                    </ul>
+                </div>
+                <div>
+                    <h3>Consensus Outlook</h3>
+                    <ul>
+                        <li><strong>Average Price Target:</strong> $250.92</li>
+                        <li><strong>Rating Distribution:</strong> 10 Buy, 3 Hold, 1 Sell</li>
+                        <li><strong>Upside Potential:</strong> ~15% from current levels</li>
+                        <li><strong>Range:</strong> $155 - $290 (wide dispersion)</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>Investment Thesis Analysis</h2>
+            
+            <div class="opportunities">
+                <h3 style="color: #2d5016; margin-bottom: 15px;">🚀 Key Opportunities</h3>
+                <ul>
+                    <li><strong>Cloud Transition Acceleration:</strong> 74% cloud ARR mix with 36% growth rate demonstrates successful transformation</li>
+                    <li><strong>Market Leadership Position:</strong> Dominant player in P&C insurance software with high switching costs</li>
+                    <li><strong>Recurring Revenue Model:</strong> $1B+ ARR provides predictable cash flows and expansion opportunities</li>
+                    <li><strong>AI/Digital Transformation:</strong> Insurance industry digitization creates long-term tailwinds</li>
+                    <li><strong>Margin Expansion Potential:</strong> Cloud model should drive operating leverage over time</li>
+                </ul>
+            </div>
+
+            <div class="risk-factors">
+                <h3 style="color: #742a2a; margin-bottom: 15px;">⚠️ Key Risk Factors</h3>
+                <ul>
+                    <li><strong>Valuation Concerns:</strong> Trading at 551x P/E ratio reflects high growth expectations</li>
+                    <li><strong>Transition Execution:</strong> Legacy customers migration timeline and potential churn risks</li>
+                    <li><strong>Competition:</strong> Large tech companies expanding into vertical software markets</li>
+                    <li><strong>Economic Sensitivity:</strong> Insurance industry spending potentially cyclical</li>
+                    <li><strong>Integration Complexity:</strong> Long implementation cycles may impact near-term growth</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>Technical & Trading Analysis</h2>
+            <div class="chart-container">
+                <h3>Recent Price Action</h3>
+                <table class="comparison-table">
+                    <thead>
+                        <tr>
+                            <th>Timeframe</th>
+                            <th>Performance</th>
+                            <th>Key Levels</th>
+                            <th>Volume Analysis</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Pre-Earnings (Sept 4)</td>
+                            <td class="negative">-1.03% to $216.99</td>
+                            <td>Support: $212.46</td>
+                            <td>1.39M vs 801K avg (+74%)</td>
+                        </tr>
+                        <tr>
+                            <td>After-Hours</td>
+                            <td class="positive">+13.4% to $246+</td>
+                            <td>Resistance: $248.59</td>
+                            <td>Heavy institutional buying</td>
+                        </tr>
+                        <tr>
+                            <td>YTD Performance</td>
+                            <td class="positive">+28.7%</td>
+                            <td>52W High: $263.20</td>
+                            <td>Outperforming tech sector</td>
+                        </tr>
+                        <tr>
+                            <td>1-Year</td>
+                            <td class="positive">+45.9%</td>
+                            <td>52W Low: $159.00</td>
+                            <td>Strong institutional support</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; margin: 20px 0;">
+                <div class="metric-card">
+                    <div class="metric-value">49.26</div>
+                    <div class="metric-label">RSI (14-day)</div>
+                    <div style="margin-top: 8px; font-size: 0.9em;">Neutral territory</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-value">1.21</div>
+                    <div class="metric-label">Beta</div>
+                    <div style="margin-top: 8px; font-size: 0.9em;">Higher volatility vs market</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-value">1.74x</div>
+                    <div class="metric-label">Relative Volume</div>
+                    <div style="margin-top: 8px; font-size: 0.9em;">Above average activity</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>Sector & Competitive Context</h2>
+            <div class="highlight">
+                <h3>Industry Positioning</h3>
+                <p>Guidewire operates in the specialized P&C insurance software market, serving as a critical infrastructure provider for insurance carriers. The company's cloud transformation positions it well for the industry's digital modernization trend, with sticky customer relationships and high switching costs creating competitive moats.</p>
+            </div>
+            
+            <table class="comparison-table">
+                <thead>
+                    <tr>
+                        <th>Competitive Factor</th>
+                        <th>Guidewire Strength</th>
+                        <th>Market Impact</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Market Leadership</td>
+                        <td>Dominant P&C insurance platform</td>
+                        <td>Pricing power & customer retention</td>
+                    </tr>
+                    <tr>
+                        <td>Cloud Transition</td>
+                        <td>74% cloud ARR, 36% growth</td>
+                        <td>Scalability & margin expansion</td>
+                    </tr>
+                    <tr>
+                        <td>Switching Costs</td>
+                        <td>Mission-critical systems</td>
+                        <td>Reduced competitive threats</td>
+                    </tr>
+                    <tr>
+                        <td>Industry Tailwinds</td>
+                        <td>Digital transformation need</td>
+                        <td>Long-term growth driver</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="section">
+            <h2>Investment Recommendation Summary</h2>
+            <div class="executive-summary">
+                <h3>Overall Assessment: POSITIVE</h3>
+                <p><strong>Guidewire's Q4 2025 results demonstrate exceptional execution of its cloud transformation strategy, with strong beats across all key metrics and robust guidance for FY2026.</strong></p>
+                
+                <p>The company's achievement of $1B+ ARR milestone, combined with 36% cloud ARR growth and improving margins, validates the investment thesis. The 13%+ after-hours surge reflects market recognition of the earnings quality and forward momentum.</p>
+                
+                <p><strong>Key Investment Catalysts:</strong> Continued cloud adoption acceleration, expanding TAM from insurance digitization, potential margin expansion from operating leverage, and strong competitive positioning with high switching costs.</p>
+                
+                <p><em>Suitable for growth investors seeking exposure to vertical software markets with strong recurring revenue characteristics. Valuation remains elevated but justified by strong execution and market leadership.</em></p>
+            </div>
+        </div>
+
+        <div class="footer">
+            <div style="font-size: 1.1em; margin-bottom: 10px;">
+                <strong>GWRE Earnings Analysis Report</strong>
+            </div>
+            <div>Analysis based on Q4 2025 earnings released September 4, 2025</div>
+            <div class="timestamp">
+                Report Generated: September 5, 2025 | Market Data as of After-Hours Trading
+            </div>
+            <div style="margin-top: 15px; font-size: 0.9em; opacity: 0.8;">
+                This analysis is for informational purposes only and does not constitute investment advice.
+                Past performance does not guarantee future results. Please conduct your own research before making investment decisions.
+            </div>
+        </div>
+    </div>
+</body>
+</html>

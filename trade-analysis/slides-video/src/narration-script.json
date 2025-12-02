@@ -1,0 +1,40 @@
+{
+  "slides": [
+    {
+      "slide": 1,
+      "title": "September 4th After-Market Report",
+      "narration": "Welcome to your September 4th after-market report. Today showed a broad rally across all major sectors with strong risk-on sentiment dominating the session.",
+      "duration": 4000
+    },
+    {
+      "slide": 2,
+      "title": "ETF Performance",
+      "narration": "Looking at ETF performance, small caps led the charge with IWM up 1.25%, signaling strong risk appetite as investors moved into smaller companies.",
+      "duration": 4000
+    },
+    {
+      "slide": 3,
+      "title": "Volume Surge Winners",
+      "narration": "Today's volume surge winners were impressive. AEO jumped nearly 38% on massive volume, while NEGG and CIEN also posted strong double-digit gains.",
+      "duration": 4000
+    },
+    {
+      "slide": 4,
+      "title": "Sector Rotation",
+      "narration": "In a rare display of market strength, all sectors finished positive today, led by consumer discretionary and technology stocks in a broad-based rally.",
+      "duration": 4000
+    },
+    {
+      "slide": 5,
+      "title": "After-Hours Earnings Winners",
+      "narration": "After-hours action was dominated by earnings winners. BRZE, GWRE, and IOT all posted significant beats and strong price reactions, with tech leading the way.",
+      "duration": 4000
+    },
+    {
+      "slide": 6,
+      "title": "Key Takeaways",
+      "narration": "Today's key takeaway: broad market strength with small caps outperforming, high-quality earnings beats, and positive momentum heading into tomorrow's session.",
+      "duration": 4000
+    }
+  ]
+}

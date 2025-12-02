@@ -1,0 +1,530 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Earnings Trade Analysis - October 9, 2025</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px;
+            color: #333;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .header {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            margin-bottom: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            text-align: center;
+        }
+
+        .header h1 {
+            color: #667eea;
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+
+        .header .subtitle {
+            color: #666;
+            font-size: 1.2em;
+        }
+
+        .header .date {
+            color: #999;
+            font-size: 0.9em;
+            margin-top: 10px;
+        }
+
+        .market-overview {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            margin-bottom: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+
+        .market-overview h2 {
+            color: #667eea;
+            margin-bottom: 15px;
+            font-size: 1.8em;
+        }
+
+        .market-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .stat-card {
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            padding: 15px;
+            border-radius: 10px;
+            text-align: center;
+        }
+
+        .stat-card .label {
+            font-size: 0.9em;
+            color: #666;
+            margin-bottom: 5px;
+        }
+
+        .stat-card .value {
+            font-size: 1.5em;
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        .stock-card {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            margin-bottom: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            transition: transform 0.3s ease;
+        }
+
+        .stock-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .stock-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 20px;
+            border-bottom: 2px solid #f0f0f0;
+        }
+
+        .stock-title {
+            flex: 1;
+        }
+
+        .stock-title h2 {
+            color: #667eea;
+            font-size: 2em;
+            margin-bottom: 5px;
+        }
+
+        .stock-title .company-name {
+            color: #666;
+            font-size: 1.1em;
+        }
+
+        .grade-badge {
+            padding: 15px 30px;
+            border-radius: 10px;
+            font-size: 2em;
+            font-weight: bold;
+            text-align: center;
+            min-width: 120px;
+        }
+
+        .grade-a {
+            background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+            color: white;
+        }
+
+        .grade-b {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            color: white;
+        }
+
+        .grade-c {
+            background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+            color: white;
+        }
+
+        .grade-d {
+            background: linear-gradient(135deg, #ee0979 0%, #ff6a00 100%);
+            color: white;
+        }
+
+        .score-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+
+        .score-item {
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            padding: 15px;
+            border-radius: 10px;
+        }
+
+        .score-item .label {
+            font-size: 0.85em;
+            color: #666;
+            margin-bottom: 8px;
+        }
+
+        .score-item .value {
+            font-size: 1.3em;
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        .score-item .weight {
+            font-size: 0.75em;
+            color: #999;
+            margin-top: 5px;
+        }
+
+        .info-section {
+            margin: 20px 0;
+        }
+
+        .info-section h3 {
+            color: #667eea;
+            margin-bottom: 10px;
+            font-size: 1.3em;
+        }
+
+        .info-section p, .info-section ul {
+            color: #666;
+            line-height: 1.6;
+            font-size: 1em;
+        }
+
+        .info-section ul {
+            margin-left: 20px;
+        }
+
+        .info-section li {
+            margin-bottom: 8px;
+        }
+
+        .price-info {
+            display: flex;
+            gap: 30px;
+            margin: 20px 0;
+            flex-wrap: wrap;
+        }
+
+        .price-item {
+            flex: 1;
+            min-width: 150px;
+        }
+
+        .price-item .label {
+            font-size: 0.9em;
+            color: #666;
+            margin-bottom: 5px;
+        }
+
+        .price-item .value {
+            font-size: 1.5em;
+            font-weight: bold;
+        }
+
+        .positive {
+            color: #38ef7d;
+        }
+
+        .negative {
+            color: #ee0979;
+        }
+
+        .neutral {
+            color: #667eea;
+        }
+
+        .stars {
+            color: #ffd700;
+            font-size: 1.2em;
+            margin-top: 5px;
+        }
+
+        .disclaimer {
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            margin-top: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            border-left: 5px solid #ee0979;
+        }
+
+        .disclaimer h3 {
+            color: #ee0979;
+            margin-bottom: 10px;
+        }
+
+        .disclaimer p {
+            color: #666;
+            font-size: 0.9em;
+            line-height: 1.5;
+        }
+
+        .footer {
+            text-align: center;
+            color: white;
+            margin-top: 30px;
+            padding: 20px;
+        }
+
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 1.8em;
+            }
+
+            .stock-header {
+                flex-direction: column;
+                gap: 15px;
+            }
+
+            .grade-badge {
+                width: 100%;
+            }
+
+            .score-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📊 Post-Earnings Gap-Up Stock Analysis</h1>
+            <div class="subtitle">Backtest-Based Scoring System</div>
+            <div class="date">Analysis Date: October 9, 2025 | Earnings: Today's Pre-Market</div>
+        </div>
+
+        <div class="market-overview">
+            <h2>🌐 Market Overview</h2>
+            <p style="color: #666; margin-top: 10px;">Today's market shows stable conditions with major indices near record highs. Two stocks reported earnings before the market open with positive price reactions.</p>
+            <div class="market-stats">
+                <div class="stat-card">
+                    <div class="label">SPY Price</div>
+                    <div class="value">$673.22</div>
+                    <div style="color: #38ef7d; margin-top: 5px;">+0.02%</div>
+                </div>
+                <div class="stat-card">
+                    <div class="label">QQQ Price</div>
+                    <div class="value">$611.35</div>
+                    <div style="color: #ee0979; margin-top: 5px;">-0.01%</div>
+                </div>
+                <div class="stat-card">
+                    <div class="label">Stocks Analyzed</div>
+                    <div class="value">2</div>
+                </div>
+                <div class="stat-card">
+                    <div class="label">Avg EPS Surprise</div>
+                    <div class="value">+34.9%</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Stock 1: DAL -->
+        <div class="stock-card">
+            <div class="stock-header">
+                <div class="stock-title">
+                    <h2>$DAL</h2>
+                    <div class="company-name">Delta Air Lines, Inc.</div>
+                    <div style="color: #999; margin-top: 5px;">Industrials - Airlines</div>
+                </div>
+                <div class="grade-badge grade-c">
+                    <div>C-Grade</div>
+                    <div style="font-size: 0.5em; margin-top: 5px;">58 Points</div>
+                    <div class="stars">⭐⭐⭐</div>
+                </div>
+            </div>
+
+            <div class="price-info">
+                <div class="price-item">
+                    <div class="label">Current Price</div>
+                    <div class="value neutral">$61.26</div>
+                </div>
+                <div class="price-item">
+                    <div class="label">Gap Up</div>
+                    <div class="value positive">+7.25%</div>
+                </div>
+                <div class="price-item">
+                    <div class="label">EPS Surprise</div>
+                    <div class="value positive">+11.88%</div>
+                </div>
+                <div class="price-item">
+                    <div class="label">Revenue Surprise</div>
+                    <div class="value positive">+0.79%</div>
+                </div>
+            </div>
+
+            <div class="info-section">
+                <h3>📈 Backtest Score Breakdown</h3>
+                <div class="score-grid">
+                    <div class="score-item">
+                        <div class="label">Gap Size (7.25%)</div>
+                        <div class="value">3 pts</div>
+                        <div class="weight">Weight: 25%</div>
+                    </div>
+                    <div class="score-item">
+                        <div class="label">Pre-Earnings Trend</div>
+                        <div class="value">3 pts</div>
+                        <div class="weight">+7.32% 1W | Weight: 30%</div>
+                    </div>
+                    <div class="score-item">
+                        <div class="label">Volume Trend</div>
+                        <div class="value">1 pt</div>
+                        <div class="weight">Rel Vol: 2.88x | Weight: 20%</div>
+                    </div>
+                    <div class="score-item">
+                        <div class="label">MA200 Position</div>
+                        <div class="value">5 pts</div>
+                        <div class="weight">+12.60% | Weight: 15%</div>
+                    </div>
+                    <div class="score-item">
+                        <div class="label">MA50 Position</div>
+                        <div class="value">3 pts</div>
+                        <div class="weight">+5.04% | Weight: 10%</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="info-section">
+                <h3>📰 Earnings Analysis</h3>
+                <ul>
+                    <li><strong>Q3 Results:</strong> Delta beat analyst expectations with EPS of $1.83 vs. est. $1.64, showing strong travel demand recovery</li>
+                    <li><strong>Revenue Performance:</strong> Achieved record quarterly revenue with upmarket strategy paying off</li>
+                    <li><strong>Forward Guidance:</strong> CEO sees "significant improvement" in revenue outlook entering holiday season</li>
+                    <li><strong>Market Impact:</strong> Positive earnings lifted entire airline sector, validating travel rebound thesis</li>
+                </ul>
+            </div>
+
+            <div class="info-section">
+                <h3>🔍 Technical Factors</h3>
+                <p><strong>Strengths:</strong> Stock is well above all key moving averages (MA20: +5.55%, MA50: +5.04%, MA200: +12.60%), indicating strong long-term uptrend. RSI at 61.1 shows healthy momentum without being overbought.</p>
+                <p style="margin-top: 10px;"><strong>Concerns:</strong> Abnormally high relative volume (2.88x) suggests potential profit-taking after the gap. The 7.25% gap is moderate, historically associated with 42% success rate for continued upside.</p>
+                <p style="margin-top: 10px;"><strong>Risk Level:</strong> Medium - Strong fundamentals and technical position, but high volume suggests increased volatility.</p>
+            </div>
+
+            <div class="info-section">
+                <h3>🎯 Trading Strategy</h3>
+                <p><strong>Success Probability:</strong> 45-50% (based on C-grade historical performance)</p>
+                <p style="margin-top: 10px;"><strong>Entry Consideration:</strong> Wait for pullback to $59-60 range for better risk/reward</p>
+                <p style="margin-top: 10px;"><strong>Target:</strong> $64-65 (5-6% upside from current levels)</p>
+                <p style="margin-top: 10px;"><strong>Stop Loss:</strong> Below $57 (previous day's low)</p>
+                <p style="margin-top: 10px;"><strong>Time Horizon:</strong> 2-10 trading days (swing trade)</p>
+            </div>
+        </div>
+
+        <!-- Stock 2: BYRN -->
+        <div class="stock-card">
+            <div class="stock-header">
+                <div class="stock-title">
+                    <h2>$BYRN</h2>
+                    <div class="company-name">Byrna Technologies Inc.</div>
+                    <div style="color: #999; margin-top: 5px;">Industrials - Aerospace & Defense</div>
+                </div>
+                <div class="grade-badge grade-c">
+                    <div>C-Grade</div>
+                    <div style="font-size: 0.5em; margin-top: 5px;">57 Points</div>
+                    <div class="stars">⭐⭐⭐</div>
+                </div>
+            </div>
+
+            <div class="price-info">
+                <div class="price-item">
+                    <div class="label">Current Price</div>
+                    <div class="value neutral">$25.65</div>
+                </div>
+                <div class="price-item">
+                    <div class="label">Gap Up</div>
+                    <div class="value positive">+12.50%</div>
+                </div>
+                <div class="price-item">
+                    <div class="label">EPS Surprise</div>
+                    <div class="value positive">+57.98%</div>
+                </div>
+                <div class="price-item">
+                    <div class="label">Revenue Surprise</div>
+                    <div class="value positive">+1.22%</div>
+                </div>
+            </div>
+
+            <div class="info-section">
+                <h3>📈 Backtest Score Breakdown</h3>
+                <div class="score-grid">
+                    <div class="score-item">
+                        <div class="label">Gap Size (12.50%)</div>
+                        <div class="value">2 pts</div>
+                        <div class="weight">Weight: 25%</div>
+                    </div>
+                    <div class="score-item">
+                        <div class="label">Pre-Earnings Trend</div>
+                        <div class="value">4 pts</div>
+                        <div class="weight">+15.28% 1W | Weight: 30%</div>
+                    </div>
+                    <div class="score-item">
+                        <div class="label">Volume Trend</div>
+                        <div class="value">1 pt</div>
+                        <div class="weight">Rel Vol: 3.35x | Weight: 20%</div>
+                    </div>
+                    <div class="score-item">
+                        <div class="label">MA200 Position</div>
+                        <div class="value">3 pts</div>
+                        <div class="weight">+5.68% | Weight: 15%</div>
+                    </div>
+                    <div class="score-item">
+                        <div class="label">MA50 Position</div>
+                        <div class="value">5 pts</div>
+                        <div class="weight">+22.53% | Weight: 10%</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="info-section">
+                <h3>📰 Earnings Analysis</h3>
+                <ul>
+                    <li><strong>Q3 Results:</strong> Exceptional EPS beat of 57.98%, significantly exceeding analyst estimates</li>
+                    <li><strong>Revenue Growth:</strong> Strong 40.63% QoQ sales growth showing business acceleration</li>
+                    <li><strong>Earnings Quality:</strong> Large EPS surprise indicates strong operational performance</li>
+                    <li><strong>Market Context:</strong> Small-cap defense technology company with high beta (2.04)</li>
+                </ul>
+            </div>
+
+            <div class="info-section">
+                <h3>🔍 Technical Factors</h3>
+                <p><strong>Strengths:</strong> Strong momentum with stock up 15.28% in past week before earnings. Significantly above MA50 (+22.53%) and MA20 (+18.01%), showing excellent intermediate-term trend.</p>
+                <p style="margin-top: 10px;"><strong>Concerns:</strong> RSI at 72.14 indicates overbought conditions. Gap size >10% historically shows only 28% success rate for continuation. Extremely high relative volume (3.35x) and high beta (2.04) suggest high volatility risk.</p>
+                <p style="margin-top: 10px;"><strong>Risk Level:</strong> High - Small cap with high volatility and overbought technicals despite strong earnings.</p>
+            </div>
+
+            <div class="info-section">
+                <h3>🎯 Trading Strategy</h3>
+                <p><strong>Success Probability:</strong> 40-45% (based on C-grade and large gap statistics)</p>
+                <p style="margin-top: 10px;"><strong>Entry Consideration:</strong> Avoid immediate entry due to overbought RSI. Wait for pullback to $23-24 range</p>
+                <p style="margin-top: 10px;"><strong>Target:</strong> $27-28 (5-9% upside from current levels)</p>
+                <p style="margin-top: 10px;"><strong>Stop Loss:</strong> Below $21.50 (gap fill level)</p>
+                <p style="margin-top: 10px;"><strong>Time Horizon:</strong> 3-7 trading days (short swing trade)</p>
+                <p style="margin-top: 10px;"><strong>Position Sizing:</strong> Reduce size by 50% due to high volatility and small market cap</p>
+            </div>
+        </div>
+
+        <div class="disclaimer">
+            <h3>⚠️ Risk Disclaimer</h3>
+            <p>This analysis is for educational and informational purposes only and should not be considered as investment advice. Past performance and backtest results do not guarantee future results. All trading involves risk, including the potential loss of principal. The success probabilities mentioned are based on historical patterns and do not guarantee outcomes for individual trades. Always conduct your own research, consider your risk tolerance, and consult with a licensed financial advisor before making investment decisions. Position sizing and stop-loss discipline are critical for managing risk in earnings-based trading strategies.</p>
+        </div>
+
+        <div class="footer">
+            <p>Analysis Generated: October 9, 2025 | Data Sources: Finviz, Financial Modeling Prep</p>
+            <p style="margin-top: 10px;">Backtest Scoring System: Gap Size (25%) + Pre-Earnings Trend (30%) + Volume (20%) + MA200 (15%) + MA50 (10%)</p>
+        </div>
+    </div>
+</body>
+</html>

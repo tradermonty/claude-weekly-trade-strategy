@@ -1,0 +1,1248 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Post-Earnings Gap-Up Stock Analysis - October 22, 2025</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            color: white;
+            padding: 40px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .header .subtitle {
+            font-size: 1.2em;
+            opacity: 0.9;
+        }
+
+        .timestamp {
+            background: rgba(255,255,255,0.1);
+            display: inline-block;
+            padding: 8px 20px;
+            border-radius: 20px;
+            margin-top: 15px;
+            font-size: 0.9em;
+        }
+
+        .summary-section {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            color: white;
+            padding: 30px 40px;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+        }
+
+        .summary-box {
+            background: rgba(255,255,255,0.2);
+            padding: 20px;
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+            text-align: center;
+        }
+
+        .summary-box .number {
+            font-size: 2.5em;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .summary-box .label {
+            font-size: 0.9em;
+            opacity: 0.9;
+        }
+
+        .content {
+            padding: 40px;
+        }
+
+        .grade-section {
+            margin-bottom: 50px;
+        }
+
+        .grade-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 25px;
+            padding-bottom: 15px;
+            border-bottom: 3px solid #eee;
+        }
+
+        .grade-badge {
+            font-size: 2em;
+            font-weight: bold;
+            padding: 10px 25px;
+            border-radius: 10px;
+            margin-right: 20px;
+            color: white;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.2);
+        }
+
+        .grade-a { background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%); }
+        .grade-b { background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); }
+        .grade-c { background: linear-gradient(135deg, #fa709a 0%, #fee140 100%); }
+        .grade-d { background: linear-gradient(135deg, #30cfd0 0%, #330867 100%); }
+
+        .grade-info {
+            flex: 1;
+        }
+
+        .grade-info h2 {
+            font-size: 1.8em;
+            color: #2c3e50;
+            margin-bottom: 5px;
+        }
+
+        .grade-info .success-rate {
+            color: #7f8c8d;
+            font-size: 1.1em;
+        }
+
+        .stock-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(450px, 1fr));
+            gap: 25px;
+        }
+
+        .stock-card {
+            background: white;
+            border: 2px solid #e1e8ed;
+            border-radius: 15px;
+            padding: 25px;
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .stock-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+            border-color: #667eea;
+        }
+
+        .stock-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #f5f5f5;
+        }
+
+        .stock-title {
+            flex: 1;
+        }
+
+        .ticker {
+            font-size: 1.8em;
+            font-weight: bold;
+            color: #2c3e50;
+            margin-bottom: 5px;
+        }
+
+        .company-name {
+            font-size: 0.95em;
+            color: #7f8c8d;
+            margin-bottom: 3px;
+        }
+
+        .sector {
+            font-size: 0.85em;
+            color: #95a5a6;
+        }
+
+        .score-badge {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 15px 20px;
+            border-radius: 12px;
+            text-align: center;
+            min-width: 100px;
+        }
+
+        .score-number {
+            font-size: 1.8em;
+            font-weight: bold;
+            display: block;
+        }
+
+        .score-label {
+            font-size: 0.8em;
+            opacity: 0.9;
+        }
+
+        .stars {
+            font-size: 1.2em;
+            margin-top: 5px;
+        }
+
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .metric-item {
+            background: #f8f9fa;
+            padding: 12px;
+            border-radius: 8px;
+            border-left: 4px solid #667eea;
+        }
+
+        .metric-label {
+            font-size: 0.85em;
+            color: #7f8c8d;
+            margin-bottom: 3px;
+        }
+
+        .metric-value {
+            font-size: 1.1em;
+            font-weight: 600;
+            color: #2c3e50;
+        }
+
+        .metric-value.positive {
+            color: #27ae60;
+        }
+
+        .metric-value.negative {
+            color: #e74c3c;
+        }
+
+        .score-breakdown {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 15px;
+        }
+
+        .score-breakdown h4 {
+            margin-bottom: 12px;
+            color: #2c3e50;
+            font-size: 1em;
+        }
+
+        .score-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+            padding: 8px;
+            background: white;
+            border-radius: 6px;
+        }
+
+        .score-item-label {
+            font-size: 0.9em;
+            color: #7f8c8d;
+        }
+
+        .score-item-value {
+            font-weight: 600;
+            color: #2c3e50;
+        }
+
+        .score-bar {
+            height: 6px;
+            background: #e1e8ed;
+            border-radius: 3px;
+            overflow: hidden;
+            margin-top: 5px;
+        }
+
+        .score-bar-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+            transition: width 0.3s ease;
+        }
+
+        .analysis-section {
+            background: #fff9e6;
+            border-left: 4px solid #f39c12;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+        }
+
+        .analysis-section h4 {
+            color: #d68910;
+            margin-bottom: 8px;
+            font-size: 0.95em;
+        }
+
+        .analysis-section p {
+            font-size: 0.9em;
+            color: #5d4e37;
+            line-height: 1.6;
+        }
+
+        .technical-factors {
+            background: #e8f5e9;
+            border-left: 4px solid #27ae60;
+            padding: 15px;
+            border-radius: 8px;
+        }
+
+        .technical-factors h4 {
+            color: #27ae60;
+            margin-bottom: 10px;
+            font-size: 0.95em;
+        }
+
+        .technical-list {
+            list-style: none;
+            font-size: 0.9em;
+            color: #2c5530;
+        }
+
+        .technical-list li {
+            padding: 5px 0;
+            padding-left: 20px;
+            position: relative;
+        }
+
+        .technical-list li:before {
+            content: "✓";
+            position: absolute;
+            left: 0;
+            color: #27ae60;
+            font-weight: bold;
+        }
+
+        .footer {
+            background: #2c3e50;
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .footer h3 {
+            margin-bottom: 15px;
+        }
+
+        .disclaimer {
+            font-size: 0.85em;
+            opacity: 0.8;
+            max-width: 800px;
+            margin: 0 auto;
+            line-height: 1.8;
+        }
+
+        @media (max-width: 768px) {
+            .stock-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .header h1 {
+                font-size: 1.8em;
+            }
+
+            .metrics-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📊 Post-Earnings Gap-Up Stock Analysis</h1>
+            <div class="subtitle">Yesterday's After-Hours & Pre-Market Earnings Releases</div>
+            <div class="timestamp">⏰ Analysis Date: October 22, 2025 (Wednesday) | Pre-Market Analysis</div>
+        </div>
+
+        <div class="summary-section">
+            <div class="summary-box">
+                <div class="number">19</div>
+                <div class="label">Stocks Analyzed</div>
+            </div>
+            <div class="summary-box">
+                <div class="number">5</div>
+                <div class="label">A-Grade Stocks</div>
+            </div>
+            <div class="summary-box">
+                <div class="number">8</div>
+                <div class="label">B-Grade Stocks</div>
+            </div>
+            <div class="summary-box">
+                <div class="number">270%</div>
+                <div class="label">Top EPS Surprise</div>
+            </div>
+        </div>
+
+        <div class="content">
+            <!-- A-Grade Stocks (85+ points, 70%+ Success Rate) -->
+            <div class="grade-section">
+                <div class="grade-header">
+                    <div class="grade-badge grade-a">A</div>
+                    <div class="grade-info">
+                        <h2>A-Grade Stocks</h2>
+                        <div class="success-rate">⭐⭐⭐⭐⭐ 70%+ Success Rate (85+ points)</div>
+                    </div>
+                </div>
+
+                <div class="stock-grid">
+                    <!-- VICR -->
+                    <div class="stock-card">
+                        <div class="stock-header">
+                            <div class="stock-title">
+                                <div class="ticker">$VICR</div>
+                                <div class="company-name">Vicor Corporation</div>
+                                <div class="sector">Technology</div>
+                            </div>
+                            <div class="score-badge">
+                                <span class="score-number">91.5</span>
+                                <span class="score-label">Score</span>
+                                <div class="stars">⭐⭐⭐⭐⭐</div>
+                            </div>
+                        </div>
+
+                        <div class="metrics-grid">
+                            <div class="metric-item">
+                                <div class="metric-label">EPS Surprise</div>
+                                <div class="metric-value positive">+270.59%</div>
+                            </div>
+                            <div class="metric-item">
+                                <div class="metric-label">Revenue Surprise</div>
+                                <div class="metric-value positive">+15.75%</div>
+                            </div>
+                            <div class="metric-item">
+                                <div class="metric-label">Price (Pre-Market)</div>
+                                <div class="metric-value positive">$65.80 (+13.4%)</div>
+                            </div>
+                            <div class="metric-item">
+                                <div class="metric-label">Relative Volume</div>
+                                <div class="metric-value positive">8.32x</div>
+                            </div>
+                        </div>
+
+                        <div class="score-breakdown">
+                            <h4>📊 Backtest Score Breakdown</h4>
+                            <div class="score-item">
+                                <span class="score-item-label">Gap Size (25%): 10-15%</span>
+                                <span class="score-item-value">2.5 pts</span>
+                            </div>
+                            <div class="score-bar"><div class="score-bar-fill" style="width: 50%"></div></div>
+
+                            <div class="score-item">
+                                <span class="score-item-label">Pre-Earnings Trend (30%): +49.7% (MA20)</span>
+                                <span class="score-item-value">5.0 pts</span>
+                            </div>
+                            <div class="score-bar"><div class="score-bar-fill" style="width: 100%"></div></div>
+
+                            <div class="score-item">
+                                <span class="score-item-label">Volume Trend (20%): 832%</span>
+                                <span class="score-item-value">1.0 pt</span>
+                            </div>
+                            <div class="score-bar"><div class="score-bar-fill" style="width: 20%"></div></div>
+
+                            <div class="score-item">
+                                <span class="score-item-label">MA200 Position (15%): +64.6%</span>
+                                <span class="score-item-value">5.0 pts</span>
+                            </div>
+                            <div class="score-bar"><div class="score-bar-fill" style="width: 100%"></div></div>
+
+                            <div class="score-item">
+                                <span class="score-item-label">MA50 Position (10%): +55.6%</span>
+                                <span class="score-item-value">5.0 pts</span>
+                            </div>
+                            <div class="score-bar"><div class="score-bar-fill" style="width: 100%"></div></div>
+                        </div>
+
+                        <div class="analysis-section">
+                            <h4>💡 Earnings Analysis</h4>
+                            <p>Vicor delivered extraordinary Q3 results with 270% EPS surprise and 16% revenue beat. The company reported strong sales growth despite challenging market conditions. Pre-market price action shows extreme bullish momentum with 8x normal volume.</p>
+                        </div>
+
+                        <div class="technical-factors">
+                            <h4>📈 Technical Factors</h4>
+                            <ul class="technical-list">
+                                <li>Massive breakout: +49.7% above 20-day MA</li>
+                                <li>Well above all major MAs (50D: +55.6%, 200D: +64.6%)</li>
+                                <li>Extreme relative volume spike: 8.32x average</li>
+                                <li>Strong pre-earnings uptrend momentum</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <!-- VRT -->
+                    <div class="stock-card">
+                        <div class="stock-header">
+                            <div class="stock-title">
+                                <div class="ticker">$VRT</div>
+                                <div class="company-name">Vertiv Holdings Co</div>
+                                <div class="sector">Industrials</div>
+                            </div>
+                            <div class="score-badge">
+                                <span class="score-number">87.0</span>
+                                <span class="score-label">Score</span>
+                                <div class="stars">⭐⭐⭐⭐⭐</div>
+                            </div>
+                        </div>
+
+                        <div class="metrics-grid">
+                            <div class="metric-item">
+                                <div class="metric-label">EPS Surprise</div>
+                                <div class="metric-value positive">+14.17%</div>
+                            </div>
+                            <div class="metric-item">
+                                <div class="metric-label">Revenue Surprise</div>
+                                <div class="metric-value positive">+12.07%</div>
+                            </div>
+                            <div class="metric-item">
+                                <div class="metric-label">Current Price</div>
+                                <div class="metric-value positive">$186.00</div>
+                            </div>
+                            <div class="metric-item">
+                                <div class="metric-label">Relative Volume</div>
+                                <div class="metric-value positive">3.34x</div>
+                            </div>
+                        </div>
+
+                        <div class="score-breakdown">
+                            <h4>📊 Backtest Score Breakdown</h4>
+                            <div class="score-item">
+                                <span class="score-item-label">Gap Size (25%): 5-10%</span>
+                                <span class="score-item-value">3.0 pts</span>
+                            </div>
+                            <div class="score-bar"><div class="score-bar-fill" style="width: 60%"></div></div>
+
+                            <div class="score-item">
+                                <span class="score-item-label">Pre-Earnings Trend (30%): +12.0% (MA20)</span>
+                                <span class="score-item-value">4.0 pts</span>
+                            </div>
+                            <div class="score-bar"><div class="score-bar-fill" style="width: 80%"></div></div>
+
+                            <div class="score-item">
+                                <span class="score-item-label">Volume Trend (20%): 334%</span>
+                                <span class="score-item-value">1.0 pt</span>
+                            </div>
+                            <div class="score-bar"><div class="score-bar-fill" style="width: 20%"></div></div>
+
+                            <div class="score-item">
+                                <span class="score-item-label">MA200 Position (15%): +57.8%</span>
+                                <span class="score-item-value">5.0 pts</span>
+                            </div>
+                            <div class="score-bar"><div class="score-bar-fill" style="width: 100%"></div></div>
+
+                            <div class="score-item">
+                                <span class="score-item-label">MA50 Position (10%): +27.0%</span>
+                                <span class="score-item-value">5.0 pts</span>
+                            </div>
+                            <div class="score-bar"><div class="score-bar-fill" style="width: 100%"></div></div>
+                        </div>
+
+                        <div class="analysis-section">
+                            <h4>💡 Earnings Analysis</h4>
+                            <p>Vertiv reported strong Q3 results beating both EPS and revenue estimates. Data center infrastructure demand continues driving growth. Stock shows excellent technical strength with significant gains above all major moving averages.</p>
+                        </div>
+
+                        <div class="technical-factors">
+                            <h4>📈 Technical Factors</h4>
+                            <ul class="technical-list">
+                                <li>Strong position: +12.0% above 20-day MA</li>
+                                <li>Excellent long-term trend: +57.8% above 200D MA</li>
+                                <li>High relative volume: 3.34x average</li>
+                                <li>Consistent upward momentum across all timeframes</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <!-- APH -->
+                    <div class="stock-card">
+                        <div class="stock-header">
+                            <div class="stock-title">
+                                <div class="ticker">$APH</div>
+                                <div class="company-name">Amphenol Corp</div>
+                                <div class="sector">Technology</div>
+                            </div>
+                            <div class="score-badge">
+                                <span class="score-number">87.0</span>
+                                <span class="score-label">Score</span>
+                                <div class="stars">⭐⭐⭐⭐⭐</div>
+                            </div>
+                        </div>
+
+                        <div class="metrics-grid">
+                            <div class="metric-item">
+                                <div class="metric-label">EPS Surprise</div>
+                                <div class="metric-value positive">+21.51%</div>
+                            </div>
+                            <div class="metric-item">
+                                <div class="metric-label">Revenue Surprise</div>
+                                <div class="metric-value positive">+12.12%</div>
+                            </div>
+                            <div class="metric-item">
+                                <div class="metric-label">Current Price</div>
+                                <div class="metric-value positive">$134.87</div>
+                            </div>
+                            <div class="metric-item">
+                                <div class="metric-label">Market Cap</div>
+                                <div class="metric-value">$164.7B</div>
+                            </div>
+                        </div>
+
+                        <div class="score-breakdown">
+                            <h4>📊 Backtest Score Breakdown</h4>
+                            <div class="score-item">
+                                <span class="score-item-label">Gap Size (25%): 5-8%</span>
+                                <span class="score-item-value">3.0 pts</span>
+                            </div>
+                            <div class="score-bar"><div class="score-bar-fill" style="width: 60%"></div></div>
+
+                            <div class="score-item">
+                                <span class="score-item-label">Pre-Earnings Trend (30%): +7.9% (MA20)</span>
+                                <span class="score-item-value">3.0 pts</span>
+                            </div>
+                            <div class="score-bar"><div class="score-bar-fill" style="width: 60%"></div></div>
+
+                            <div class="score-item">
+                                <span class="score-item-label">Volume Trend (20%): Below avg</span>
+                                <span class="score-item-value">3.0 pts</span>
+                            </div>
+                            <div class="score-bar"><div class="score-bar-fill" style="width: 60%"></div></div>
+
+                            <div class="score-item">
+                                <span class="score-item-label">MA200 Position (15%): +49.0%</span>
+                                <span class="score-item-value">5.0 pts</span>
+                            </div>
+                            <div class="score-bar"><div class="score-bar-fill" style="width: 100%"></div></div>
+
+                            <div class="score-item">
+                                <span class="score-item-label">MA50 Position (10%): +13.5%</span>
+                                <span class="score-item-value">5.0 pts</span>
+                            </div>
+                            <div class="score-bar"><div class="score-bar-fill" style="width: 100%"></div></div>
+                        </div>
+
+                        <div class="analysis-section">
+                            <h4>💡 Earnings Analysis</h4>
+                            <p>Amphenol delivered impressive Q3 results with 21% EPS surprise and 12% revenue beat. The electronic connector manufacturer benefits from AI infrastructure build-out. Strong technical foundation with massive gains above 200-day MA.</p>
+                        </div>
+
+                        <div class="technical-factors">
+                            <h4>📈 Technical Factors</h4>
+                            <ul class="technical-list">
+                                <li>Solid position: +7.9% above 20-day MA</li>
+                                <li>Exceptional long-term trend: +49.0% above 200D MA</li>
+                                <li>Strong medium-term momentum: +13.5% above 50D MA</li>
+                                <li>Large-cap stability with growth momentum</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <!-- ISRG -->
+                    <div class="stock-card">
+                        <div class="stock-header">
+                            <div class="stock-title">
+                                <div class="ticker">$ISRG</div>
+                                <div class="company-name">Intuitive Surgical Inc</div>
+                                <div class="sector">Healthcare</div>
+                            </div>
+                            <div class="score-badge">
+                                <span class="score-number">85.5</span>
+                                <span class="score-label">Score</span>
+                                <div class="stars">⭐⭐⭐⭐⭐</div>
+                            </div>
+                        </div>
+
+                        <div class="metrics-grid">
+                            <div class="metric-item">
+                                <div class="metric-label">EPS Surprise</div>
+                                <div class="metric-value positive">+20.31%</div>
+                            </div>
+                            <div class="metric-item">
+                                <div class="metric-label">Revenue Surprise</div>
+                                <div class="metric-value positive">+4.10%</div>
+                            </div>
+                            <div class="metric-item">
+                                <div class="metric-label">Current Price</div>
+                                <div class="metric-value positive">$547.04</div>
+                            </div>
+                            <div class="metric-item">
+                                <div class="metric-label">Relative Volume</div>
+                                <div class="metric-value positive">3.34x</div>
+                            </div>
+                        </div>
+
+                        <div class="score-breakdown">
+                            <h4>📊 Backtest Score Breakdown</h4>
+                            <div class="score-item">
+                                <span class="score-item-label">Gap Size (25%): 8-10%</span>
+                                <span class="score-item-value">3.0 pts</span>
+                            </div>
+                            <div class="score-bar"><div class="score-bar-fill" style="width: 60%"></div></div>
+
+                            <div class="score-item">
+                                <span class="score-item-label">Pre-Earnings Trend (30%): +22.1% (MA20)</span>
+                                <span class="score-item-value">5.0 pts</span>
+                            </div>
+                            <div class="score-bar"><div class="score-bar-fill" style="width: 100%"></div></div>
+
+                            <div class="score-item">
+                                <span class="score-item-label">Volume Trend (20%): 334%</span>
+                                <span class="score-item-value">1.0 pt</span>
+                            </div>
+                            <div class="score-bar"><div class="score-bar-fill" style="width: 20%"></div></div>
+
+                            <div class="score-item">
+                                <span class="score-item-label">MA200 Position (15%): +6.9%</span>
+                                <span class="score-item-value">4.0 pts</span>
+                            </div>
+                            <div class="score-bar"><div class="score-bar-fill" style="width: 80%"></div></div>
+
+                            <div class="score-item">
+                                <span class="score-item-label">MA50 Position (10%): +20.1%</span>
+                                <span class="score-item-value">5.0 pts</span>
+                            </div>
+                            <div class="score-bar"><div class="score-bar-fill" style="width: 100%"></div></div>
+                        </div>
+
+                        <div class="analysis-section">
+                            <h4>💡 Earnings Analysis</h4>
+                            <p>Intuitive Surgical posted strong Q3 results with 20% EPS beat. Robotic surgery procedures continue growing globally. Stock shows powerful momentum with significant gains above short and medium-term moving averages.</p>
+                        </div>
+
+                        <div class="technical-factors">
+                            <h4>📈 Technical Factors</h4>
+                            <ul class="technical-list">
+                                <li>Powerful breakout: +22.1% above 20-day MA</li>
+                                <li>Strong medium-term: +20.1% above 50D MA</li>
+                                <li>Above long-term trend: +6.9% above 200D MA</li>
+                                <li>High volume confirmation: 3.34x average</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <!-- TMO -->
+                    <div class="stock-card">
+                        <div class="stock-header">
+                            <div class="stock-title">
+                                <div class="ticker">$TMO</div>
+                                <div class="company-name">Thermo Fisher Scientific Inc</div>
+                                <div class="sector">Healthcare</div>
+                            </div>
+                            <div class="score-badge">
+                                <span class="score-number">85.0</span>
+                                <span class="score-label">Score</span>
+                                <div class="stars">⭐⭐⭐⭐⭐</div>
+                            </div>
+                        </div>
+
+                        <div class="metrics-grid">
+                            <div class="metric-item">
+                                <div class="metric-label">EPS Surprise</div>
+                                <div class="metric-value positive">+5.32%</div>
+                            </div>
+                            <div class="metric-item">
+                                <div class="metric-label">Revenue Surprise</div>
+                                <div class="metric-value positive">+1.87%</div>
+                            </div>
+                            <div class="metric-item">
+                                <div class="metric-label">Current Price</div>
+                                <div class="metric-value positive">$571.02</div>
+                            </div>
+                            <div class="metric-item">
+                                <div class="metric-label">Market Cap</div>
+                                <div class="metric-value">$215.6B</div>
+                            </div>
+                        </div>
+
+                        <div class="score-breakdown">
+                            <h4>📊 Backtest Score Breakdown</h4>
+                            <div class="score-item">
+                                <span class="score-item-label">Gap Size (25%): 5-7%</span>
+                                <span class="score-item-value">3.0 pts</span>
+                            </div>
+                            <div class="score-bar"><div class="score-bar-fill" style="width: 60%"></div></div>
+
+                            <div class="score-item">
+                                <span class="score-item-label">Pre-Earnings Trend (30%): +9.3% (MA20)</span>
+                                <span class="score-item-value">3.0 pts</span>
+                            </div>
+                            <div class="score-bar"><div class="score-bar-fill" style="width: 60%"></div></div>
+
+                            <div class="score-item">
+                                <span class="score-item-label">Volume Trend (20%): Below avg</span>
+                                <span class="score-item-value">3.0 pts</span>
+                            </div>
+                            <div class="score-bar"><div class="score-bar-fill" style="width: 60%"></div></div>
+
+                            <div class="score-item">
+                                <span class="score-item-label">MA200 Position (15%): +19.6%</span>
+                                <span class="score-item-value">5.0 pts</span>
+                            </div>
+                            <div class="score-bar"><div class="score-bar-fill" style="width: 100%"></div></div>
+
+                            <div class="score-item">
+                                <span class="score-item-label">MA50 Position (10%): +14.4%</span>
+                                <span class="score-item-value">5.0 pts</span>
+                            </div>
+                            <div class="score-bar"><div class="score-bar-fill" style="width: 100%"></div></div>
+                        </div>
+
+                        <div class="analysis-section">
+                            <h4>💡 Earnings Analysis</h4>
+                            <p>Thermo Fisher posted solid Q3 results beating estimates. Life sciences and diagnostic products showing steady demand. Mega-cap stability with strong technical position across all major moving averages.</p>
+                        </div>
+
+                        <div class="technical-factors">
+                            <h4>📈 Technical Factors</h4>
+                            <ul class="technical-list">
+                                <li>Strong position: +9.3% above 20-day MA</li>
+                                <li>Excellent long-term: +19.6% above 200D MA</li>
+                                <li>Solid medium-term: +14.4% above 50D MA</li>
+                                <li>Mega-cap quality with consistent uptrend</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- B-Grade Stocks (70-84 points, 55-69% Success Rate) -->
+            <div class="grade-section">
+                <div class="grade-header">
+                    <div class="grade-badge grade-b">B</div>
+                    <div class="grade-info">
+                        <h2>B-Grade Stocks</h2>
+                        <div class="success-rate">⭐⭐⭐⭐ 55-69% Success Rate (70-84 points)</div>
+                    </div>
+                </div>
+
+                <div class="stock-grid">
+                    <!-- PEGA -->
+                    <div class="stock-card">
+                        <div class="stock-header">
+                            <div class="stock-title">
+                                <div class="ticker">$PEGA</div>
+                                <div class="company-name">Pegasystems Inc</div>
+                                <div class="sector">Technology</div>
+                            </div>
+                            <div class="score-badge">
+                                <span class="score-number">79.0</span>
+                                <span class="score-label">Score</span>
+                                <div class="stars">⭐⭐⭐⭐</div>
+                            </div>
+                        </div>
+
+                        <div class="metrics-grid">
+                            <div class="metric-item">
+                                <div class="metric-label">EPS Surprise</div>
+                                <div class="metric-value positive">+50.08%</div>
+                            </div>
+                            <div class="metric-item">
+                                <div class="metric-label">Revenue Surprise</div>
+                                <div class="metric-value positive">+8.48%</div>
+                            </div>
+                            <div class="metric-item">
+                                <div class="metric-label">Price (Pre-Market)</div>
+                                <div class="metric-value positive">$57.05 (+4.1%)</div>
+                            </div>
+                            <div class="metric-item">
+                                <div class="metric-label">Market Cap</div>
+                                <div class="metric-value">$9.8B</div>
+                            </div>
+                        </div>
+
+                        <div class="analysis-section">
+                            <h4>💡 Earnings Analysis</h4>
+                            <p>Pegasystems delivered exceptional 50% EPS beat with strong revenue growth. AI-powered workflow automation showing strong demand. Technical position solid with double-digit gains above all moving averages.</p>
+                        </div>
+
+                        <div class="technical-factors">
+                            <h4>📈 Technical Factors</h4>
+                            <ul class="technical-list">
+                                <li>Strong breakout: +12.0% above 20D MA</li>
+                                <li>Excellent long-term: +29.2% above 200D MA</li>
+                                <li>Medium-term strength: +13.2% above 50D MA</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <!-- COF -->
+                    <div class="stock-card">
+                        <div class="stock-header">
+                            <div class="stock-title">
+                                <div class="ticker">$COF</div>
+                                <div class="company-name">Capital One Financial Corp</div>
+                                <div class="sector">Financial</div>
+                            </div>
+                            <div class="score-badge">
+                                <span class="score-number">78.0</span>
+                                <span class="score-label">Score</span>
+                                <div class="stars">⭐⭐⭐⭐</div>
+                            </div>
+                        </div>
+
+                        <div class="metrics-grid">
+                            <div class="metric-item">
+                                <div class="metric-label">EPS Surprise</div>
+                                <div class="metric-value positive">+32.51%</div>
+                            </div>
+                            <div class="metric-item">
+                                <div class="metric-label">Revenue Surprise</div>
+                                <div class="metric-value positive">+1.90%</div>
+                            </div>
+                            <div class="metric-item">
+                                <div class="metric-label">Price (Pre-Market)</div>
+                                <div class="metric-value positive">$217.05 (+1.0%)</div>
+                            </div>
+                            <div class="metric-item">
+                                <div class="metric-label">Market Cap</div>
+                                <div class="metric-value">$138.8B</div>
+                            </div>
+                        </div>
+
+                        <div class="analysis-section">
+                            <h4>💡 Earnings Analysis</h4>
+                            <p>Capital One posted impressive 32% EPS beat driven by strong credit quality and consumer spending. Financial sector strength with solid technical positioning above key moving averages.</p>
+                        </div>
+
+                        <div class="technical-factors">
+                            <h4>📈 Technical Factors</h4>
+                            <ul class="technical-list">
+                                <li>Above 20D MA: +7.1%</li>
+                                <li>Strong long-term: +14.9% above 200D MA</li>
+                                <li>Medium-term positive: +4.8% above 50D MA</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <!-- PFSI -->
+                    <div class="stock-card">
+                        <div class="stock-header">
+                            <div class="stock-title">
+                                <div class="ticker">$PFSI</div>
+                                <div class="company-name">PennyMac Financial Services</div>
+                                <div class="sector">Financial</div>
+                            </div>
+                            <div class="score-badge">
+                                <span class="score-number">76.5</span>
+                                <span class="score-label">Score</span>
+                                <div class="stars">⭐⭐⭐⭐</div>
+                            </div>
+                        </div>
+
+                        <div class="metrics-grid">
+                            <div class="metric-item">
+                                <div class="metric-label">EPS Surprise</div>
+                                <div class="metric-value positive">+24.71%</div>
+                            </div>
+                            <div class="metric-item">
+                                <div class="metric-label">Revenue Surprise</div>
+                                <div class="metric-value positive">+7.05%</div>
+                            </div>
+                            <div class="metric-item">
+                                <div class="metric-label">Current Price</div>
+                                <div class="metric-value positive">$124.15</div>
+                            </div>
+                            <div class="metric-item">
+                                <div class="metric-label">Market Cap</div>
+                                <div class="metric-value">$6.4B</div>
+                            </div>
+                        </div>
+
+                        <div class="analysis-section">
+                            <h4>💡 Earnings Analysis</h4>
+                            <p>PennyMac Financial delivered strong Q3 with 25% EPS beat. Mortgage origination and servicing benefiting from rate environment. Solid technical position with gains across all timeframes.</p>
+                        </div>
+
+                        <div class="technical-factors">
+                            <h4>📈 Technical Factors</h4>
+                            <ul class="technical-list">
+                                <li>Above 20D MA: +3.0%</li>
+                                <li>Strong long-term: +19.4% above 200D MA</li>
+                                <li>Medium-term positive: +5.7% above 50D MA</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <!-- BSX -->
+                    <div class="stock-card">
+                        <div class="stock-header">
+                            <div class="stock-title">
+                                <div class="ticker">$BSX</div>
+                                <div class="company-name">Boston Scientific Corp</div>
+                                <div class="sector">Healthcare</div>
+                            </div>
+                            <div class="score-badge">
+                                <span class="score-number">74.0</span>
+                                <span class="score-label">Score</span>
+                                <div class="stars">⭐⭐⭐⭐</div>
+                            </div>
+                        </div>
+
+                        <div class="metrics-grid">
+                            <div class="metric-item">
+                                <div class="metric-label">EPS Surprise</div>
+                                <div class="metric-value positive">+3.38%</div>
+                            </div>
+                            <div class="metric-item">
+                                <div class="metric-label">Revenue Surprise</div>
+                                <div class="metric-value positive">+3.43%</div>
+                            </div>
+                            <div class="metric-item">
+                                <div class="metric-label">Current Price</div>
+                                <div class="metric-value positive">$103.26</div>
+                            </div>
+                            <div class="metric-item">
+                                <div class="metric-label">Relative Volume</div>
+                                <div class="metric-value positive">1.06x</div>
+                            </div>
+                        </div>
+
+                        <div class="analysis-section">
+                            <h4>💡 Earnings Analysis</h4>
+                            <p>Boston Scientific posted solid Q3 results with modest beats. Medical device portfolio showing consistent demand. Technical position stable with slight gains above major moving averages.</p>
+                        </div>
+
+                        <div class="technical-factors">
+                            <h4>📈 Technical Factors</h4>
+                            <ul class="technical-list">
+                                <li>Above 20D MA: +5.8%</li>
+                                <li>Near 200D MA: +1.6%</li>
+                                <li>Close to 50D MA: +2.1%</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <!-- LII -->
+                    <div class="stock-card">
+                        <div class="stock-header">
+                            <div class="stock-title">
+                                <div class="ticker">$LII</div>
+                                <div class="company-name">Lennox International Inc</div>
+                                <div class="sector">Industrials</div>
+                            </div>
+                            <div class="score-badge">
+                                <span class="score-number">73.0</span>
+                                <span class="score-label">Score</span>
+                                <div class="stars">⭐⭐⭐⭐</div>
+                            </div>
+                        </div>
+
+                        <div class="metrics-grid">
+                            <div class="metric-item">
+                                <div class="metric-label">EPS Surprise</div>
+                                <div class="metric-value positive">+13.95%</div>
+                            </div>
+                            <div class="metric-item">
+                                <div class="metric-label">Revenue Surprise</div>
+                                <div class="metric-value positive">+2.03%</div>
+                            </div>
+                            <div class="metric-item">
+                                <div class="metric-label">Current Price</div>
+                                <div class="metric-value positive">$562.00</div>
+                            </div>
+                            <div class="metric-item">
+                                <div class="metric-label">Market Cap</div>
+                                <div class="metric-value">$19.7B</div>
+                            </div>
+                        </div>
+
+                        <div class="analysis-section">
+                            <h4>💡 Earnings Analysis</h4>
+                            <p>Lennox International delivered strong 14% EPS beat. HVAC demand remains solid despite economic concerns. Note: Currently trading slightly below 200D MA, suggesting near support level.</p>
+                        </div>
+
+                        <div class="technical-factors">
+                            <h4>📈 Technical Factors</h4>
+                            <ul class="technical-list">
+                                <li>Above 20D MA: +5.0%</li>
+                                <li>Slightly below 200D MA: -2.9%</li>
+                                <li>Near 50D MA: +1.6%</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <!-- HLT -->
+                    <div class="stock-card">
+                        <div class="stock-header">
+                            <div class="stock-title">
+                                <div class="ticker">$HLT</div>
+                                <div class="company-name">Hilton Worldwide Holdings</div>
+                                <div class="sector">Consumer Cyclical</div>
+                            </div>
+                            <div class="score-badge">
+                                <span class="score-number">72.5</span>
+                                <span class="score-label">Score</span>
+                                <div class="stars">⭐⭐⭐⭐</div>
+                            </div>
+                        </div>
+
+                        <div class="metrics-grid">
+                            <div class="metric-item">
+                                <div class="metric-label">EPS Surprise</div>
+                                <div class="metric-value positive">+2.70%</div>
+                            </div>
+                            <div class="metric-item">
+                                <div class="metric-label">Revenue Surprise</div>
+                                <div class="metric-value positive">+3.67%</div>
+                            </div>
+                            <div class="metric-item">
+                                <div class="metric-label">Current Price</div>
+                                <div class="metric-value positive">$273.00</div>
+                            </div>
+                            <div class="metric-item">
+                                <div class="metric-label">Market Cap</div>
+                                <div class="metric-value">$64.2B</div>
+                            </div>
+                        </div>
+
+                        <div class="analysis-section">
+                            <h4>💡 Earnings Analysis</h4>
+                            <p>Hilton posted modest beats with steady occupancy trends. Travel and hospitality showing resilience. Solid technical position with gains above all key moving averages.</p>
+                        </div>
+
+                        <div class="technical-factors">
+                            <h4>📈 Technical Factors</h4>
+                            <ul class="technical-list">
+                                <li>Above 20D MA: +4.4%</li>
+                                <li>Strong long-term: +7.7% above 200D MA</li>
+                                <li>Near 50D MA: +1.9%</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <!-- HCSG -->
+                    <div class="stock-card">
+                        <div class="stock-header">
+                            <div class="stock-title">
+                                <div class="ticker">$HCSG</div>
+                                <div class="company-name">Healthcare Services Group</div>
+                                <div class="sector">Healthcare</div>
+                            </div>
+                            <div class="score-badge">
+                                <span class="score-number">71.0</span>
+                                <span class="score-label">Score</span>
+                                <div class="stars">⭐⭐⭐⭐</div>
+                            </div>
+                        </div>
+
+                        <div class="metrics-grid">
+                            <div class="metric-item">
+                                <div class="metric-label">EPS Surprise</div>
+                                <div class="metric-value positive">+2.69%</div>
+                            </div>
+                            <div class="metric-item">
+                                <div class="metric-label">Revenue Surprise</div>
+                                <div class="metric-value positive">+1.71%</div>
+                            </div>
+                            <div class="metric-item">
+                                <div class="metric-label">Current Price</div>
+                                <div class="metric-value positive">$18.85</div>
+                            </div>
+                            <div class="metric-item">
+                                <div class="metric-label">Market Cap</div>
+                                <div class="metric-value">$1.4B</div>
+                            </div>
+                        </div>
+
+                        <div class="analysis-section">
+                            <h4>💡 Earnings Analysis</h4>
+                            <p>Healthcare Services posted modest earnings beat. Facility services showing recovery. Impressive technical strength with significant gains above all moving averages, particularly 200D MA.</p>
+                        </div>
+
+                        <div class="technical-factors">
+                            <h4>📈 Technical Factors</h4>
+                            <ul class="technical-list">
+                                <li>Strong breakout: +16.9% above 20D MA</li>
+                                <li>Excellent long-term: +43.4% above 200D MA</li>
+                                <li>Strong medium-term: +19.8% above 50D MA</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <!-- EQT -->
+                    <div class="stock-card">
+                        <div class="stock-header">
+                            <div class="stock-title">
+                                <div class="ticker">$EQT</div>
+                                <div class="company-name">EQT Corporation</div>
+                                <div class="sector">Energy</div>
+                            </div>
+                            <div class="score-badge">
+                                <span class="score-number">70.5</span>
+                                <span class="score-label">Score</span>
+                                <div class="stars">⭐⭐⭐⭐</div>
+                            </div>
+                        </div>
+
+                        <div class="metrics-grid">
+                            <div class="metric-item">
+                                <div class="metric-label">EPS Surprise</div>
+                                <div class="metric-value positive">+43.81%</div>
+                            </div>
+                            <div class="metric-item">
+                                <div class="metric-label">Revenue Surprise</div>
+                                <div class="metric-value negative">-3.17%</div>
+                            </div>
+                            <div class="metric-item">
+                                <div class="metric-label">Price (Pre-Market)</div>
+                                <div class="metric-value negative">$55.71 (-1.3%)</div>
+                            </div>
+                            <div class="metric-item">
+                                <div class="metric-label">Market Cap</div>
+                                <div class="metric-value">$34.8B</div>
+                            </div>
+                        </div>
+
+                        <div class="analysis-section">
+                            <h4>💡 Earnings Analysis</h4>
+                            <p>EQT posted strong 44% EPS surprise despite revenue miss. Natural gas producer showing operational efficiency. Pre-market giving back initial gains. Solid technical position above key moving averages.</p>
+                        </div>
+
+                        <div class="technical-factors">
+                            <h4>📈 Technical Factors</h4>
+                            <ul class="technical-list">
+                                <li>Above 20D MA: +2.7%</li>
+                                <li>Strong long-term: +7.0% above 200D MA</li>
+                                <li>Medium-term positive: +7.2% above 50D MA</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="footer">
+            <h3>⚠️ Risk Disclosure</h3>
+            <div class="disclaimer">
+                <p>This analysis is for educational and informational purposes only. Past performance does not guarantee future results. The backtest scoring system is based on historical data patterns and should not be the sole basis for investment decisions. Trading stocks carries substantial risk of loss. Please conduct your own due diligence and consult with a qualified financial advisor before making investment decisions. Position sizing and stop-loss discipline are essential for risk management.</p>
+                <p><strong>Key Risks:</strong> Earnings reactions can be unpredictable. Gap-ups may reverse quickly. High volatility increases both potential gains and losses. Always use proper position sizing (typically 1-3% of portfolio per position) and set stop-losses below recent support levels.</p>
+            </div>
+            <p style="margin-top: 20px; opacity: 0.7; font-size: 0.9em;">Generated: October 22, 2025 | Data Sources: Finviz, Financial Modeling Prep</p>
+        </div>
+    </div>
+</body>
+</html>

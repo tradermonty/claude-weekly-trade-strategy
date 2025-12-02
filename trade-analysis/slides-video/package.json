@@ -1,0 +1,25 @@
+{
+  "name": "avgo-slides-video",
+  "version": "1.0.0",
+  "description": "AVGO earnings slides video using Remotion",
+  "scripts": {
+    "start": "remotion studio",
+    "build": "remotion render",
+    "upgrade": "remotion upgrade"
+  },
+  "repository": {},
+  "license": "UNLICENSED",
+  "dependencies": {
+    "@remotion/cli": "^4.0.341",
+    "@remotion/google-fonts": "^4.0.341",
+    "@remotion/media-utils": "^4.0.341",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "remotion": "^4.0.341"
+  },
+  "devDependencies": {
+    "@types/react": "^18.0.26",
+    "typescript": "^4.9.4"
+  },
+  "packageManager": "npm@8.15.0"
+}

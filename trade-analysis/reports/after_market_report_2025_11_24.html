@@ -1,0 +1,781 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>After-Market Report - November 24, 2025</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            color: white;
+            padding: 40px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .header .date {
+            font-size: 1.2em;
+            opacity: 0.9;
+        }
+
+        .summary-box {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            color: white;
+            padding: 30px;
+            margin: 20px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+
+        .summary-box h2 {
+            font-size: 1.8em;
+            margin-bottom: 15px;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.2);
+        }
+
+        .summary-box p {
+            font-size: 1.1em;
+            line-height: 1.8;
+        }
+
+        .indices-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 20px;
+            padding: 20px;
+        }
+
+        .index-card {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            border-left: 5px solid #667eea;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .index-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+        }
+
+        .index-card h3 {
+            color: #1e3c72;
+            font-size: 1.3em;
+            margin-bottom: 15px;
+        }
+
+        .index-value {
+            font-size: 2em;
+            font-weight: bold;
+            color: #2a5298;
+            margin: 10px 0;
+        }
+
+        .change-positive {
+            color: #10b981;
+            font-size: 1.3em;
+            font-weight: bold;
+        }
+
+        .change-negative {
+            color: #ef4444;
+            font-size: 1.3em;
+            font-weight: bold;
+        }
+
+        .section {
+            margin: 30px 20px;
+        }
+
+        .section-title {
+            font-size: 2em;
+            color: #1e3c72;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 3px solid #667eea;
+        }
+
+        .sector-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .sector-card {
+            background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.1);
+            border-left: 4px solid;
+        }
+
+        .sector-card.positive {
+            border-left-color: #10b981;
+        }
+
+        .sector-card.negative {
+            border-left-color: #ef4444;
+        }
+
+        .sector-name {
+            font-weight: bold;
+            font-size: 1.1em;
+            color: #1e3c72;
+            margin-bottom: 8px;
+        }
+
+        .sector-change {
+            font-size: 1.5em;
+            font-weight: bold;
+        }
+
+        .movers-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+            background: white;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+
+        .movers-table thead {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .movers-table th {
+            padding: 15px;
+            text-align: left;
+            font-weight: 600;
+            font-size: 1em;
+        }
+
+        .movers-table td {
+            padding: 12px 15px;
+            border-bottom: 1px solid #f0f0f0;
+        }
+
+        .movers-table tbody tr:hover {
+            background-color: #f8f9fa;
+        }
+
+        .ticker-symbol {
+            font-weight: bold;
+            color: #1e3c72;
+            font-size: 1.1em;
+        }
+
+        .company-name {
+            color: #6b7280;
+            font-size: 0.9em;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        .stat-box {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 25px;
+            border-radius: 12px;
+            text-align: center;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+
+        .stat-label {
+            font-size: 0.9em;
+            opacity: 0.9;
+            margin-bottom: 10px;
+        }
+
+        .stat-value {
+            font-size: 2em;
+            font-weight: bold;
+        }
+
+        .key-takeaways {
+            background: linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%);
+            padding: 30px;
+            margin: 20px;
+            border-radius: 15px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+
+        .key-takeaways h2 {
+            color: #c2410c;
+            font-size: 1.8em;
+            margin-bottom: 20px;
+        }
+
+        .key-takeaways ul {
+            list-style-position: inside;
+            font-size: 1.1em;
+            color: #451a03;
+        }
+
+        .key-takeaways li {
+            margin-bottom: 12px;
+            padding-left: 10px;
+        }
+
+        .footer {
+            background: #1e3c72;
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .footer p {
+            opacity: 0.9;
+            margin-bottom: 10px;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-size: 0.85em;
+            font-weight: 600;
+            margin-left: 8px;
+        }
+
+        .badge-volume {
+            background: #3b82f6;
+            color: white;
+        }
+
+        .badge-sector {
+            background: #8b5cf6;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <h1>📊 AFTER-MARKET REPORT</h1>
+            <div class="date">Friday, November 24, 2025 | Market Close</div>
+        </div>
+
+        <!-- Executive Summary -->
+        <div class="summary-box">
+            <h2>🎯 Executive Summary</h2>
+            <p>
+                U.S. markets surged on Friday with the NASDAQ Composite leading gains, up 2.68% as tech stocks rallied strongly.
+                The S&P 500 climbed 1.54% while the Dow Jones added 0.44%, propelling all major indices to fresh session highs.
+                The Russell 2000 jumped 1.89%, showing broad-based strength in small-cap stocks. Technology and Communication Services
+                sectors led the market higher with gains of 2.48% and 3.63% respectively, driven by strong performance from mega-cap
+                names like Broadcom (+11.1%) and semiconductor stocks. Market breadth was positive with 143 stocks showing volume surges
+                above 1.5x normal levels, indicating strong institutional participation. The VIX settled around 20-23, reflecting
+                moderate volatility levels as markets digested the weekly gains.
+            </p>
+        </div>
+
+        <!-- Major Indices -->
+        <div class="section">
+            <h2 class="section-title">📈 Major Market Indices</h2>
+            <div class="indices-grid">
+                <div class="index-card">
+                    <h3>S&P 500</h3>
+                    <div class="index-value">6,704.67</div>
+                    <div class="change-positive">▲ 101.68 (+1.54%)</div>
+                    <div style="margin-top: 10px; color: #6b7280; font-size: 0.9em;">
+                        Volume: 2.76B shares
+                    </div>
+                </div>
+
+                <div class="index-card">
+                    <h3>NASDAQ Composite</h3>
+                    <div class="index-value">22,870.09</div>
+                    <div class="change-positive">▲ 597.01 (+2.68%)</div>
+                    <div style="margin-top: 10px; color: #6b7280; font-size: 0.9em;">
+                        Volume: 6.41B shares
+                    </div>
+                </div>
+
+                <div class="index-card">
+                    <h3>Dow Jones</h3>
+                    <div class="index-value">46,448.28</div>
+                    <div class="change-positive">▲ 202.86 (+0.44%)</div>
+                    <div style="margin-top: 10px; color: #6b7280; font-size: 0.9em;">
+                        Volume: 483M shares
+                    </div>
+                </div>
+
+                <div class="index-card">
+                    <h3>Russell 2000</h3>
+                    <div class="index-value">2,414.28</div>
+                    <div class="change-positive">▲ 44.70 (+1.89%)</div>
+                    <div style="margin-top: 10px; color: #6b7280; font-size: 0.9em;">
+                        Small-cap strength
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sector Performance -->
+        <div class="section">
+            <h2 class="section-title">🏢 Sector Performance</h2>
+            <div class="sector-grid">
+                <div class="sector-card positive">
+                    <div class="sector-name">Communication Services</div>
+                    <div class="sector-change change-positive">+3.63%</div>
+                    <div style="margin-top: 8px; font-size: 0.9em; color: #6b7280;">
+                        Market Cap: $12.25T | P/E: 39.05
+                    </div>
+                </div>
+
+                <div class="sector-card positive">
+                    <div class="sector-name">Technology</div>
+                    <div class="sector-change change-positive">+2.48%</div>
+                    <div style="margin-top: 8px; font-size: 0.9em; color: #6b7280;">
+                        Market Cap: $25.74T | P/E: 39.18
+                    </div>
+                </div>
+
+                <div class="sector-card positive">
+                    <div class="sector-name">Basic Materials</div>
+                    <div class="sector-change change-positive">+1.84%</div>
+                    <div style="margin-top: 8px; font-size: 0.9em; color: #6b7280;">
+                        Market Cap: $2.32T | P/E: 22.95
+                    </div>
+                </div>
+
+                <div class="sector-card positive">
+                    <div class="sector-name">Consumer Cyclical</div>
+                    <div class="sector-change change-positive">+1.80%</div>
+                    <div style="margin-top: 8px; font-size: 0.9em; color: #6b7280;">
+                        Market Cap: $8.97T | P/E: 27.61
+                    </div>
+                </div>
+
+                <div class="sector-card positive">
+                    <div class="sector-name">Utilities</div>
+                    <div class="sector-change change-positive">+0.98%</div>
+                    <div style="margin-top: 8px; font-size: 0.9em; color: #6b7280;">
+                        Market Cap: $1.80T | Div Yield: 2.85%
+                    </div>
+                </div>
+
+                <div class="sector-card positive">
+                    <div class="sector-name">Industrials</div>
+                    <div class="sector-change change-positive">+0.66%</div>
+                    <div style="margin-top: 8px; font-size: 0.9em; color: #6b7280;">
+                        Market Cap: $6.42T | P/E: 27.09
+                    </div>
+                </div>
+
+                <div class="sector-card positive">
+                    <div class="sector-name">Healthcare</div>
+                    <div class="sector-change change-positive">+0.56%</div>
+                    <div style="margin-top: 8px; font-size: 0.9em; color: #6b7280;">
+                        Market Cap: $8.55T | P/E: 25.95
+                    </div>
+                </div>
+
+                <div class="sector-card positive">
+                    <div class="sector-name">Financial</div>
+                    <div class="sector-change change-positive">+0.55%</div>
+                    <div style="margin-top: 8px; font-size: 0.9em; color: #6b7280;">
+                        Market Cap: $13.61T | P/E: 18.42
+                    </div>
+                </div>
+
+                <div class="sector-card positive">
+                    <div class="sector-name">Real Estate</div>
+                    <div class="sector-change change-positive">+0.25%</div>
+                    <div style="margin-top: 8px; font-size: 0.9em; color: #6b7280;">
+                        Market Cap: $1.67T | Div Yield: 3.91%
+                    </div>
+                </div>
+
+                <div class="sector-card negative">
+                    <div class="sector-name">Energy</div>
+                    <div class="sector-change change-negative">-0.21%</div>
+                    <div style="margin-top: 8px; font-size: 0.9em; color: #6b7280;">
+                        Market Cap: $3.54T | Div Yield: 4.21%
+                    </div>
+                </div>
+
+                <div class="sector-card negative">
+                    <div class="sector-name">Consumer Defensive</div>
+                    <div class="sector-change change-negative">-1.16%</div>
+                    <div style="margin-top: 8px; font-size: 0.9em; color: #6b7280;">
+                        Market Cap: $4.09T | Div Yield: 2.61%
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Top Volume Surge Movers -->
+        <div class="section">
+            <h2 class="section-title">🔥 Top Volume Surge Movers (1.5x+ Volume, 2%+ Gain)</h2>
+            <table class="movers-table">
+                <thead>
+                    <tr>
+                        <th>Ticker</th>
+                        <th>Company</th>
+                        <th>Sector</th>
+                        <th>Price</th>
+                        <th>Change</th>
+                        <th>Rel Volume</th>
+                        <th>Market Cap</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td class="ticker-symbol">CGEM</td>
+                        <td>Cullinan Therapeutics Inc</td>
+                        <td><span class="badge badge-sector">Healthcare</span></td>
+                        <td>$12.93</td>
+                        <td class="change-positive">+36.54%</td>
+                        <td><span class="badge badge-volume">5.23x</span></td>
+                        <td>$763.9M</td>
+                    </tr>
+                    <tr>
+                        <td class="ticker-symbol">INSP</td>
+                        <td>Inspire Medical Systems Inc</td>
+                        <td><span class="badge badge-sector">Healthcare</span></td>
+                        <td>$117.31</td>
+                        <td class="change-positive">+30.53%</td>
+                        <td><span class="badge badge-volume">4.87x</span></td>
+                        <td>$3.4B</td>
+                    </tr>
+                    <tr>
+                        <td class="ticker-symbol">OSCR</td>
+                        <td>Oscar Health Inc</td>
+                        <td><span class="badge badge-sector">Healthcare</span></td>
+                        <td>$16.49</td>
+                        <td class="change-positive">+22.33%</td>
+                        <td><span class="badge badge-volume">3.45x</span></td>
+                        <td>$4.4B</td>
+                    </tr>
+                    <tr>
+                        <td class="ticker-symbol">BMNR</td>
+                        <td>BitMine Immersion Technologies</td>
+                        <td><span class="badge badge-sector">Financial</span></td>
+                        <td>$31.11</td>
+                        <td class="change-positive">+19.65%</td>
+                        <td><span class="badge badge-volume">1.55x</span></td>
+                        <td>$8.9B</td>
+                    </tr>
+                    <tr>
+                        <td class="ticker-symbol">GRAL</td>
+                        <td>GRAIL Inc</td>
+                        <td><span class="badge badge-sector">Healthcare</span></td>
+                        <td>$111.40</td>
+                        <td class="change-positive">+19.08%</td>
+                        <td><span class="badge badge-volume">2.42x</span></td>
+                        <td>$4.3B</td>
+                    </tr>
+                    <tr>
+                        <td class="ticker-symbol">LITE</td>
+                        <td>Lumentum Holdings Inc</td>
+                        <td><span class="badge badge-sector">Technology</span></td>
+                        <td>$299.36</td>
+                        <td class="change-positive">+17.13%</td>
+                        <td><span class="badge badge-volume">1.79x</span></td>
+                        <td>$21.2B</td>
+                    </tr>
+                    <tr>
+                        <td class="ticker-symbol">MAGN</td>
+                        <td>Magnera Corp</td>
+                        <td><span class="badge badge-sector">Basic Materials</span></td>
+                        <td>$13.47</td>
+                        <td class="change-positive">+16.72%</td>
+                        <td><span class="badge badge-volume">3.90x</span></td>
+                        <td>$479.5M</td>
+                    </tr>
+                    <tr>
+                        <td class="ticker-symbol">ADUR</td>
+                        <td>Aduro Clean Technologies</td>
+                        <td><span class="badge badge-sector">Industrials</span></td>
+                        <td>$12.72</td>
+                        <td class="change-positive">+16.65%</td>
+                        <td><span class="badge badge-volume">3.77x</span></td>
+                        <td>$396.6M</td>
+                    </tr>
+                    <tr>
+                        <td class="ticker-symbol">CLS</td>
+                        <td>Celestica Inc</td>
+                        <td><span class="badge badge-sector">Technology</span></td>
+                        <td>$322.46</td>
+                        <td class="change-positive">+15.14%</td>
+                        <td><span class="badge badge-volume">1.61x</span></td>
+                        <td>$37.1B</td>
+                    </tr>
+                    <tr>
+                        <td class="ticker-symbol">NPCE</td>
+                        <td>NeuroPace Inc</td>
+                        <td><span class="badge badge-sector">Healthcare</span></td>
+                        <td>$16.26</td>
+                        <td class="change-positive">+13.31%</td>
+                        <td><span class="badge badge-volume">2.43x</span></td>
+                        <td>$541.6M</td>
+                    </tr>
+                    <tr>
+                        <td class="ticker-symbol">SNDX</td>
+                        <td>Syndax Pharmaceuticals Inc</td>
+                        <td><span class="badge badge-sector">Healthcare</span></td>
+                        <td>$19.76</td>
+                        <td class="change-positive">+13.30%</td>
+                        <td><span class="badge badge-volume">1.63x</span></td>
+                        <td>$1.7B</td>
+                    </tr>
+                    <tr>
+                        <td class="ticker-symbol">CRDO</td>
+                        <td>Credo Technology Group</td>
+                        <td><span class="badge badge-sector">Technology</span></td>
+                        <td>$150.85</td>
+                        <td class="change-positive">+13.00%</td>
+                        <td><span class="badge badge-volume">2.38x</span></td>
+                        <td>$26.1B</td>
+                    </tr>
+                    <tr>
+                        <td class="ticker-symbol">PRAX</td>
+                        <td>Praxis Precision Medicines</td>
+                        <td><span class="badge badge-sector">Healthcare</span></td>
+                        <td>$190.85</td>
+                        <td class="change-positive">+12.40%</td>
+                        <td><span class="badge badge-volume">1.51x</span></td>
+                        <td>$4.8B</td>
+                    </tr>
+                    <tr>
+                        <td class="ticker-symbol">THC</td>
+                        <td>Tenet Healthcare Corp</td>
+                        <td><span class="badge badge-sector">Healthcare</span></td>
+                        <td>$214.47</td>
+                        <td class="change-positive">+11.73%</td>
+                        <td><span class="badge badge-volume">3.08x</span></td>
+                        <td>$18.8B</td>
+                    </tr>
+                    <tr>
+                        <td class="ticker-symbol">SEPN</td>
+                        <td>Septerna Inc</td>
+                        <td><span class="badge badge-sector">Healthcare</span></td>
+                        <td>$28.51</td>
+                        <td class="change-positive">+11.54%</td>
+                        <td><span class="badge badge-volume">1.75x</span></td>
+                        <td>$1.3B</td>
+                    </tr>
+                    <tr>
+                        <td class="ticker-symbol">AVGO</td>
+                        <td>Broadcom Inc</td>
+                        <td><span class="badge badge-sector">Technology</span></td>
+                        <td>$377.96</td>
+                        <td class="change-positive">+11.10%</td>
+                        <td><span class="badge badge-volume">1.82x</span></td>
+                        <td>$1.8T</td>
+                    </tr>
+                    <tr>
+                        <td class="ticker-symbol">ODD</td>
+                        <td>ODDITY Tech Ltd</td>
+                        <td><span class="badge badge-sector">Consumer Cyclical</span></td>
+                        <td>$41.77</td>
+                        <td class="change-positive">+10.80%</td>
+                        <td><span class="badge badge-volume">2.17x</span></td>
+                        <td>$2.3B</td>
+                    </tr>
+                    <tr>
+                        <td class="ticker-symbol">NBIS</td>
+                        <td>Nebius Group N.V</td>
+                        <td><span class="badge badge-sector">Technology</span></td>
+                        <td>$91.90</td>
+                        <td class="change-positive">+10.38%</td>
+                        <td><span class="badge badge-volume">2.09x</span></td>
+                        <td>$22.9B</td>
+                    </tr>
+                    <tr>
+                        <td class="ticker-symbol">MODG</td>
+                        <td>Topgolf Callaway Brands</td>
+                        <td><span class="badge badge-sector">Consumer Cyclical</span></td>
+                        <td>$11.15</td>
+                        <td class="change-positive">+10.29%</td>
+                        <td><span class="badge badge-volume">2.08x</span></td>
+                        <td>$2.1B</td>
+                    </tr>
+                    <tr>
+                        <td class="ticker-symbol">MLAB</td>
+                        <td>Mesa Laboratories Inc</td>
+                        <td><span class="badge badge-sector">Technology</span></td>
+                        <td>$77.74</td>
+                        <td class="change-positive">+10.11%</td>
+                        <td><span class="badge badge-volume">4.05x</span></td>
+                        <td>$429.3M</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Earnings Movers -->
+        <div class="section">
+            <h2 class="section-title">📊 After-Hours Earnings Mover</h2>
+            <table class="movers-table">
+                <thead>
+                    <tr>
+                        <th>Ticker</th>
+                        <th>Company</th>
+                        <th>Sector</th>
+                        <th>Price</th>
+                        <th>Day Change</th>
+                        <th>AH Change</th>
+                        <th>EPS Surprise</th>
+                        <th>Rev Surprise</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td class="ticker-symbol">SYM</td>
+                        <td>Symbotic Inc</td>
+                        <td><span class="badge badge-sector">Industrials</span></td>
+                        <td>$55.46</td>
+                        <td class="change-positive">+3.39%</td>
+                        <td class="change-positive">+8.00%</td>
+                        <td class="change-positive">+54.64%</td>
+                        <td class="change-positive">+11.04%</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Market Statistics -->
+        <div class="section">
+            <h2 class="section-title">📊 Market Breadth & Statistics</h2>
+            <div class="stats-grid">
+                <div class="stat-box">
+                    <div class="stat-label">Volume Surge Stocks</div>
+                    <div class="stat-value">143</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-label">Uptrend Stocks</div>
+                    <div class="stat-value">579</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-label">Avg Relative Volume</div>
+                    <div class="stat-value">2.3x</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-label">Avg Price Change</div>
+                    <div class="stat-value">+6.1%</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-label">VIX (Volatility)</div>
+                    <div class="stat-value">~21</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-label">Weekly Earnings</div>
+                    <div class="stat-value">79</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Most Active Stocks -->
+        <div class="section">
+            <h2 class="section-title">🔥 Most Active Stocks by Volume</h2>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-top: 20px;">
+                <div style="background: #f8f9fa; padding: 15px; border-radius: 10px; border-left: 4px solid #3b82f6;">
+                    <div style="font-weight: bold; color: #1e3c72;">NVDA</div>
+                    <div style="font-size: 1.2em; margin: 5px 0;">$182.55</div>
+                    <div class="change-positive">+2.05%</div>
+                </div>
+                <div style="background: #f8f9fa; padding: 15px; border-radius: 10px; border-left: 4px solid #3b82f6;">
+                    <div style="font-weight: bold; color: #1e3c72;">TSLA</div>
+                    <div style="font-size: 1.2em; margin: 5px 0;">$417.50</div>
+                    <div class="change-positive">+6.75%</div>
+                </div>
+                <div style="background: #f8f9fa; padding: 15px; border-radius: 10px; border-left: 4px solid #3b82f6;">
+                    <div style="font-weight: bold; color: #1e3c72;">TQQQ</div>
+                    <div style="font-size: 1.2em; margin: 5px 0;">$51.08</div>
+                    <div class="change-positive">+7.58%</div>
+                </div>
+                <div style="background: #f8f9fa; padding: 15px; border-radius: 10px; border-left: 4px solid #3b82f6;">
+                    <div style="font-weight: bold; color: #1e3c72;">SOXL</div>
+                    <div style="font-size: 1.2em; margin: 5px 0;">$35.84</div>
+                    <div class="change-positive">+12.95%</div>
+                </div>
+                <div style="background: #f8f9fa; padding: 15px; border-radius: 10px; border-left: 4px solid #3b82f6;">
+                    <div style="font-weight: bold; color: #1e3c72;">OPEN</div>
+                    <div style="font-size: 1.2em; margin: 5px 0;">$7.69</div>
+                    <div class="change-positive">+13.93%</div>
+                </div>
+                <div style="background: #f8f9fa; padding: 15px; border-radius: 10px; border-left: 4px solid #3b82f6;">
+                    <div style="font-weight: bold; color: #1e3c72;">IBIT</div>
+                    <div style="font-size: 1.2em; margin: 5px 0;">$50.57</div>
+                    <div class="change-positive">+5.42%</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Key Takeaways -->
+        <div class="key-takeaways">
+            <h2>💡 Key Takeaways</h2>
+            <ul>
+                <li><strong>Tech Leadership:</strong> Technology sector drove market gains with Communication Services (+3.63%) and Technology (+2.48%) leading all sectors, while NASDAQ surged 2.68%.</li>
+
+                <li><strong>Broadcom Breakout:</strong> AVGO soared 11.1% on 1.82x volume, pushing its market cap to $1.8T and leading semiconductor stocks higher across the board.</li>
+
+                <li><strong>Healthcare Dominance:</strong> Healthcare stocks dominated volume surge movers with 12 of top 20 names, led by CGEM (+36.54%) and INSP (+30.53%).</li>
+
+                <li><strong>Strong Market Breadth:</strong> 143 stocks showed volume surges above 1.5x with average gains of 6.1%, indicating broad institutional participation and healthy market internals.</li>
+
+                <li><strong>Small-Cap Strength:</strong> Russell 2000 jumped 1.89%, outperforming the Dow Jones (+0.44%), suggesting increased risk appetite and rotation into smaller companies.</li>
+
+                <li><strong>Semiconductor Rally:</strong> Chip stocks rallied strongly with LITE (+17.13%), CRDO (+13.0%), and CLS (+15.14%) all posting double-digit gains on elevated volume.</li>
+
+                <li><strong>Defensive Sectors Lag:</strong> Consumer Defensive (-1.16%) and Energy (-0.21%) were the only sectors in negative territory, reflecting risk-on sentiment.</li>
+
+                <li><strong>Volatility Stable:</strong> VIX hovering around 20-23 suggests moderate volatility expectations as markets digest strong weekly gains.</li>
+
+                <li><strong>Earnings Beat:</strong> Symbotic (SYM) jumped 8% after-hours on a 54.64% EPS surprise and 11.04% revenue beat, continuing positive earnings momentum.</li>
+
+                <li><strong>Broad-Based Rally:</strong> With 579 stocks in uptrends and positive performance across 9 of 11 sectors, the market rally showed healthy breadth and participation.</li>
+            </ul>
+        </div>
+
+        <!-- Footer -->
+        <div class="footer">
+            <p><strong>Market Report Generated:</strong> November 24, 2025</p>
+            <p>Data Sources: Finviz, Alpaca Markets, Financial Modeling Prep</p>
+            <p style="font-size: 0.9em; margin-top: 15px;">
+                This report is for informational purposes only and does not constitute investment advice.
+                Past performance is not indicative of future results.
+            </p>
+        </div>
+    </div>
+</body>
+</html>

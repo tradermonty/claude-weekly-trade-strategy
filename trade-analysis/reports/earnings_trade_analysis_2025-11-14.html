@@ -1,0 +1,679 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Earnings Trade Analysis - November 14, 2025</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            color: white;
+            padding: 40px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .header .subtitle {
+            font-size: 1.2em;
+            opacity: 0.9;
+            margin-bottom: 5px;
+        }
+
+        .header .date {
+            font-size: 1em;
+            opacity: 0.8;
+        }
+
+        .summary-dashboard {
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            padding: 30px;
+            border-bottom: 3px solid #667eea;
+        }
+
+        .summary-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        .summary-card {
+            background: white;
+            padding: 20px;
+            border-radius: 15px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+
+        .summary-card h3 {
+            color: #2a5298;
+            font-size: 1.1em;
+            margin-bottom: 10px;
+        }
+
+        .summary-card .value {
+            font-size: 2em;
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        .content {
+            padding: 40px;
+        }
+
+        .section-title {
+            font-size: 2em;
+            color: #1e3c72;
+            margin: 30px 0 20px 0;
+            padding-bottom: 10px;
+            border-bottom: 3px solid #667eea;
+        }
+
+        .stock-card {
+            background: white;
+            border: 2px solid #e0e0e0;
+            border-radius: 15px;
+            padding: 30px;
+            margin-bottom: 30px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .stock-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 16px rgba(0,0,0,0.2);
+        }
+
+        .stock-card.grade-a {
+            border-left: 8px solid #10b981;
+        }
+
+        .stock-card.grade-b {
+            border-left: 8px solid #3b82f6;
+        }
+
+        .stock-card.grade-c {
+            border-left: 8px solid #f59e0b;
+        }
+
+        .stock-card.grade-d {
+            border-left: 8px solid #ef4444;
+        }
+
+        .stock-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        .stock-title {
+            font-size: 1.8em;
+            color: #1e3c72;
+        }
+
+        .ticker {
+            color: #667eea;
+            font-weight: bold;
+        }
+
+        .grade-badge {
+            padding: 10px 20px;
+            border-radius: 25px;
+            font-weight: bold;
+            font-size: 1.2em;
+            color: white;
+        }
+
+        .grade-a-badge {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+        }
+
+        .grade-b-badge {
+            background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+        }
+
+        .grade-c-badge {
+            background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+        }
+
+        .grade-d-badge {
+            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+        }
+
+        .score-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+
+        .score-item {
+            background: #f5f7fa;
+            padding: 15px;
+            border-radius: 10px;
+            border-left: 4px solid #667eea;
+        }
+
+        .score-label {
+            font-size: 0.9em;
+            color: #666;
+            margin-bottom: 5px;
+        }
+
+        .score-value {
+            font-size: 1.4em;
+            font-weight: bold;
+            color: #1e3c72;
+        }
+
+        .analysis-section {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+        }
+
+        .analysis-section h4 {
+            color: #2a5298;
+            margin-bottom: 15px;
+            font-size: 1.3em;
+        }
+
+        .analysis-section ul {
+            list-style-position: inside;
+            color: #333;
+        }
+
+        .analysis-section li {
+            margin-bottom: 8px;
+            padding-left: 10px;
+        }
+
+        .probability-meter {
+            background: #e0e0e0;
+            height: 30px;
+            border-radius: 15px;
+            overflow: hidden;
+            margin: 15px 0;
+        }
+
+        .probability-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #10b981 0%, #059669 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            transition: width 1s ease;
+        }
+
+        .risk-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+
+        .risk-table th,
+        .risk-table td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        .risk-table th {
+            background: #2a5298;
+            color: white;
+            font-weight: bold;
+        }
+
+        .risk-table tr:hover {
+            background: #f5f7fa;
+        }
+
+        .footer {
+            background: #1e3c72;
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .disclaimer {
+            background: #fff3cd;
+            border: 2px solid #ffc107;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+            color: #856404;
+        }
+
+        .disclaimer h4 {
+            color: #856404;
+            margin-bottom: 10px;
+        }
+
+        .stars {
+            color: #fbbf24;
+            font-size: 1.2em;
+        }
+
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 1.8em;
+            }
+
+            .stock-header {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+
+            .grade-badge {
+                margin-top: 10px;
+            }
+
+            .score-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Post-Earnings Gap-Up Stock Analysis</h1>
+            <div class="subtitle">昨日の引け後・寄り付き前決算発表とギャップアップ銘柄まとめ</div>
+            <div class="date">November 14, 2025</div>
+        </div>
+
+        <div class="summary-dashboard">
+            <h2 style="color: #1e3c72; margin-bottom: 20px;">Market Summary</h2>
+            <div class="summary-cards">
+                <div class="summary-card">
+                    <h3>Total Stocks Analyzed</h3>
+                    <div class="value">2</div>
+                </div>
+                <div class="summary-card">
+                    <h3>A-Grade Stocks</h3>
+                    <div class="value" style="color: #10b981;">0</div>
+                </div>
+                <div class="summary-card">
+                    <h3>B-Grade Stocks</h3>
+                    <div class="value" style="color: #3b82f6;">1</div>
+                </div>
+                <div class="summary-card">
+                    <h3>Average Gap Size</h3>
+                    <div class="value">9.46%</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="content">
+            <h2 class="section-title">B-Grade Stocks (55-69% Success Rate) <span class="stars">⭐⭐⭐⭐</span></h2>
+
+            <!-- SRRK Stock Card -->
+            <div class="stock-card grade-b">
+                <div class="stock-header">
+                    <div class="stock-title">
+                        <span class="ticker">$SRRK</span> - Scholar Rock Holding Corp
+                    </div>
+                    <div class="grade-badge grade-b-badge">B-Grade: 73 Points</div>
+                </div>
+
+                <div class="score-grid">
+                    <div class="score-item">
+                        <div class="score-label">Total Score</div>
+                        <div class="score-value">73/100</div>
+                    </div>
+                    <div class="score-item">
+                        <div class="score-label">Gap Size (25%)</div>
+                        <div class="score-value">2.0 pts</div>
+                        <div class="score-label" style="font-size: 0.85em; margin-top: 5px;">+13.90% gap</div>
+                    </div>
+                    <div class="score-item">
+                        <div class="score-label">Pre-Earnings Trend (30%)</div>
+                        <div class="score-value">4.5 pts</div>
+                        <div class="score-label" style="font-size: 0.85em; margin-top: 5px;">+18.31% (1 week)</div>
+                    </div>
+                    <div class="score-item">
+                        <div class="score-label">Volume Trend (20%)</div>
+                        <div class="score-value">1.0 pt</div>
+                        <div class="score-label" style="font-size: 0.85em; margin-top: 5px;">Rel Vol: 0.90</div>
+                    </div>
+                    <div class="score-item">
+                        <div class="score-label">MA200 Position (15%)</div>
+                        <div class="score-value">3.0 pts</div>
+                        <div class="score-label" style="font-size: 0.85em; margin-top: 5px;">+1.13% above</div>
+                    </div>
+                    <div class="score-item">
+                        <div class="score-label">MA50 Position (10%)</div>
+                        <div class="score-value">4.0 pts</div>
+                        <div class="score-label" style="font-size: 0.85em; margin-top: 5px;">+5.03% above</div>
+                    </div>
+                </div>
+
+                <div class="analysis-section">
+                    <h4>Success Probability</h4>
+                    <div class="probability-meter">
+                        <div class="probability-fill" style="width: 60%;">60% Success Rate</div>
+                    </div>
+                </div>
+
+                <div class="analysis-section">
+                    <h4>Earnings Results & Analysis</h4>
+                    <ul>
+                        <li><strong>EPS Surprise:</strong> -6.85% (missed estimates)</li>
+                        <li><strong>Revenue Surprise:</strong> -100.00% (significant miss)</li>
+                        <li><strong>Market Cap:</strong> $3.29B (Mid-cap biotech)</li>
+                        <li><strong>Sector:</strong> Healthcare - Biotechnology</li>
+                        <li><strong>Recent Momentum:</strong> Strong 1-week performance (+18.31%), positive 1-month (+16.34%)</li>
+                        <li><strong>Key Development:</strong> New employee inducement grants signal growth expectations</li>
+                    </ul>
+                </div>
+
+                <div class="analysis-section">
+                    <h4>Technical Factors</h4>
+                    <ul>
+                        <li><strong>Current Price:</strong> $34.25 (gap up from $30.07)</li>
+                        <li><strong>20-Day SMA:</strong> +15.44% above ($29.46)</li>
+                        <li><strong>50-Day SMA:</strong> +5.03% above ($32.38)</li>
+                        <li><strong>200-Day SMA:</strong> +1.13% above ($33.63)</li>
+                        <li><strong>RSI:</strong> 62.41 (bullish but not overbought)</li>
+                        <li><strong>Volume:</strong> 112.2K (below average - caution)</li>
+                        <li><strong>Beta:</strong> 0.66 (lower volatility than market)</li>
+                    </ul>
+                </div>
+
+                <div class="analysis-section">
+                    <h4>Trade Rationale</h4>
+                    <ul>
+                        <li><strong>Positive Factors:</strong>
+                            <ul>
+                                <li>Strong pre-earnings uptrend (+18% in 1 week)</li>
+                                <li>Trading above all major moving averages</li>
+                                <li>Healthy RSI without overbought conditions</li>
+                                <li>Recent rally shows investor confidence</li>
+                            </ul>
+                        </li>
+                        <li><strong>Risk Factors:</strong>
+                            <ul>
+                                <li>Negative earnings surprise on both EPS and revenue</li>
+                                <li>Volume significantly below average (rel vol 0.90)</li>
+                                <li>Large gap may face pullback pressure</li>
+                                <li>Biotech sector inherently volatile</li>
+                            </ul>
+                        </li>
+                    </ul>
+                </div>
+
+                <table class="risk-table">
+                    <thead>
+                        <tr>
+                            <th>Position Parameters</th>
+                            <th>Value</th>
+                            <th>Notes</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Entry Zone</td>
+                            <td>$33.50 - $34.50</td>
+                            <td>Wait for pullback or confirmation</td>
+                        </tr>
+                        <tr>
+                            <td>Stop Loss</td>
+                            <td>$31.50</td>
+                            <td>Below recent support at $32</td>
+                        </tr>
+                        <tr>
+                            <td>Target 1</td>
+                            <td>$36.50</td>
+                            <td>+7% from current level</td>
+                        </tr>
+                        <tr>
+                            <td>Target 2</td>
+                            <td>$39.00</td>
+                            <td>Extension target +14%</td>
+                        </tr>
+                        <tr>
+                            <td>Risk/Reward</td>
+                            <td>1:2.5</td>
+                            <td>Favorable ratio</td>
+                        </tr>
+                        <tr>
+                            <td>Position Size</td>
+                            <td>2-3% of portfolio</td>
+                            <td>Moderate risk allocation</td>
+                        </tr>
+                        <tr>
+                            <td>Time Horizon</td>
+                            <td>2-10 days</td>
+                            <td>Short-term swing trade</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <h2 class="section-title">C-Grade Stocks (40-54% Success Rate) <span class="stars">⭐⭐⭐</span></h2>
+
+            <!-- LGN Stock Card -->
+            <div class="stock-card grade-c">
+                <div class="stock-header">
+                    <div class="stock-title">
+                        <span class="ticker">$LGN</span> - Legence Corp
+                    </div>
+                    <div class="grade-badge grade-c-badge">C-Grade: 57 Points</div>
+                </div>
+
+                <div class="score-grid">
+                    <div class="score-item">
+                        <div class="score-label">Total Score</div>
+                        <div class="score-value">57/100</div>
+                    </div>
+                    <div class="score-item">
+                        <div class="score-label">Gap Size (25%)</div>
+                        <div class="score-value">3.0 pts</div>
+                        <div class="score-label" style="font-size: 0.85em; margin-top: 5px;">+5.01% gap</div>
+                    </div>
+                    <div class="score-item">
+                        <div class="score-label">Pre-Earnings Trend (30%)</div>
+                        <div class="score-value">1.5 pts</div>
+                        <div class="score-label" style="font-size: 0.85em; margin-top: 5px;">-1.41% (1 week)</div>
+                    </div>
+                    <div class="score-item">
+                        <div class="score-label">Volume Trend (20%)</div>
+                        <div class="score-value">1.0 pt</div>
+                        <div class="score-label" style="font-size: 0.85em; margin-top: 5px;">Rel Vol: 0.10</div>
+                    </div>
+                    <div class="score-item">
+                        <div class="score-label">MA200 Position (15%)</div>
+                        <div class="score-value">3.0 pts</div>
+                        <div class="score-label" style="font-size: 0.85em; margin-top: 5px;">+2.96% above</div>
+                    </div>
+                    <div class="score-item">
+                        <div class="score-label">MA50 Position (10%)</div>
+                        <div class="score-value">3.0 pts</div>
+                        <div class="score-label" style="font-size: 0.85em; margin-top: 5px;">+2.96% above</div>
+                    </div>
+                </div>
+
+                <div class="analysis-section">
+                    <h4>Success Probability</h4>
+                    <div class="probability-meter">
+                        <div class="probability-fill" style="width: 45%; background: linear-gradient(90deg, #f59e0b 0%, #d97706 100%);">45% Success Rate</div>
+                    </div>
+                </div>
+
+                <div class="analysis-section">
+                    <h4>Earnings Results & Analysis</h4>
+                    <ul>
+                        <li><strong>EPS Surprise:</strong> -124.15% (significant miss)</li>
+                        <li><strong>Revenue Surprise:</strong> +10.81% (beat estimates - 26% revenue growth)</li>
+                        <li><strong>Market Cap:</strong> $1.63B (Small-cap industrial)</li>
+                        <li><strong>Sector:</strong> Industrials - Engineering & Construction</li>
+                        <li><strong>Recent Momentum:</strong> Negative 1-week (-1.41%), positive 1-month (+4.01%)</li>
+                        <li><strong>Key Development:</strong> Announced acquisition of Bowers, strong revenue growth in first post-IPO report</li>
+                    </ul>
+                </div>
+
+                <div class="analysis-section">
+                    <h4>Technical Factors</h4>
+                    <ul>
+                        <li><strong>Current Price:</strong> $34.99 (gap up from $33.32)</li>
+                        <li><strong>20-Day SMA:</strong> -5.45% below ($37.01) - BEARISH SIGNAL</li>
+                        <li><strong>50-Day SMA:</strong> +2.96% above ($33.98)</li>
+                        <li><strong>200-Day SMA:</strong> +2.96% above ($33.98)</li>
+                        <li><strong>RSI:</strong> 48.16 (neutral)</li>
+                        <li><strong>Volume:</strong> 5.8K (extremely low - major concern)</li>
+                        <li><strong>Recent Pattern:</strong> Sharp decline from $43 high to current levels</li>
+                    </ul>
+                </div>
+
+                <div class="analysis-section">
+                    <h4>Trade Rationale</h4>
+                    <ul>
+                        <li><strong>Positive Factors:</strong>
+                            <ul>
+                                <li>Strong 26% revenue growth beat expectations</li>
+                                <li>Strategic acquisition announcement (Bowers)</li>
+                                <li>Trading above 50-day and 200-day moving averages</li>
+                                <li>First post-IPO earnings - potential for volatility expansion</li>
+                            </ul>
+                        </li>
+                        <li><strong>Risk Factors:</strong>
+                            <ul>
+                                <li>Massive EPS miss (-124%) - profitability concerns</li>
+                                <li>Trading below 20-day MA - short-term weakness</li>
+                                <li>Extremely low volume (rel vol 0.10) - liquidity risk</li>
+                                <li>Recent downtrend from $43 to $33 range</li>
+                                <li>Pre-earnings negative momentum (-1.41%)</li>
+                            </ul>
+                        </li>
+                    </ul>
+                </div>
+
+                <table class="risk-table">
+                    <thead>
+                        <tr>
+                            <th>Position Parameters</th>
+                            <th>Value</th>
+                            <th>Notes</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Entry Zone</td>
+                            <td>$33.50 - $34.50</td>
+                            <td>Wait for volume confirmation</td>
+                        </tr>
+                        <tr>
+                            <td>Stop Loss</td>
+                            <td>$32.00</td>
+                            <td>Below recent support</td>
+                        </tr>
+                        <tr>
+                            <td>Target 1</td>
+                            <td>$37.00</td>
+                            <td>20-day MA resistance</td>
+                        </tr>
+                        <tr>
+                            <td>Target 2</td>
+                            <td>$39.50</td>
+                            <td>Previous support area</td>
+                        </tr>
+                        <tr>
+                            <td>Risk/Reward</td>
+                            <td>1:1.7</td>
+                            <td>Less favorable ratio</td>
+                        </tr>
+                        <tr>
+                            <td>Position Size</td>
+                            <td>1-2% of portfolio</td>
+                            <td>Small risk allocation - HIGH RISK</td>
+                        </tr>
+                        <tr>
+                            <td>Time Horizon</td>
+                            <td>2-10 days</td>
+                            <td>Short-term swing trade</td>
+                        </tr>
+                        <tr>
+                            <td>Caution</td>
+                            <td colspan="2" style="color: #dc2626; font-weight: bold;">⚠️ AVOID OR WAIT - Extremely low volume and significant EPS miss present high risk</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="disclaimer">
+                <h4>⚠️ Risk Disclaimer</h4>
+                <p><strong>This analysis is for educational and informational purposes only.</strong> Past performance does not guarantee future results. The backtest-based scoring system shows historical success rates that may not repeat in future trades.</p>
+                <p><strong>Key Risks:</strong></p>
+                <ul>
+                    <li>Earnings trades are inherently volatile and can result in significant losses</li>
+                    <li>Gap-up stocks often face pullback pressure</li>
+                    <li>Low volume trades (like LGN) present liquidity risks</li>
+                    <li>Biotech stocks (like SRRK) carry sector-specific risks</li>
+                    <li>Always use proper position sizing (1-3% of portfolio maximum)</li>
+                    <li>Never trade without stop-loss orders</li>
+                    <li>Consider your personal risk tolerance before trading</li>
+                </ul>
+                <p><strong>This is not financial advice.</strong> Please consult with a licensed financial advisor before making investment decisions. Trade at your own risk.</p>
+            </div>
+
+            <div class="analysis-section">
+                <h4>Methodology: 5-Factor Backtest Scoring System</h4>
+                <p>This analysis uses a proprietary 5-factor scoring system based on historical earnings trade data:</p>
+                <ul>
+                    <li><strong>Gap Size (25% weight):</strong> Measures the magnitude of the post-earnings gap</li>
+                    <li><strong>Pre-Earnings Trend (30% weight):</strong> Evaluates momentum leading into earnings</li>
+                    <li><strong>Volume Trend (20% weight):</strong> Analyzes trading interest and liquidity</li>
+                    <li><strong>MA200 Position (15% weight):</strong> Long-term trend indicator</li>
+                    <li><strong>MA50 Position (10% weight):</strong> Medium-term trend indicator</li>
+                </ul>
+                <p><strong>Grading Scale:</strong></p>
+                <ul>
+                    <li>A-Grade (85+ points): 70%+ historical success rate</li>
+                    <li>B-Grade (70-84 points): 55-69% historical success rate</li>
+                    <li>C-Grade (55-69 points): 40-54% historical success rate</li>
+                    <li>D-Grade (54- points): Below 40% historical success rate</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="footer">
+            <p><strong>Analysis Date:</strong> November 14, 2025</p>
+            <p><strong>Data Sources:</strong> Finviz, Alpaca, Financial Modeling Prep</p>
+            <p><strong>Methodology:</strong> 5-Factor Backtest Scoring System</p>
+            <p style="margin-top: 20px; opacity: 0.8;">Generated by Earnings Trade Analysis System</p>
+        </div>
+    </div>
+</body>
+</html>

@@ -1,0 +1,773 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>After Market Report - December 1, 2025</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px;
+            color: #333;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            color: white;
+            padding: 40px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .header .date {
+            font-size: 1.2em;
+            opacity: 0.9;
+        }
+
+        .executive-summary {
+            background: #f8f9fa;
+            padding: 30px;
+            border-left: 5px solid #dc3545;
+        }
+
+        .executive-summary h2 {
+            color: #dc3545;
+            margin-bottom: 15px;
+            font-size: 1.8em;
+        }
+
+        .executive-summary p {
+            font-size: 1.1em;
+            line-height: 1.8;
+            color: #555;
+        }
+
+        .content {
+            padding: 40px;
+        }
+
+        .section {
+            margin-bottom: 40px;
+        }
+
+        .section h2 {
+            color: #2a5298;
+            margin-bottom: 20px;
+            font-size: 1.8em;
+            border-bottom: 3px solid #2a5298;
+            padding-bottom: 10px;
+        }
+
+        .index-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .index-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 25px;
+            border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            transition: transform 0.3s;
+        }
+
+        .index-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .index-card.negative {
+            background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+        }
+
+        .index-card.positive {
+            background: linear-gradient(135deg, #28a745 0%, #218838 100%);
+        }
+
+        .index-card h3 {
+            font-size: 1.3em;
+            margin-bottom: 10px;
+        }
+
+        .index-card .price {
+            font-size: 2em;
+            font-weight: bold;
+            margin: 10px 0;
+        }
+
+        .index-card .change {
+            font-size: 1.3em;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        table thead {
+            background: linear-gradient(135deg, #2a5298 0%, #1e3c72 100%);
+            color: white;
+        }
+
+        table th {
+            padding: 15px;
+            text-align: left;
+            font-weight: 600;
+        }
+
+        table td {
+            padding: 12px 15px;
+            border-bottom: 1px solid #e9ecef;
+        }
+
+        table tbody tr:hover {
+            background: #f8f9fa;
+        }
+
+        .positive-change {
+            color: #28a745;
+            font-weight: bold;
+        }
+
+        .negative-change {
+            color: #dc3545;
+            font-weight: bold;
+        }
+
+        .sector-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+
+        .sector-item {
+            padding: 15px;
+            border-radius: 8px;
+            background: #f8f9fa;
+            border-left: 4px solid #2a5298;
+        }
+
+        .sector-item.positive {
+            border-left-color: #28a745;
+            background: #d4edda;
+        }
+
+        .sector-item.negative {
+            border-left-color: #dc3545;
+            background: #f8d7da;
+        }
+
+        .sector-item h4 {
+            margin-bottom: 8px;
+            color: #333;
+        }
+
+        .highlight-box {
+            background: #fff3cd;
+            border-left: 5px solid #ffc107;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 5px;
+        }
+
+        .highlight-box h3 {
+            color: #856404;
+            margin-bottom: 10px;
+        }
+
+        .footer {
+            background: #2a5298;
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .footer p {
+            margin: 5px 0;
+        }
+
+        .metric-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+
+        .metric-box {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            text-align: center;
+            border: 2px solid #e9ecef;
+        }
+
+        .metric-box .label {
+            font-size: 0.9em;
+            color: #6c757d;
+            margin-bottom: 8px;
+        }
+
+        .metric-box .value {
+            font-size: 1.8em;
+            font-weight: bold;
+            color: #2a5298;
+        }
+
+        ul.key-points {
+            list-style: none;
+            padding-left: 0;
+        }
+
+        ul.key-points li {
+            padding: 10px;
+            margin: 8px 0;
+            background: #f8f9fa;
+            border-left: 4px solid #2a5298;
+            border-radius: 4px;
+        }
+
+        ul.key-points li:before {
+            content: "▸ ";
+            color: #2a5298;
+            font-weight: bold;
+            margin-right: 8px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>After Market Report</h1>
+            <p class="date">December 1, 2025 | Market Close Analysis</p>
+        </div>
+
+        <div class="executive-summary">
+            <h2>Executive Summary</h2>
+            <p>
+                U.S. markets closed lower on Monday, December 1st, as investors kicked off the final month of 2025 with cautious sentiment.
+                The S&P 500 declined 0.50%, closing at 6,814.65, while the Dow Jones Industrial Average fell 0.89% to 47,289.34.
+                The tech-heavy NASDAQ Composite slipped 0.38% to 23,275.92, and the small-cap Russell 2000 experienced the sharpest decline,
+                dropping 1.25% to 2,469.13. The VIX volatility index rose to 17.25, reflecting increased market uncertainty.
+                Sector performance was mixed, with Energy gaining 0.54% as the lone bright spot, while Utilities led declines with a 2.16% drop.
+                Trading volume remained elevated as market participants positioned for year-end and monitored key earnings reports from tech giants.
+            </p>
+        </div>
+
+        <div class="content">
+            <div class="section">
+                <h2>Major Index Performance</h2>
+                <div class="index-grid">
+                    <div class="index-card negative">
+                        <h3>S&P 500</h3>
+                        <div class="price">6,814.65</div>
+                        <div class="change">-34.44 (-0.50%)</div>
+                        <div style="margin-top: 10px; font-size: 0.9em;">
+                            Day Range: 6,799.94 - 6,843.65<br>
+                            Volume: 2.18B
+                        </div>
+                    </div>
+
+                    <div class="index-card negative">
+                        <h3>Dow Jones</h3>
+                        <div class="price">47,289.34</div>
+                        <div class="change">-427.09 (-0.89%)</div>
+                        <div style="margin-top: 10px; font-size: 0.9em;">
+                            Day Range: 47,271.11 - 47,676.03<br>
+                            Volume: 464.2M
+                        </div>
+                    </div>
+
+                    <div class="index-card negative">
+                        <h3>NASDAQ</h3>
+                        <div class="price">23,275.92</div>
+                        <div class="change">-89.76 (-0.38%)</div>
+                        <div style="margin-top: 10px; font-size: 0.9em;">
+                            Day Range: 23,110.21 - 23,363.85<br>
+                            Volume: 6.67B
+                        </div>
+                    </div>
+
+                    <div class="index-card negative">
+                        <h3>Russell 2000</h3>
+                        <div class="price">2,469.13</div>
+                        <div class="change">-31.31 (-1.25%)</div>
+                        <div style="margin-top: 10px; font-size: 0.9em;">
+                            Day Range: 2,468.01 - 2,488.58<br>
+                            52-Week: 1,732.99 - 2,541.67
+                        </div>
+                    </div>
+                </div>
+
+                <h3 style="margin-top: 30px; color: #2a5298;">Key ETF Performance</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>ETF</th>
+                            <th>Price</th>
+                            <th>Change</th>
+                            <th>Volume</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>SPY</strong> - SPDR S&P 500</td>
+                            <td>$680.27</td>
+                            <td class="negative-change">-0.46%</td>
+                            <td>59.43M</td>
+                        </tr>
+                        <tr>
+                            <td><strong>QQQ</strong> - Invesco NASDAQ</td>
+                            <td>$617.17</td>
+                            <td class="negative-change">-0.34%</td>
+                            <td>40.37M</td>
+                        </tr>
+                        <tr>
+                            <td><strong>DIA</strong> - SPDR Dow Jones</td>
+                            <td>$473.32</td>
+                            <td class="negative-change">-0.81%</td>
+                            <td>4.34M</td>
+                        </tr>
+                        <tr>
+                            <td><strong>IWM</strong> - iShares Russell 2000</td>
+                            <td>$245.62</td>
+                            <td class="negative-change">-1.26%</td>
+                            <td>36.73M</td>
+                        </tr>
+                        <tr>
+                            <td><strong>TLT</strong> - 20+ Year Treasury Bond</td>
+                            <td>$88.77</td>
+                            <td class="negative-change">-1.60%</td>
+                            <td>46.91M</td>
+                        </tr>
+                        <tr>
+                            <td><strong>GLD</strong> - SPDR Gold Shares</td>
+                            <td>$389.75</td>
+                            <td class="positive-change">+0.48%</td>
+                            <td>11.11M</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="section">
+                <h2>Market Breadth & Sentiment Indicators</h2>
+                <div class="metric-grid">
+                    <div class="metric-box">
+                        <div class="label">VIX (Volatility)</div>
+                        <div class="value" style="color: #dc3545;">17.25</div>
+                        <div style="font-size: 0.9em; color: #dc3545; margin-top: 5px;">+0.90 (+5.50%)</div>
+                    </div>
+                    <div class="metric-box">
+                        <div class="label">Volume Surge Stocks</div>
+                        <div class="value">31</div>
+                        <div style="font-size: 0.9em; margin-top: 5px;">Avg 6.7x volume</div>
+                    </div>
+                    <div class="metric-box">
+                        <div class="label">Uptrend Stocks</div>
+                        <div class="value">816</div>
+                        <div style="font-size: 0.9em; margin-top: 5px;">Above key MAs</div>
+                    </div>
+                    <div class="metric-box">
+                        <div class="label">Earnings This Week</div>
+                        <div class="value">84</div>
+                        <div style="font-size: 0.9em; margin-top: 5px;">Reports expected</div>
+                    </div>
+                </div>
+
+                <div class="highlight-box">
+                    <h3>Market Breadth Analysis</h3>
+                    <p>
+                        Market breadth showed signs of weakness with declining volume across major indices. The Russell 2000's 1.25%
+                        decline suggests selling pressure in small-cap stocks. Rising VIX above 17 indicates heightened uncertainty
+                        as traders position for December's economic data releases and year-end portfolio rebalancing. Gold's positive
+                        performance reflects safe-haven demand amid market volatility.
+                    </p>
+                </div>
+            </div>
+
+            <div class="section">
+                <h2>Sector Performance Analysis</h2>
+                <div class="sector-grid">
+                    <div class="sector-item positive">
+                        <h4>Energy</h4>
+                        <div class="positive-change">+0.54%</div>
+                        <div style="font-size: 0.85em; color: #666; margin-top: 5px;">
+                            P/E: 16.48 | Div: 4.13%
+                        </div>
+                    </div>
+                    <div class="sector-item positive">
+                        <h4>Consumer Cyclical</h4>
+                        <div class="positive-change">+0.12%</div>
+                        <div style="font-size: 0.85em; color: #666; margin-top: 5px;">
+                            P/E: 29.00 | Div: 0.76%
+                        </div>
+                    </div>
+                    <div class="sector-item negative">
+                        <h4>Consumer Defensive</h4>
+                        <div class="negative-change">-0.02%</div>
+                        <div style="font-size: 0.85em; color: #666; margin-top: 5px;">
+                            P/E: 26.12 | Div: 2.53%
+                        </div>
+                    </div>
+                    <div class="sector-item negative">
+                        <h4>Technology</h4>
+                        <div class="negative-change">-0.17%</div>
+                        <div style="font-size: 0.85em; color: #666; margin-top: 5px;">
+                            P/E: 39.64 | Div: 0.57%
+                        </div>
+                    </div>
+                    <div class="sector-item negative">
+                        <h4>Basic Materials</h4>
+                        <div class="negative-change">-0.17%</div>
+                        <div style="font-size: 0.85em; color: #666; margin-top: 5px;">
+                            P/E: 24.00 | Div: 1.95%
+                        </div>
+                    </div>
+                    <div class="sector-item negative">
+                        <h4>Financial</h4>
+                        <div class="negative-change">-0.73%</div>
+                        <div style="font-size: 0.85em; color: #666; margin-top: 5px;">
+                            P/E: 18.83 | Div: 1.81%
+                        </div>
+                    </div>
+                    <div class="sector-item negative">
+                        <h4>Communication Services</h4>
+                        <div class="negative-change">-0.86%</div>
+                        <div style="font-size: 0.85em; color: #666; margin-top: 5px;">
+                            P/E: 39.27 | Div: 0.54%
+                        </div>
+                    </div>
+                    <div class="sector-item negative">
+                        <h4>Real Estate</h4>
+                        <div class="negative-change">-1.14%</div>
+                        <div style="font-size: 0.85em; color: #666; margin-top: 5px;">
+                            P/E: 34.14 | Div: 3.89%
+                        </div>
+                    </div>
+                    <div class="sector-item negative">
+                        <h4>Industrials</h4>
+                        <div class="negative-change">-1.46%</div>
+                        <div style="font-size: 0.85em; color: #666; margin-top: 5px;">
+                            P/E: 27.53 | Div: 1.20%
+                        </div>
+                    </div>
+                    <div class="sector-item negative">
+                        <h4>Healthcare</h4>
+                        <div class="negative-change">-1.53%</div>
+                        <div style="font-size: 0.85em; color: #666; margin-top: 5px;">
+                            P/E: 26.00 | Div: 1.51%
+                        </div>
+                    </div>
+                    <div class="sector-item negative">
+                        <h4>Utilities</h4>
+                        <div class="negative-change">-2.16%</div>
+                        <div style="font-size: 0.85em; color: #666; margin-top: 5px;">
+                            P/E: 21.25 | Div: 2.86%
+                        </div>
+                    </div>
+                </div>
+
+                <h3 style="margin-top: 30px; color: #2a5298;">Sector Rotation Insights</h3>
+                <ul class="key-points">
+                    <li><strong>Energy Outperforms:</strong> Energy sector led with 0.54% gain as oil prices stabilized, benefiting from supply concerns and seasonal demand patterns.</li>
+                    <li><strong>Defensive Weakness:</strong> Traditional defensive sectors (Utilities, Healthcare) underperformed, suggesting reduced risk-off positioning.</li>
+                    <li><strong>Rate-Sensitive Pressure:</strong> Real Estate (-1.14%) and Utilities (-2.16%) continued to face headwinds from bond yield movements.</li>
+                    <li><strong>Tech Resilience:</strong> Technology sector (-0.17%) showed relative strength despite broader market weakness, with NVIDIA up 1.65%.</li>
+                </ul>
+            </div>
+
+            <div class="section">
+                <h2>Notable Market Movers</h2>
+
+                <h3 style="color: #28a745;">Top Performers</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Symbol</th>
+                            <th>Company</th>
+                            <th>Price</th>
+                            <th>Change</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>FLYE</strong></td>
+                            <td>Fly-E Group, Inc.</td>
+                            <td>$15.79</td>
+                            <td class="positive-change">+252.46%</td>
+                        </tr>
+                        <tr>
+                            <td><strong>AHMA</strong></td>
+                            <td>Ambitions Enterprise Management</td>
+                            <td>$14.34</td>
+                            <td class="positive-change">+198.13%</td>
+                        </tr>
+                        <tr>
+                            <td><strong>CNCK</strong></td>
+                            <td>Coincheck Group N.V.</td>
+                            <td>$7.88</td>
+                            <td class="positive-change">+143.21%</td>
+                        </tr>
+                        <tr>
+                            <td><strong>QTTB</strong></td>
+                            <td>Q32 Bio Inc.</td>
+                            <td>$3.82</td>
+                            <td class="positive-change">+74.43%</td>
+                        </tr>
+                        <tr>
+                            <td><strong>BYND</strong></td>
+                            <td>Beyond Meat, Inc.</td>
+                            <td>$1.34</td>
+                            <td class="positive-change">+36.48%</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <h3 style="color: #dc3545; margin-top: 30px;">Top Decliners</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Symbol</th>
+                            <th>Company</th>
+                            <th>Price</th>
+                            <th>Change</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>PAVS</strong></td>
+                            <td>Paranovus Entertainment Technology</td>
+                            <td>$0.078</td>
+                            <td class="negative-change">-92.57%</td>
+                        </tr>
+                        <tr>
+                            <td><strong>BRR</strong></td>
+                            <td>Columbus Circle Capital Corp</td>
+                            <td>$5.77</td>
+                            <td class="negative-change">-43.15%</td>
+                        </tr>
+                        <tr>
+                            <td><strong>SMX</strong></td>
+                            <td>SMX (Security Matters)</td>
+                            <td>$38.99</td>
+                            <td class="negative-change">-36.12%</td>
+                        </tr>
+                        <tr>
+                            <td><strong>MNDR</strong></td>
+                            <td>Mobile-health Network Solutions</td>
+                            <td>$1.85</td>
+                            <td class="negative-change">-30.19%</td>
+                        </tr>
+                        <tr>
+                            <td><strong>ADTX</strong></td>
+                            <td>Aditxt, Inc.</td>
+                            <td>$2.81</td>
+                            <td class="negative-change">-26.05%</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <h3 style="color: #2a5298; margin-top: 30px;">Most Active Stocks</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Symbol</th>
+                            <th>Company</th>
+                            <th>Price</th>
+                            <th>Change</th>
+                            <th>Note</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>NVDA</strong></td>
+                            <td>NVIDIA Corporation</td>
+                            <td>$179.92</td>
+                            <td class="positive-change">+1.65%</td>
+                            <td>Strong AI chip demand</td>
+                        </tr>
+                        <tr>
+                            <td><strong>BYND</strong></td>
+                            <td>Beyond Meat, Inc.</td>
+                            <td>$1.34</td>
+                            <td class="positive-change">+36.48%</td>
+                            <td>Restructuring news</td>
+                        </tr>
+                        <tr>
+                            <td><strong>QTTB</strong></td>
+                            <td>Q32 Bio Inc.</td>
+                            <td>$3.82</td>
+                            <td class="positive-change">+74.43%</td>
+                            <td>Clinical trial results</td>
+                        </tr>
+                        <tr>
+                            <td><strong>OPEN</strong></td>
+                            <td>Opendoor Technologies</td>
+                            <td>$7.15</td>
+                            <td class="negative-change">-7.16%</td>
+                            <td>Real estate concerns</td>
+                        </tr>
+                        <tr>
+                            <td><strong>IBIT</strong></td>
+                            <td>iShares Bitcoin Trust</td>
+                            <td>$48.50</td>
+                            <td class="negative-change">-5.91%</td>
+                            <td>Crypto weakness</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="section">
+                <h2>Key Market News & Events</h2>
+                <ul class="key-points">
+                    <li><strong>MongoDB Earnings Beat:</strong> MDB stock soared on strong Q3 results, beating revenue and EPS estimates with improved guidance for fiscal 2026.</li>
+                    <li><strong>Tech Earnings Week:</strong> Market anticipates earnings from CrowdStrike (CRWD) and Marvell Technology (MRVL) this week, setting tone for semiconductor sector.</li>
+                    <li><strong>Crypto Sector Weakness:</strong> Bitcoin-related stocks declined with IBIT dropping 5.91%, reflecting broader cryptocurrency market pullback.</li>
+                    <li><strong>Year-End Positioning:</strong> December kicked off with investors reassessing portfolios ahead of year-end, contributing to elevated volatility.</li>
+                    <li><strong>Healthcare Sector Activity:</strong> 182 healthcare stocks in uptrend, representing largest sector concentration among trending stocks.</li>
+                    <li><strong>Financial Sector Update:</strong> Banks and financial services companies participate in Goldman Sachs Financial Services Conference this week.</li>
+                </ul>
+
+                <div class="highlight-box">
+                    <h3>Economic Calendar Highlights - Week of December 1-7</h3>
+                    <p><strong>Monday (Dec 1):</strong> ISM Manufacturing PMI<br>
+                    <strong>Wednesday (Dec 3):</strong> ADP Employment Report, ISM Services PMI<br>
+                    <strong>Thursday (Dec 4):</strong> Weekly Initial Jobless Claims<br>
+                    <strong>Friday (Dec 5):</strong> Non-Farm Payrolls, Unemployment Rate, Average Hourly Earnings<br><br>
+                    <em>The week's employment data will be critical for Fed policy expectations heading into the December FOMC meeting.</em>
+                    </p>
+                </div>
+            </div>
+
+            <div class="section">
+                <h2>Technical Analysis & Market Outlook</h2>
+
+                <h3 style="color: #2a5298;">Key Technical Levels</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Index</th>
+                            <th>Current</th>
+                            <th>Support</th>
+                            <th>Resistance</th>
+                            <th>Trend</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>S&P 500</strong></td>
+                            <td>6,814.65</td>
+                            <td>6,750 / 6,650</td>
+                            <td>6,850 / 6,920</td>
+                            <td>Neutral-Bearish</td>
+                        </tr>
+                        <tr>
+                            <td><strong>NASDAQ</strong></td>
+                            <td>23,275.92</td>
+                            <td>23,000 / 22,750</td>
+                            <td>23,500 / 24,020</td>
+                            <td>Consolidating</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Dow Jones</strong></td>
+                            <td>47,289.34</td>
+                            <td>47,000 / 46,500</td>
+                            <td>47,700 / 48,400</td>
+                            <td>Weakening</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Russell 2000</strong></td>
+                            <td>2,469.13</td>
+                            <td>2,425 / 2,375</td>
+                            <td>2,500 / 2,542</td>
+                            <td>Bearish</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <h3 style="color: #2a5298; margin-top: 30px;">Market Outlook</h3>
+                <ul class="key-points">
+                    <li><strong>Short-term (1-2 weeks):</strong> Market faces critical test with Friday's employment report. VIX above 17 suggests continued volatility. Watch for S&P 500 support at 6,750 level.</li>
+                    <li><strong>Sector Rotation:</strong> Energy showing relative strength may continue if supply concerns persist. Technology sector resilience despite market weakness is encouraging for bulls.</li>
+                    <li><strong>Small-Cap Weakness:</strong> Russell 2000's 1.25% decline and break below recent support suggests risk-off sentiment. Recovery above 2,500 needed to restore confidence.</li>
+                    <li><strong>Earnings Watch:</strong> Tech earnings (CrowdStrike, Marvell) will be crucial for NASDAQ direction. Strong results could provide catalyst for year-end rally.</li>
+                    <li><strong>Year-End Dynamics:</strong> December historically positive for stocks, but elevated valuations and rate uncertainty create mixed backdrop.</li>
+                </ul>
+
+                <div class="highlight-box">
+                    <h3>Risk Factors to Monitor</h3>
+                    <p>
+                        <strong>Immediate Risks:</strong> Rising VIX, small-cap weakness, utilities sector breakdown<br>
+                        <strong>This Week:</strong> Employment data, tech earnings, bond market volatility<br>
+                        <strong>Near-term:</strong> December FOMC meeting expectations, year-end tax-loss selling, geopolitical developments<br>
+                        <strong>Strategic:</strong> Valuation concerns (Tech P/E 39.6x), narrow market leadership, economic slowdown signals
+                    </p>
+                </div>
+            </div>
+
+            <div class="section">
+                <h2>Trading Opportunities & Recommendations</h2>
+
+                <h3 style="color: #28a745;">Potential Long Opportunities</h3>
+                <ul class="key-points">
+                    <li><strong>NVDA (NVIDIA):</strong> Showing strength at $179.92 (+1.65%) with AI tailwinds. Watch for continuation above $180 with targets at $185-190.</li>
+                    <li><strong>Energy Sector:</strong> XLE showing relative strength. Consider on pullback to $87-88 range with defensive positioning.</li>
+                    <li><strong>Gold (GLD):</strong> Safe-haven bid emerging. $389.75 level holding, target $395-400 if market volatility persists.</li>
+                    <li><strong>Quality Healthcare:</strong> Sector consolidating at attractive valuations with 1.51% dividend yield and defensive characteristics.</li>
+                </ul>
+
+                <h3 style="color: #dc3545; margin-top: 20px;">Caution Areas</h3>
+                <ul class="key-points">
+                    <li><strong>Small-Caps (IWM):</strong> Breaking key support. Avoid until stabilization above $248.</li>
+                    <li><strong>Utilities:</strong> Worst sector today (-2.16%). Rate-sensitive pressure continuing.</li>
+                    <li><strong>Crypto-Related:</strong> IBIT down 5.91%. Wait for crypto market stabilization.</li>
+                    <li><strong>Real Estate:</strong> REITs under pressure (-1.14%). Rate environment remains challenging.</li>
+                </ul>
+
+                <h3 style="color: #2a5298; margin-top: 20px;">Week Ahead Strategy</h3>
+                <ul class="key-points">
+                    <li>Maintain 60-70% long exposure with emphasis on quality large-caps and sector leaders</li>
+                    <li>Keep 30-40% cash for opportunities if market tests support levels</li>
+                    <li>Use tight stops (3-5%) given elevated VIX environment</li>
+                    <li>Focus on stocks with strong relative strength and earnings momentum</li>
+                    <li>Monitor Friday's employment report closely for Fed policy implications</li>
+                    <li>Be prepared for increased volatility around tech earnings announcements</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="footer">
+            <p><strong>Disclaimer:</strong> This report is for informational purposes only and does not constitute investment advice.</p>
+            <p>Always conduct your own research and consult with a qualified financial advisor before making investment decisions.</p>
+            <p style="margin-top: 15px; opacity: 0.8;">Report Generated: December 1, 2025 | Data Sources: Finviz, Alpaca, FMP</p>
+        </div>
+    </div>
+</body>
+</html>

@@ -1,0 +1,1101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CRDO - Credo Technology Group | Comprehensive Stock Analysis</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px;
+            color: #333;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            color: white;
+            padding: 40px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 3em;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .header .ticker {
+            font-size: 1.5em;
+            opacity: 0.9;
+            letter-spacing: 3px;
+        }
+
+        .header .price {
+            font-size: 2.5em;
+            margin: 20px 0;
+            font-weight: bold;
+        }
+
+        .header .change {
+            font-size: 1.3em;
+            padding: 10px 20px;
+            background: rgba(255,255,255,0.2);
+            border-radius: 10px;
+            display: inline-block;
+        }
+
+        .positive {
+            color: #4caf50;
+        }
+
+        .negative {
+            color: #f44336;
+        }
+
+        .section {
+            padding: 40px;
+        }
+
+        .section-title {
+            font-size: 2em;
+            color: #1e3c72;
+            margin-bottom: 30px;
+            border-bottom: 3px solid #667eea;
+            padding-bottom: 10px;
+        }
+
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .metric-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+            transition: transform 0.3s ease;
+        }
+
+        .metric-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .metric-label {
+            font-size: 0.9em;
+            opacity: 0.9;
+            margin-bottom: 10px;
+        }
+
+        .metric-value {
+            font-size: 2em;
+            font-weight: bold;
+        }
+
+        .info-card {
+            background: #f8f9fa;
+            padding: 25px;
+            border-radius: 15px;
+            margin-bottom: 20px;
+            border-left: 5px solid #667eea;
+        }
+
+        .info-card h3 {
+            color: #1e3c72;
+            margin-bottom: 15px;
+            font-size: 1.3em;
+        }
+
+        .info-card p {
+            line-height: 1.8;
+            color: #555;
+        }
+
+        .chart-container {
+            background: white;
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            margin-bottom: 30px;
+        }
+
+        .recommendation-box {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            color: white;
+            padding: 40px;
+            border-radius: 20px;
+            text-align: center;
+            margin: 30px 0;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        }
+
+        .recommendation-box h2 {
+            font-size: 2.5em;
+            margin-bottom: 20px;
+        }
+
+        .recommendation-box p {
+            font-size: 1.2em;
+            line-height: 1.8;
+        }
+
+        .bull-bear {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-top: 30px;
+        }
+
+        .bull-case {
+            background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+            color: white;
+            padding: 30px;
+            border-radius: 15px;
+        }
+
+        .bear-case {
+            background: linear-gradient(135deg, #eb3349 0%, #f45c43 100%);
+            color: white;
+            padding: 30px;
+            border-radius: 15px;
+        }
+
+        .bull-case h3, .bear-case h3 {
+            font-size: 1.5em;
+            margin-bottom: 15px;
+        }
+
+        .bull-case ul, .bear-case ul {
+            list-style: none;
+            padding-left: 0;
+        }
+
+        .bull-case li, .bear-case li {
+            padding: 10px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.3);
+        }
+
+        .bull-case li:before {
+            content: "✓ ";
+            font-weight: bold;
+            margin-right: 10px;
+        }
+
+        .bear-case li:before {
+            content: "✗ ";
+            font-weight: bold;
+            margin-right: 10px;
+        }
+
+        .analyst-targets {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .target-card {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+
+        .target-card .analyst {
+            font-weight: bold;
+            color: #1e3c72;
+            margin-bottom: 10px;
+        }
+
+        .target-card .target {
+            font-size: 1.8em;
+            color: #667eea;
+            font-weight: bold;
+        }
+
+        .target-card .upside {
+            color: #4caf50;
+            font-size: 0.9em;
+            margin-top: 5px;
+        }
+
+        .disclaimer {
+            background: #f8f9fa;
+            padding: 30px;
+            text-align: center;
+            color: #666;
+            font-size: 0.9em;
+            line-height: 1.6;
+        }
+
+        .timestamp {
+            text-align: right;
+            padding: 20px;
+            color: #999;
+            font-size: 0.9em;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+
+        th {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            font-weight: bold;
+        }
+
+        tr:hover {
+            background: #f5f5f5;
+        }
+
+        .warning-badge {
+            background: #ff9800;
+            color: white;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 0.9em;
+            display: inline-block;
+            margin: 5px 0;
+        }
+
+        .success-badge {
+            background: #4caf50;
+            color: white;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 0.9em;
+            display: inline-block;
+            margin: 5px 0;
+        }
+
+        .danger-badge {
+            background: #f44336;
+            color: white;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 0.9em;
+            display: inline-block;
+            margin: 5px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header Section -->
+        <div class="header">
+            <div class="ticker">NASDAQ: CRDO</div>
+            <h1>Credo Technology Group Holding Ltd</h1>
+            <div class="price">$195.15</div>
+            <div class="change positive">+$24.02 (+14.04%) Today</div>
+            <div style="margin-top: 20px; font-size: 1.1em;">
+                Communication Equipment | AI Connectivity Solutions
+            </div>
+        </div>
+
+        <!-- Executive Summary -->
+        <div class="section">
+            <h2 class="section-title">Executive Summary</h2>
+            <div class="recommendation-box">
+                <h2>HOLD with CAUTION</h2>
+                <p>Credo Technology is experiencing exceptional AI-driven growth with 272% QoQ revenue increase, but trades at extreme valuations (168x P/E, 42x P/S). Strong fundamentals meet stretched valuation - suitable for high-risk growth investors only.</p>
+                <div style="margin-top: 20px;">
+                    <span class="warning-badge">High Valuation Risk</span>
+                    <span class="success-badge">Strong Revenue Growth</span>
+                    <span class="warning-badge">Customer Concentration</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Key Metrics -->
+        <div class="section" style="background: #f8f9fa;">
+            <h2 class="section-title">Key Metrics Snapshot</h2>
+            <div class="metrics-grid">
+                <div class="metric-card">
+                    <div class="metric-label">Market Cap</div>
+                    <div class="metric-value">$33.76B</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-label">P/E Ratio</div>
+                    <div class="metric-value">167.72</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-label">Forward P/E</div>
+                    <div class="metric-value">65.24</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-label">Price/Sales</div>
+                    <div class="metric-value">41.74</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-label">Price/Book</div>
+                    <div class="metric-value">42.50</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-label">YTD Return</div>
+                    <div class="metric-value">+175%</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-label">1-Year Return</div>
+                    <div class="metric-value">+308%</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-label">Beta</div>
+                    <div class="metric-value">2.62</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Company Overview -->
+        <div class="section">
+            <h2 class="section-title">Company Overview</h2>
+            <div class="info-card">
+                <h3>Business Description</h3>
+                <p>Credo Technology Group provides high-speed connectivity solutions for optical and electrical Ethernet applications. The company's products include integrated circuits, active electrical cables, and SerDes chiplets based on serializer/deserializer and digital signal processor technologies. Credo also offers intellectual property solutions consisting of SerDes IP licensing.</p>
+            </div>
+            <div class="metrics-grid">
+                <div class="info-card">
+                    <h3>Sector</h3>
+                    <p><strong>Technology - Semiconductors</strong></p>
+                </div>
+                <div class="info-card">
+                    <h3>CEO</h3>
+                    <p><strong>William J. Brennan</strong></p>
+                </div>
+                <div class="info-card">
+                    <h3>Founded</h3>
+                    <p><strong>2008 (IPO: 2022)</strong></p>
+                </div>
+                <div class="info-card">
+                    <h3>Headquarters</h3>
+                    <p><strong>San Jose, California</strong></p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Financial Performance -->
+        <div class="section" style="background: #f8f9fa;">
+            <h2 class="section-title">Financial Performance Analysis</h2>
+
+            <div class="chart-container">
+                <h3 style="margin-bottom: 20px;">Quarterly Revenue Growth (Last 4 Quarters)</h3>
+                <canvas id="revenueChart"></canvas>
+            </div>
+
+            <div class="chart-container">
+                <h3 style="margin-bottom: 20px;">Quarterly Net Income Trend</h3>
+                <canvas id="incomeChart"></canvas>
+            </div>
+
+            <div class="info-card">
+                <h3>Latest Quarter (Q2 FY2026) - Outstanding Performance</h3>
+                <table>
+                    <tr>
+                        <th>Metric</th>
+                        <th>Value</th>
+                        <th>QoQ Change</th>
+                    </tr>
+                    <tr>
+                        <td><strong>Revenue</strong></td>
+                        <td>$268.0M</td>
+                        <td><span class="positive">+20.1%</span></td>
+                    </tr>
+                    <tr>
+                        <td><strong>Net Income</strong></td>
+                        <td>$82.6M</td>
+                        <td><span class="positive">+30.3%</span></td>
+                    </tr>
+                    <tr>
+                        <td><strong>EPS (Diluted)</strong></td>
+                        <td>$0.44</td>
+                        <td><span class="positive">+29.4%</span></td>
+                    </tr>
+                    <tr>
+                        <td><strong>Gross Margin</strong></td>
+                        <td>67.5%</td>
+                        <td><span class="positive">+0.1pp</span></td>
+                    </tr>
+                    <tr>
+                        <td><strong>Operating Margin</strong></td>
+                        <td>29.4%</td>
+                        <td><span class="positive">+2.2pp</span></td>
+                    </tr>
+                </table>
+            </div>
+
+            <div class="chart-container">
+                <h3 style="margin-bottom: 20px;">Annual Performance Comparison</h3>
+                <canvas id="annualChart"></canvas>
+            </div>
+        </div>
+
+        <!-- Price Performance -->
+        <div class="section">
+            <h2 class="section-title">Price Performance & Technical Analysis</h2>
+
+            <div class="chart-container">
+                <h3 style="margin-bottom: 20px;">Price Performance Across Time Periods</h3>
+                <canvas id="performanceChart"></canvas>
+            </div>
+
+            <div class="metrics-grid">
+                <div class="info-card">
+                    <h3>Technical Indicators</h3>
+                    <table>
+                        <tr>
+                            <td><strong>Current Price</strong></td>
+                            <td>$195.15</td>
+                        </tr>
+                        <tr>
+                            <td><strong>20-Day EMA</strong></td>
+                            <td>$159.74</td>
+                        </tr>
+                        <tr>
+                            <td><strong>50-Day EMA</strong></td>
+                            <td>$152.36</td>
+                        </tr>
+                        <tr>
+                            <td><strong>RSI (14)</strong></td>
+                            <td>65.48 (Neutral-Overbought)</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Relative Volume</strong></td>
+                            <td>3.05x (High)</td>
+                        </tr>
+                    </table>
+                </div>
+                <div class="info-card">
+                    <h3>Price Levels</h3>
+                    <table>
+                        <tr>
+                            <td><strong>52-Week High</strong></td>
+                            <td>$195.64</td>
+                        </tr>
+                        <tr>
+                            <td><strong>52-Week Low</strong></td>
+                            <td>$29.09</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Distance from High</strong></td>
+                            <td>-0.73%</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Distance from Low</strong></td>
+                            <td>+560.33%</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Volatility (Month)</strong></td>
+                            <td>8.64%</td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+
+            <div class="info-card">
+                <h3>Technical Assessment</h3>
+                <p><strong>Trend:</strong> <span class="success-badge">Strong Uptrend</span></p>
+                <p>Price is significantly above both 20-day EMA (+22.1%) and 50-day EMA (+25.5%), indicating strong bullish momentum. The stock recently hit new 52-week highs, showing continued strength.</p>
+                <p><strong>Momentum:</strong> RSI at 65.48 suggests the stock is in neutral-to-overbought territory, indicating potential for short-term consolidation but not yet in extreme overbought conditions.</p>
+                <p><strong>Volume:</strong> Relative volume of 3.05x indicates exceptional buying interest, particularly around recent earnings announcement.</p>
+            </div>
+        </div>
+
+        <!-- Analyst Ratings -->
+        <div class="section" style="background: #f8f9fa;">
+            <h2 class="section-title">Analyst Ratings & Price Targets</h2>
+
+            <div class="info-card">
+                <h3>Recent Price Target Updates (December 2025)</h3>
+                <div class="analyst-targets">
+                    <div class="target-card">
+                        <div class="analyst">Roth Capital</div>
+                        <div class="target">$250</div>
+                        <div class="upside">+46.1% Upside</div>
+                    </div>
+                    <div class="target-card">
+                        <div class="analyst">New Street</div>
+                        <div class="target">$240</div>
+                        <div class="upside">+40.2% Upside</div>
+                    </div>
+                    <div class="target-card">
+                        <div class="analyst">Mizuho</div>
+                        <div class="target">$225</div>
+                        <div class="upside">+31.5% Upside</div>
+                    </div>
+                    <div class="target-card">
+                        <div class="analyst">Barclays</div>
+                        <div class="target">$220</div>
+                        <div class="upside">+28.6% Upside</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="chart-container">
+                <h3 style="margin-bottom: 20px;">Analyst Consensus Ratings</h3>
+                <p><strong>Overall Rating:</strong> <span class="success-badge">Strong Buy</span></p>
+                <p>Average Price Target: $220-$250 range implies 28-46% upside potential from current levels</p>
+            </div>
+
+            <div class="info-card">
+                <h3>Analyst Growth Estimates</h3>
+                <table>
+                    <tr>
+                        <th>Fiscal Year</th>
+                        <th>Revenue Estimate</th>
+                        <th>EPS Estimate</th>
+                    </tr>
+                    <tr>
+                        <td>FY2026 (Current)</td>
+                        <td>$967M</td>
+                        <td>$2.06</td>
+                    </tr>
+                    <tr>
+                        <td>FY2027</td>
+                        <td>$1,238M (+28%)</td>
+                        <td>$2.57 (+25%)</td>
+                    </tr>
+                    <tr>
+                        <td>FY2028</td>
+                        <td>$1,569M (+27%)</td>
+                        <td>$3.34 (+30%)</td>
+                    </tr>
+                    <tr>
+                        <td>FY2029</td>
+                        <td>$1,780M (+13%)</td>
+                        <td>$3.74 (+12%)</td>
+                    </tr>
+                    <tr>
+                        <td>FY2030</td>
+                        <td>$2,475M (+39%)</td>
+                        <td>$4.85 (+30%)</td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+
+        <!-- Valuation Analysis -->
+        <div class="section">
+            <h2 class="section-title">Valuation Analysis</h2>
+
+            <div class="info-card">
+                <h3>Valuation Metrics Comparison</h3>
+                <table>
+                    <tr>
+                        <th>Metric</th>
+                        <th>CRDO</th>
+                        <th>Semiconductor Sector Avg</th>
+                        <th>Assessment</th>
+                    </tr>
+                    <tr>
+                        <td>P/E Ratio (TTM)</td>
+                        <td>167.72</td>
+                        <td>~30-40</td>
+                        <td><span class="danger-badge">Very High</span></td>
+                    </tr>
+                    <tr>
+                        <td>Forward P/E</td>
+                        <td>65.24</td>
+                        <td>~25-35</td>
+                        <td><span class="warning-badge">High</span></td>
+                    </tr>
+                    <tr>
+                        <td>P/S Ratio</td>
+                        <td>41.74</td>
+                        <td>~8-12</td>
+                        <td><span class="danger-badge">Very High</span></td>
+                    </tr>
+                    <tr>
+                        <td>P/B Ratio</td>
+                        <td>42.50</td>
+                        <td>~4-8</td>
+                        <td><span class="danger-badge">Very High</span></td>
+                    </tr>
+                    <tr>
+                        <td>PEG Ratio</td>
+                        <td>2.27</td>
+                        <td>~1.0-1.5</td>
+                        <td><span class="warning-badge">Elevated</span></td>
+                    </tr>
+                </table>
+            </div>
+
+            <div class="chart-container">
+                <h3 style="margin-bottom: 20px;">Valuation Assessment</h3>
+                <canvas id="valuationChart"></canvas>
+            </div>
+
+            <div class="info-card">
+                <h3>Valuation Verdict</h3>
+                <p><span class="danger-badge">Significantly Overvalued</span></p>
+                <p>CRDO trades at extreme premium valuations across all metrics. The forward P/E of 65x is nearly double the semiconductor sector average, while P/S ratio of 42x is 3-5x higher than peers. This suggests significant growth expectations are priced in, leaving little room for error.</p>
+                <p><strong>Justification for Premium:</strong> Exceptional revenue growth (170% YoY expected in FY2026), strong positioning in AI infrastructure connectivity, and expanding customer base among hyperscalers.</p>
+                <p><strong>Risk:</strong> Any slowdown in AI infrastructure spending, customer concentration issues, or competitive pressures could lead to multiple compression and significant downside.</p>
+            </div>
+        </div>
+
+        <!-- Growth Drivers -->
+        <div class="section" style="background: #f8f9fa;">
+            <h2 class="section-title">Key Growth Drivers</h2>
+
+            <div class="info-card">
+                <h3>1. AI Infrastructure Boom</h3>
+                <p>Credo is a critical connectivity supplier in the AI infrastructure stack. The company's active electrical cables, optical DSPs, and PCIe retimer solutions are essential for hyperscale AI training and inference clusters. This positions CRDO at the center of the multi-hundred-billion-dollar AI infrastructure buildout.</p>
+            </div>
+
+            <div class="info-card">
+                <h3>2. Hyperscaler Customer Expansion</h3>
+                <p>Three hyperscalers now contribute over 10% of revenue each, with a fourth expected to cross that threshold this fiscal year. This demonstrates strong market penetration and diversification within the hyperscaler customer base.</p>
+            </div>
+
+            <div class="info-card">
+                <h3>3. Product Portfolio Strength</h3>
+                <p>Strong demand across the product portfolio including Active Electrical Cables (AEC), optical DSPs for 800G/1.6T applications, and PCIe 5.0/6.0 retimers. The company is well-positioned for next-generation 400G-per-lane technology transitions.</p>
+            </div>
+
+            <div class="info-card">
+                <h3>4. Margin Expansion</h3>
+                <p>Operating margins improved from 15.8% (FY2025) to 29.4% (Q2 FY2026), demonstrating operational leverage and pricing power as the company scales. Gross margins remain healthy at 67.5%.</p>
+            </div>
+
+            <div class="info-card">
+                <h3>5. Market Leadership Position</h3>
+                <p>Credo has established itself as one of the most important connectivity suppliers in the AI infrastructure space, competing with larger players like Marvell and Broadcom through technological differentiation.</p>
+            </div>
+        </div>
+
+        <!-- Risk Factors -->
+        <div class="section">
+            <h2 class="section-title">Key Risk Factors</h2>
+
+            <div class="info-card" style="border-left-color: #f44336;">
+                <h3>1. Customer Concentration Risk</h3>
+                <p><span class="danger-badge">High Risk</span></p>
+                <p>Heavy reliance on a small number of hyperscale customers creates significant revenue volatility risk. Any change in spending patterns, vendor diversification strategies, or loss of a major customer could materially impact results.</p>
+            </div>
+
+            <div class="info-card" style="border-left-color: #f44336;">
+                <h3>2. Extreme Valuation Risk</h3>
+                <p><span class="danger-badge">High Risk</span></p>
+                <p>Trading at 168x P/E and 42x P/S leaves no room for execution missteps. Any guidance miss, slower-than-expected growth, or margin pressure could trigger significant multiple compression. The stock price implies perfect execution for years.</p>
+            </div>
+
+            <div class="info-card" style="border-left-color: #ff9800;">
+                <h3>3. Competitive Threats</h3>
+                <p><span class="warning-badge">Medium Risk</span></p>
+                <p>Facing competition from Marvell (shipping 1.6T optical DSPs at scale) and Broadcom (leveraging scale and co-packaged optics roadmap). These competitors have larger R&D budgets, established relationships, and broader product portfolios that could pressure CRDO's market share.</p>
+            </div>
+
+            <div class="info-card" style="border-left-color: #ff9800;">
+                <h3>4. Demand Pull-Forward Risk</h3>
+                <p><span class="warning-badge">Medium Risk</span></p>
+                <p>The exceptional growth in AI infrastructure buildouts may reflect pulled-forward demand. As hyperscaler CapEx normalizes or AI infrastructure deployment slows, revenue growth could decelerate materially, disappointing investors.</p>
+            </div>
+
+            <div class="info-card" style="border-left-color: #ff9800;">
+                <h3>5. Technology Transition Execution</h3>
+                <p><span class="warning-badge">Medium Risk</span></p>
+                <p>Successfully transitioning to next-generation technologies (400G-per-lane, PCIe 6.0) while maintaining market share requires flawless execution. Any delays or quality issues could allow competitors to gain ground.</p>
+            </div>
+
+            <div class="info-card" style="border-left-color: #ff9800;">
+                <h3>6. High Beta Risk</h3>
+                <p><span class="warning-badge">Medium Risk</span></p>
+                <p>Beta of 2.62 indicates the stock is highly volatile and sensitive to market movements. In a broader market downturn, CRDO could experience outsized declines.</p>
+            </div>
+        </div>
+
+        <!-- Bull vs Bear Case -->
+        <div class="section" style="background: #f8f9fa;">
+            <h2 class="section-title">Investment Thesis: Bull vs Bear Case</h2>
+
+            <div class="bull-bear">
+                <div class="bull-case">
+                    <h3>Bull Case - Reasons to Buy</h3>
+                    <ul>
+                        <li>Exceptional revenue growth: 272% YoY in latest quarter, 170% expected for FY2026</li>
+                        <li>Critical positioning in multi-year AI infrastructure buildout cycle</li>
+                        <li>Expanding customer diversification with 4th hyperscaler expected to cross 10% threshold</li>
+                        <li>Strong margin expansion demonstrating operational leverage and pricing power</li>
+                        <li>Product portfolio strength across AEC, optical DSPs, and PCIe retimers</li>
+                        <li>Analyst consensus "Strong Buy" with average price targets 30-45% above current levels</li>
+                        <li>Technology leadership in high-speed connectivity solutions</li>
+                        <li>Long runway for growth as AI infrastructure deployment continues through 2025-2027</li>
+                        <li>Successful transition from losses to profitability demonstrates business model viability</li>
+                    </ul>
+                </div>
+
+                <div class="bear-case">
+                    <h3>Bear Case - Reasons to Avoid</h3>
+                    <ul>
+                        <li>Extreme valuation: 168x P/E, 42x P/S - among highest in semiconductor sector</li>
+                        <li>High customer concentration creates revenue volatility and bargaining power risks</li>
+                        <li>Significant competition from Marvell, Broadcom with larger resources and broader portfolios</li>
+                        <li>Potential demand pull-forward as AI infrastructure buildout may normalize</li>
+                        <li>High beta (2.62) indicates extreme volatility and market sensitivity</li>
+                        <li>Limited margin for error - any guidance miss could trigger sharp selloff</li>
+                        <li>Rapid price appreciation (+308% in 1 year) suggests momentum exhaustion risk</li>
+                        <li>No dividend or shareholder returns; purely growth-dependent valuation</li>
+                        <li>Execution risk in transitioning to next-gen technologies while maintaining share</li>
+                        <li>Macroeconomic slowdown could impact hyperscaler CapEx spending significantly</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- Investment Recommendation -->
+        <div class="section">
+            <h2 class="section-title">Investment Recommendation</h2>
+
+            <div class="recommendation-box" style="background: linear-gradient(135deg, #f7971e 0%, #ffd200 100%);">
+                <h2>HOLD (Neutral) - High Risk Growth Play</h2>
+                <p style="font-size: 1.1em; line-height: 2;">
+                    <strong>For Current Shareholders:</strong> Consider taking profits on a portion of holdings given extreme valuations and significant YTD gains. Use any pullbacks as opportunities to reduce exposure.
+                </p>
+                <p style="font-size: 1.1em; line-height: 2;">
+                    <strong>For New Investors:</strong> Wait for better entry points. Consider initiating small positions only on 15-20% pullbacks. This is suitable only for aggressive growth investors with high risk tolerance.
+                </p>
+            </div>
+
+            <div class="info-card">
+                <h3>Price Targets & Entry Points</h3>
+                <table>
+                    <tr>
+                        <th>Scenario</th>
+                        <th>Price Level</th>
+                        <th>Action</th>
+                    </tr>
+                    <tr>
+                        <td><strong>Current Price</strong></td>
+                        <td>$195.15</td>
+                        <td><span class="warning-badge">HOLD - Fully Valued</span></td>
+                    </tr>
+                    <tr>
+                        <td><strong>Conservative Entry</strong></td>
+                        <td>$155-165</td>
+                        <td><span class="success-badge">Consider Small Position</span></td>
+                    </tr>
+                    <tr>
+                        <td><strong>Attractive Entry</strong></td>
+                        <td>$130-145</td>
+                        <td><span class="success-badge">Strong Buy Zone</span></td>
+                    </tr>
+                    <tr>
+                        <td><strong>12-Month Target</strong></td>
+                        <td>$220-240</td>
+                        <td>13-23% Upside (if momentum continues)</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Downside Risk</strong></td>
+                        <td>$100-120</td>
+                        <td>40-50% Downside (on negative catalyst)</td>
+                    </tr>
+                </table>
+            </div>
+
+            <div class="info-card">
+                <h3>Investment Strategy Recommendations</h3>
+                <p><strong>Conservative Investors:</strong> Avoid. Valuation risk far outweighs potential returns.</p>
+                <p><strong>Growth Investors:</strong> Small position (2-5% of portfolio) with stop-loss at $160. Scale in on dips.</p>
+                <p><strong>Aggressive Growth Investors:</strong> Moderate position (5-10% of portfolio) with understanding of significant volatility and downside risk.</p>
+                <p><strong>Trading Strategy:</strong> Consider taking profits on rallies above $200-210 and reaccumulating on pullbacks to $160-170 range.</p>
+            </div>
+        </div>
+
+        <!-- Key Catalysts -->
+        <div class="section" style="background: #f8f9fa;">
+            <h2 class="section-title">Key Catalysts & Events to Watch</h2>
+
+            <div class="metrics-grid">
+                <div class="info-card">
+                    <h3>Near-Term Positive Catalysts</h3>
+                    <ul style="list-style: none; padding: 0;">
+                        <li>✓ Q3 FY2026 earnings (March 2026) - Revenue guidance of $340M (38% above consensus)</li>
+                        <li>✓ Fourth hyperscaler crossing 10% revenue threshold</li>
+                        <li>✓ New product launches in 400G-per-lane optical technology</li>
+                        <li>✓ Additional analyst coverage and price target increases</li>
+                        <li>✓ Patent portfolio expansion and licensing opportunities</li>
+                    </ul>
+                </div>
+
+                <div class="info-card">
+                    <h3>Potential Negative Catalysts</h3>
+                    <ul style="list-style: none; padding: 0;">
+                        <li>✗ Hyperscaler CapEx spending slowdown announcements</li>
+                        <li>✗ Customer concentration: loss of or reduced orders from major customer</li>
+                        <li>✗ Competitive wins by Marvell or Broadcom in key accounts</li>
+                        <li>✗ Guidance miss or deceleration in growth trajectory</li>
+                        <li>✗ Broader semiconductor sector downturn</li>
+                        <li>✗ Margin pressure from customer negotiations or competitive dynamics</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- Conclusion -->
+        <div class="section">
+            <h2 class="section-title">Final Analysis Summary</h2>
+
+            <div class="info-card">
+                <h3>The Bottom Line</h3>
+                <p><strong>Credo Technology represents a classic high-growth, high-valuation trade.</strong> The company has successfully positioned itself at the center of the AI infrastructure boom with exceptional revenue growth and improving profitability. The fundamentals have rarely looked stronger.</p>
+
+                <p>However, with the stock trading at 168x P/E and 42x P/S, investors are paying an enormous premium that assumes flawless execution and continued hypergrowth for years. The valuation leaves virtually no margin for error.</p>
+
+                <p><strong>The key question:</strong> Can CRDO continue to grow fast enough to justify its valuation? If the company can maintain 25-30%+ annual growth through FY2028-2030 while expanding margins, the current valuation may prove reasonable. However, any stumble could result in significant multiple compression.</p>
+
+                <p><strong>Our view:</strong> The business quality is excellent, but the valuation is stretched. We recommend current holders take some profits and wait for better entry points for new positions. This is a "show me" stock that needs to prove it can sustain its growth trajectory before warranting new investment at these levels.</p>
+            </div>
+
+            <div style="text-align: center; margin-top: 40px; padding: 30px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border-radius: 15px;">
+                <h3 style="font-size: 1.8em; margin-bottom: 20px;">Rating Summary</h3>
+                <div style="font-size: 3em; font-weight: bold; margin: 20px 0;">HOLD</div>
+                <div style="font-size: 1.3em;">High Risk / High Reward Growth Stock</div>
+                <div style="margin-top: 20px; font-size: 1.1em;">
+                    <span class="warning-badge">Extreme Valuation</span>
+                    <span class="success-badge">Strong Fundamentals</span>
+                    <span class="warning-badge">High Volatility</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Disclaimer -->
+        <div class="disclaimer">
+            <strong>Disclaimer:</strong> This report is for educational and informational purposes only and should not be construed as investment advice. The information contained herein is based on publicly available data as of December 2, 2025, and may not reflect the most current developments. Stock prices can be volatile and past performance is not indicative of future results. Investors should conduct their own research and consult with a qualified financial advisor before making investment decisions. This analysis represents the views of the author and may not reflect the views of any affiliated organizations.
+            <br><br>
+            <strong>Data Sources:</strong> Financial Modeling Prep (FMP), Finviz, Alpaca Markets, Company SEC Filings, Analyst Research Reports
+            <br><br>
+            <strong>Risk Warning:</strong> CRDO exhibits high volatility (Beta: 2.62) and trades at elevated valuations. Investors should be prepared for significant price swings and potential losses. Only invest capital you can afford to lose in high-growth speculative stocks.
+        </div>
+
+        <div class="timestamp">
+            Report Generated: December 2, 2025 | Data as of Market Close December 1, 2025
+            <br>
+            Analysis Framework: Fundamental + Technical + Valuation + Risk Assessment
+        </div>
+    </div>
+
+    <script>
+        // Revenue Chart
+        const revenueCtx = document.getElementById('revenueChart').getContext('2d');
+        new Chart(revenueCtx, {
+            type: 'bar',
+            data: {
+                labels: ['Q3 FY25', 'Q4 FY25', 'Q1 FY26', 'Q2 FY26'],
+                datasets: [{
+                    label: 'Revenue ($M)',
+                    data: [135.0, 170.0, 223.1, 268.0],
+                    backgroundColor: 'rgba(102, 126, 234, 0.8)',
+                    borderColor: 'rgba(102, 126, 234, 1)',
+                    borderWidth: 2
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: {
+                        display: true,
+                        position: 'top'
+                    },
+                    title: {
+                        display: false
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            callback: function(value) {
+                                return '$' + value + 'M';
+                            }
+                        }
+                    }
+                }
+            }
+        });
+
+        // Net Income Chart
+        const incomeCtx = document.getElementById('incomeChart').getContext('2d');
+        new Chart(incomeCtx, {
+            type: 'line',
+            data: {
+                labels: ['Q3 FY25', 'Q4 FY25', 'Q1 FY26', 'Q2 FY26'],
+                datasets: [{
+                    label: 'Net Income ($M)',
+                    data: [29.4, 36.6, 63.4, 82.6],
+                    backgroundColor: 'rgba(76, 175, 80, 0.2)',
+                    borderColor: 'rgba(76, 175, 80, 1)',
+                    borderWidth: 3,
+                    fill: true,
+                    tension: 0.4
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: {
+                        display: true,
+                        position: 'top'
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            callback: function(value) {
+                                return '$' + value + 'M';
+                            }
+                        }
+                    }
+                }
+            }
+        });
+
+        // Annual Performance Chart
+        const annualCtx = document.getElementById('annualChart').getContext('2d');
+        new Chart(annualCtx, {
+            type: 'bar',
+            data: {
+                labels: ['FY2023', 'FY2024', 'FY2025'],
+                datasets: [
+                    {
+                        label: 'Revenue ($M)',
+                        data: [184.2, 193.0, 436.8],
+                        backgroundColor: 'rgba(102, 126, 234, 0.8)',
+                        borderColor: 'rgba(102, 126, 234, 1)',
+                        borderWidth: 2
+                    },
+                    {
+                        label: 'Net Income ($M)',
+                        data: [-16.5, -28.4, 52.2],
+                        backgroundColor: 'rgba(76, 175, 80, 0.8)',
+                        borderColor: 'rgba(76, 175, 80, 1)',
+                        borderWidth: 2
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: {
+                        display: true,
+                        position: 'top'
+                    }
+                },
+                scales: {
+                    y: {
+                        ticks: {
+                            callback: function(value) {
+                                return '$' + value + 'M';
+                            }
+                        }
+                    }
+                }
+            }
+        });
+
+        // Performance Chart
+        const performanceCtx = document.getElementById('performanceChart').getContext('2d');
+        new Chart(performanceCtx, {
+            type: 'bar',
+            data: {
+                labels: ['1 Week', '1 Month', '3 Months', '6 Months', 'YTD', '1 Year'],
+                datasets: [{
+                    label: 'Return (%)',
+                    data: [27.34, 2.38, 53.96, 167.09, 185.81, 320.24],
+                    backgroundColor: [
+                        'rgba(76, 175, 80, 0.8)',
+                        'rgba(76, 175, 80, 0.8)',
+                        'rgba(76, 175, 80, 0.8)',
+                        'rgba(76, 175, 80, 0.8)',
+                        'rgba(76, 175, 80, 0.8)',
+                        'rgba(76, 175, 80, 0.8)'
+                    ],
+                    borderColor: 'rgba(76, 175, 80, 1)',
+                    borderWidth: 2
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: {
+                        display: false
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            callback: function(value) {
+                                return value + '%';
+                            }
+                        }
+                    }
+                }
+            }
+        });
+
+        // Valuation Comparison Chart
+        const valuationCtx = document.getElementById('valuationChart').getContext('2d');
+        new Chart(valuationCtx, {
+            type: 'radar',
+            data: {
+                labels: ['P/E Ratio', 'Forward P/E', 'P/S Ratio', 'P/B Ratio', 'PEG Ratio'],
+                datasets: [
+                    {
+                        label: 'CRDO (Normalized)',
+                        data: [100, 95, 100, 100, 85],
+                        backgroundColor: 'rgba(244, 67, 54, 0.2)',
+                        borderColor: 'rgba(244, 67, 54, 1)',
+                        borderWidth: 2
+                    },
+                    {
+                        label: 'Sector Average (Normalized)',
+                        data: [35, 40, 25, 15, 50],
+                        backgroundColor: 'rgba(102, 126, 234, 0.2)',
+                        borderColor: 'rgba(102, 126, 234, 1)',
+                        borderWidth: 2
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                scales: {
+                    r: {
+                        beginAtZero: true,
+                        max: 100
+                    }
+                }
+            }
+        });
+    </script>
+</body>
+</html>

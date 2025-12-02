@@ -1,0 +1,596 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Market Situational Analysis Report - September 21, 2025</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f8f9fa;
+            color: #333;
+            line-height: 1.6;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        .header {
+            text-align: center;
+            border-bottom: 3px solid #2c3e50;
+            padding-bottom: 20px;
+            margin-bottom: 30px;
+        }
+        .header h1 {
+            color: #2c3e50;
+            margin-bottom: 5px;
+            font-size: 2.5em;
+        }
+        .header .subtitle {
+            color: #7f8c8d;
+            font-size: 1.2em;
+        }
+        .executive-summary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 25px;
+            border-radius: 8px;
+            margin-bottom: 30px;
+        }
+        .executive-summary h2 {
+            margin-top: 0;
+            font-size: 1.8em;
+        }
+        .section {
+            margin-bottom: 40px;
+        }
+        .section h2 {
+            color: #2c3e50;
+            border-left: 5px solid #3498db;
+            padding-left: 15px;
+            font-size: 1.6em;
+        }
+        .section h3 {
+            color: #34495e;
+            margin-top: 25px;
+            font-size: 1.3em;
+        }
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 20px;
+            margin: 20px 0;
+        }
+        .metric-card {
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 8px;
+            padding: 20px;
+            text-align: center;
+        }
+        .metric-card h4 {
+            margin: 0 0 10px 0;
+            color: #2c3e50;
+            font-size: 1.1em;
+        }
+        .metric-value {
+            font-size: 1.8em;
+            font-weight: bold;
+            margin: 10px 0;
+        }
+        .positive { color: #27ae60; }
+        .negative { color: #e74c3c; }
+        .neutral { color: #7f8c8d; }
+        .table-container {
+            overflow-x: auto;
+            margin: 20px 0;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            background: white;
+        }
+        th, td {
+            padding: 12px 15px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+        th {
+            background-color: #34495e;
+            color: white;
+            font-weight: bold;
+        }
+        tr:nth-child(even) {
+            background-color: #f2f2f2;
+        }
+        .alert-box {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            color: #856404;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 15px 0;
+        }
+        .info-box {
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 15px 0;
+        }
+        .risk-box {
+            background: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 15px 0;
+        }
+        .footer {
+            margin-top: 40px;
+            padding-top: 20px;
+            border-top: 2px solid #ecf0f1;
+            text-align: center;
+            color: #7f8c8d;
+            font-size: 0.9em;
+        }
+        .status-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+        .status-closed { background-color: #e74c3c; }
+        .status-open { background-color: #27ae60; }
+        .highlight {
+            background-color: #fff3cd;
+            padding: 3px 6px;
+            border-radius: 4px;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Market Situational Analysis Report</h1>
+            <div class="subtitle">September 21, 2025 | Pre-Market Analysis</div>
+            <div style="margin-top: 10px;">
+                <span class="status-indicator status-closed"></span>
+                <strong>Market Status: CLOSED</strong> | Next Open: Monday, September 22, 2025 at 9:30 AM ET
+            </div>
+        </div>
+
+        <div class="executive-summary">
+            <h2>Executive Summary</h2>
+            <p><strong>Market Regime Assessment: MIXED TO POSITIVE</strong></p>
+            <p>Markets are displaying a mixed but generally constructive environment characterized by technology leadership, moderate volatility, and selective sector rotation. The S&P 500 continues to trade near historical highs with mega-cap technology stocks providing primary support. Market breadth shows signs of improvement with 137 stocks experiencing volume surges, indicating renewed institutional interest in risk assets.</p>
+            <p><strong>Key Highlights:</strong> Technology sector leading (+0.88%), mega-cap outperformance (+0.70%), elevated volume activity in growth stocks, and constructive sector rotation patterns favoring innovation and defensive positioning.</p>
+        </div>
+
+        <div class="section">
+            <h2>1. Current Market Environment & Regime Assessment</h2>
+
+            <h3>Market Indices Performance</h3>
+            <div class="metrics-grid">
+                <div class="metric-card">
+                    <h4>S&P 500 (^GSPC)</h4>
+                    <div class="metric-value positive">6,664.36</div>
+                    <div>Change: +32.4 (+0.49%)</div>
+                    <div>Range: 6,630.31 - 6,671.82</div>
+                </div>
+                <div class="metric-card">
+                    <h4>NASDAQ Composite</h4>
+                    <div class="metric-value positive">22,631.48</div>
+                    <div>Change: +160.75 (+0.72%)</div>
+                    <div>Range: 22,439.1 - 22,645.11</div>
+                </div>
+                <div class="metric-card">
+                    <h4>Dow Jones</h4>
+                    <div class="metric-value positive">46,315.27</div>
+                    <div>Change: +172.85 (+0.37%)</div>
+                    <div>Range: 46,105.02 - 46,396.47</div>
+                </div>
+                <div class="metric-card">
+                    <h4>Russell 2000</h4>
+                    <div class="metric-value negative">2,448.77</div>
+                    <div>Change: -18.93 (-0.77%)</div>
+                    <div>Range: 2,445.86 - 2,472.27</div>
+                </div>
+            </div>
+
+            <div class="info-box">
+                <strong>Market Regime Analysis:</strong> The market is currently operating in a <span class="highlight">GROWTH-ORIENTED REGIME</span> with technology leadership and mega-cap concentration. The divergence between large-cap strength and small-cap weakness suggests continued preference for quality and scale.
+            </div>
+
+            <h3>ETF Performance Snapshot</h3>
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>ETF</th>
+                            <th>Price</th>
+                            <th>Change %</th>
+                            <th>Volume</th>
+                            <th>Focus Area</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>SPY (S&P 500)</td>
+                            <td>$663.70</td>
+                            <td class="positive">+0.22%</td>
+                            <td>97.9M</td>
+                            <td>Large Cap Equities</td>
+                        </tr>
+                        <tr>
+                            <td>QQQ (NASDAQ-100)</td>
+                            <td>$599.35</td>
+                            <td class="positive">+0.68%</td>
+                            <td>58.2M</td>
+                            <td>Technology Growth</td>
+                        </tr>
+                        <tr>
+                            <td>IWM (Russell 2000)</td>
+                            <td>$242.98</td>
+                            <td class="negative">-0.76%</td>
+                            <td>56.1M</td>
+                            <td>Small Cap Equities</td>
+                        </tr>
+                        <tr>
+                            <td>GLD (Gold)</td>
+                            <td>$339.18</td>
+                            <td class="positive">+1.06%</td>
+                            <td>15.0M</td>
+                            <td>Precious Metals</td>
+                        </tr>
+                        <tr>
+                            <td>TLT (20+ Year Treasury)</td>
+                            <td>$89.02</td>
+                            <td class="negative">-0.19%</td>
+                            <td>32.5M</td>
+                            <td>Long-Term Bonds</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>2. Sector Rotation Analysis & Leadership</h2>
+
+            <h3>Sector Performance Rankings</h3>
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Sector</th>
+                            <th>Market Cap ($B)</th>
+                            <th>P/E Ratio</th>
+                            <th>Dividend Yield</th>
+                            <th>Change %</th>
+                            <th>Stocks</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr style="background-color: #d4edda;">
+                            <td><strong>Technology</strong></td>
+                            <td>25,848.6</td>
+                            <td>42.61</td>
+                            <td>0.57%</td>
+                            <td class="positive"><strong>+0.88%</strong></td>
+                            <td>778</td>
+                        </tr>
+                        <tr style="background-color: #d4edda;">
+                            <td><strong>Utilities</strong></td>
+                            <td>1,705.6</td>
+                            <td>20.65</td>
+                            <td>3.00%</td>
+                            <td class="positive"><strong>+0.84%</strong></td>
+                            <td>107</td>
+                        </tr>
+                        <tr>
+                            <td>Communication Services</td>
+                            <td>11,449.9</td>
+                            <td>38.34</td>
+                            <td>0.56%</td>
+                            <td class="positive">+0.48%</td>
+                            <td>275</td>
+                        </tr>
+                        <tr>
+                            <td>Basic Materials</td>
+                            <td>2,314.9</td>
+                            <td>24.31</td>
+                            <td>1.97%</td>
+                            <td class="positive">+0.24%</td>
+                            <td>276</td>
+                        </tr>
+                        <tr>
+                            <td>Financial</td>
+                            <td>14,081.2</td>
+                            <td>19.26</td>
+                            <td>1.78%</td>
+                            <td class="positive">+0.24%</td>
+                            <td>963</td>
+                        </tr>
+                        <tr>
+                            <td>Consumer Cyclical</td>
+                            <td>9,480.9</td>
+                            <td>29.50</td>
+                            <td>0.75%</td>
+                            <td class="positive">+0.09%</td>
+                            <td>571</td>
+                        </tr>
+                        <tr>
+                            <td>Industrials</td>
+                            <td>6,539.2</td>
+                            <td>28.44</td>
+                            <td>1.18%</td>
+                            <td class="negative">-0.05%</td>
+                            <td>688</td>
+                        </tr>
+                        <tr style="background-color: #f8d7da;">
+                            <td>Healthcare</td>
+                            <td>7,629.5</td>
+                            <td>23.82</td>
+                            <td>1.70%</td>
+                            <td class="negative">-0.33%</td>
+                            <td>1,119</td>
+                        </tr>
+                        <tr style="background-color: #f8d7da;">
+                            <td>Consumer Defensive</td>
+                            <td>4,208.0</td>
+                            <td>26.57</td>
+                            <td>2.53%</td>
+                            <td class="negative">-0.37%</td>
+                            <td>249</td>
+                        </tr>
+                        <tr style="background-color: #f8d7da;">
+                            <td>Real Estate</td>
+                            <td>1,701.9</td>
+                            <td>38.74</td>
+                            <td>3.82%</td>
+                            <td class="negative">-0.64%</td>
+                            <td>263</td>
+                        </tr>
+                        <tr style="background-color: #f8d7da;">
+                            <td><strong>Energy</strong></td>
+                            <td>3,509.6</td>
+                            <td>15.63</td>
+                            <td>4.27%</td>
+                            <td class="negative"><strong>-1.23%</strong></td>
+                            <td>251</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="alert-box">
+                <strong>Sector Rotation Insight:</strong> Clear technology leadership (+0.88%) combined with defensive utilities strength (+0.84%) suggests a bifurcated market favoring both growth and safety. Energy weakness (-1.23%) may reflect commodity headwinds or rotation out of cyclical exposure.
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>3. Market Breadth & Momentum Analysis</h2>
+
+            <h3>Capitalization Performance</h3>
+            <div class="metrics-grid">
+                <div class="metric-card">
+                    <h4>Mega Cap ($200B+)</h4>
+                    <div class="metric-value positive">+0.70%</div>
+                    <div>Market Cap: $41.9T</div>
+                    <div>P/E: 35.25 | Stocks: 48</div>
+                </div>
+                <div class="metric-card">
+                    <h4>Large Cap ($10-200B)</h4>
+                    <div class="metric-value positive">+0.04%</div>
+                    <div>Market Cap: $38.9T</div>
+                    <div>P/E: 24.34 | Stocks: 803</div>
+                </div>
+                <div class="metric-card">
+                    <h4>Mid Cap ($2-10B)</h4>
+                    <div class="metric-value negative">-0.53%</div>
+                    <div>Market Cap: $6.0T</div>
+                    <div>P/E: 25.94 | Stocks: 1,117</div>
+                </div>
+                <div class="metric-card">
+                    <h4>Small Cap ($300M-2B)</h4>
+                    <div class="metric-value negative">-0.40%</div>
+                    <div>Market Cap: $1.5T</div>
+                    <div>P/E: 32.05 | Stocks: 1,520</div>
+                </div>
+            </div>
+
+            <h3>Market Activity Indicators</h3>
+            <div class="info-box">
+                <p><strong>Volume Surge Activity:</strong> 137 stocks showing significant volume increases (1.5x+ normal volume)</p>
+                <p><strong>Uptrend Momentum:</strong> 880 stocks exhibiting positive momentum patterns</p>
+                <p><strong>Average Relative Volume:</strong> 3.4x normal levels</p>
+                <p><strong>Average Price Movement:</strong> +6.4% for volume surge stocks</p>
+            </div>
+
+            <h3>Most Active Stocks</h3>
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Symbol</th>
+                            <th>Company</th>
+                            <th>Price</th>
+                            <th>Change %</th>
+                            <th>Category</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>NVDA</td>
+                            <td>NVIDIA Corporation</td>
+                            <td>$176.67</td>
+                            <td class="positive">+0.24%</td>
+                            <td>AI/Semiconductors</td>
+                        </tr>
+                        <tr>
+                            <td>AAPL</td>
+                            <td>Apple Inc.</td>
+                            <td>$245.50</td>
+                            <td class="positive">+3.20%</td>
+                            <td>Technology</td>
+                        </tr>
+                        <tr>
+                            <td>HOOD</td>
+                            <td>Robinhood Markets</td>
+                            <td>$124.78</td>
+                            <td class="positive">+3.20%</td>
+                            <td>Fintech</td>
+                        </tr>
+                        <tr>
+                            <td>INTC</td>
+                            <td>Intel Corporation</td>
+                            <td>$29.58</td>
+                            <td class="negative">-3.24%</td>
+                            <td>Semiconductors</td>
+                        </tr>
+                        <tr>
+                            <td>SNAP</td>
+                            <td>Snap Inc.</td>
+                            <td>$8.16</td>
+                            <td class="negative">-3.32%</td>
+                            <td>Social Media</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>4. Strategic Outlook & Market Implications</h2>
+
+            <h3>Short-Term Outlook (1-4 weeks)</h3>
+            <div class="info-box">
+                <p><strong>Constructive but Selective:</strong> Technology leadership and mega-cap strength provide near-term support. Expect continued divergence between growth and value, large-cap vs. small-cap performance.</p>
+                <p><strong>Key Levels:</strong> S&P 500 support around 6,630, resistance near 6,672 (recent highs)</p>
+                <p><strong>Volatility Outlook:</strong> Moderate volatility expected with focus on earnings quality and technology innovation themes</p>
+            </div>
+
+            <h3>Medium-Term Outlook (1-3 months)</h3>
+            <div class="alert-box">
+                <p><strong>Sector Rotation Watch:</strong> Monitor for potential broadening of market leadership beyond mega-cap technology. Small-cap underperformance may present opportunities if fundamentals improve.</p>
+                <p><strong>Economic Sensitivity:</strong> Energy sector weakness warrants attention for broader economic implications</p>
+            </div>
+
+            <h3>Strategic Recommendations by Market Participant</h3>
+
+            <h4>Institutional Investors</h4>
+            <ul>
+                <li><strong>Overweight:</strong> Technology sector with focus on AI/cloud infrastructure plays</li>
+                <li><strong>Maintain:</strong> Defensive positioning in utilities and select consumer staples</li>
+                <li><strong>Underweight:</strong> Energy and small-cap exposure until momentum improves</li>
+                <li><strong>Tactical:</strong> Consider precious metals (gold strength) as portfolio diversifier</li>
+            </ul>
+
+            <h4>Active Traders</h4>
+            <ul>
+                <li><strong>Focus:</strong> Volume surge stocks (137 identified) for momentum plays</li>
+                <li><strong>Watch:</strong> Technology earnings reactions and AI-related news flow</li>
+                <li><strong>Avoid:</strong> Low-volume, high-volatility small caps in current environment</li>
+                <li><strong>Opportunity:</strong> Apple (+3.20%) and Robinhood (+3.20%) showing strong momentum</li>
+            </ul>
+
+            <h4>Long-Term Investors</h4>
+            <ul>
+                <li><strong>Accumulate:</strong> Quality technology names on any weakness</li>
+                <li><strong>Diversify:</strong> Consider international exposure if dollar strength continues</li>
+                <li><strong>Income:</strong> Utilities sector offering 3.00% yield with positive momentum</li>
+                <li><strong>Patience:</strong> Small-cap value may present long-term opportunities at current levels</li>
+            </ul>
+        </div>
+
+        <div class="section">
+            <h2>5. Risk Assessment & Key Catalysts</h2>
+
+            <h3>Primary Risk Factors</h3>
+            <div class="risk-box">
+                <p><strong>Concentration Risk:</strong> Heavy reliance on mega-cap technology for market performance</p>
+                <p><strong>Valuation Risk:</strong> Technology P/E of 42.6x above historical averages</p>
+                <p><strong>Breadth Risk:</strong> Small-cap underperformance suggests underlying weakness</p>
+                <p><strong>Sector Risk:</strong> Energy sector decline may signal broader commodity concerns</p>
+            </div>
+
+            <h3>Positive Catalysts</h3>
+            <div class="info-box">
+                <p><strong>Innovation Momentum:</strong> Continued AI and technology advancement themes</p>
+                <p><strong>Quality Earnings:</strong> Strong fundamentals in leading sectors</p>
+                <p><strong>Defensive Options:</strong> Utilities and gold providing portfolio stability</p>
+                <p><strong>Volume Participation:</strong> Broad-based volume surge indicating institutional interest</p>
+            </div>
+
+            <h3>Key Monitoring Points</h3>
+            <ul>
+                <li>Federal Reserve policy communications and interest rate trajectory</li>
+                <li>Technology earnings quality and forward guidance</li>
+                <li>Small-cap performance inflection points</li>
+                <li>Energy sector stabilization signals</li>
+                <li>International market correlations and dollar strength</li>
+                <li>Geopolitical developments affecting technology and energy sectors</li>
+            </ul>
+        </div>
+
+        <div class="section">
+            <h2>6. Market News & Sentiment Analysis</h2>
+
+            <h3>Recent Market-Moving Headlines</h3>
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Time</th>
+                            <th>Headline</th>
+                            <th>Market Impact</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>10:08 AM</td>
+                            <td>Hims & Hers Stock Pushes to Highs on Healthcare Rate Cut Frenzy</td>
+                            <td>Healthcare/Biotech Positive</td>
+                        </tr>
+                        <tr>
+                            <td>09:30 AM</td>
+                            <td>Fed Decision: 3 Stocks to Watch After Jerome Powell's Latest Move</td>
+                            <td>Monetary Policy Focus</td>
+                        </tr>
+                        <tr>
+                            <td>09:30 AM</td>
+                            <td>Tempus AI Surges Since IPO as FDA Clearance Boosts Growth Outlook</td>
+                            <td>AI/Healthcare Convergence</td>
+                        </tr>
+                        <tr>
+                            <td>09:26 AM</td>
+                            <td>Absci Corporation Secures $64M Financing for AI Drug Discovery</td>
+                            <td>Biotech Innovation</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="footer">
+            <p><strong>Report Generated:</strong> September 21, 2025 at 10:15 AM ET</p>
+            <p><strong>Data Sources:</strong> Finviz, Alpaca Markets, Financial Modeling Prep</p>
+            <p><strong>Next Market Open:</strong> Monday, September 22, 2025 at 9:30 AM ET</p>
+            <p><em>This analysis is for informational purposes only and should not be considered as investment advice.
+            Past performance does not guarantee future results. Always consult with a qualified financial advisor
+            before making investment decisions.</em></p>
+        </div>
+    </div>
+</body>
+</html>

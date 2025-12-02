@@ -1,0 +1,90 @@
+{
+  "slides": [
+    {
+      "slide": 1,
+      "title": "決算後ギャップアップ銘柄分析",
+      "subtitle": "2025年9月5日レポート",
+      "narration": "2025年9月5日の決算後ギャップアップ銘柄分析をお届けします。昨日の引け後と今朝の決算発表を基に、厳選された9銘柄を詳しく分析いたします。",
+      "duration": 4000,
+      "audio_duration": 16.416,
+      "recommended_duration": 17416
+    },
+    {
+      "slide": 2,
+      "title": "分析サマリー",
+      "narration": "本日分析した9銘柄のうち、Aグレード銘柄が2銘柄、Bグレード銘柄が4銘柄となりました。平均EPS予想を158%上回る好決算が目立ちます。",
+      "duration": 4000,
+      "data": {
+        "analyzed": 9,
+        "a_grade": 2,
+        "b_grade": 4,
+        "avg_eps_surprise": "158%"
+      },
+      "audio_duration": 14.712,
+      "recommended_duration": 15712
+    },
+    {
+      "slide": 3,
+      "title": "Aグレード注目銘柄：AVGO",
+      "narration": "最高評価のAグレードは、ブロードコムです。株価339.76ドル、10.88%の大幅上昇を記録。AI半導体需要の拡大により記録的な売上を達成し、総合スコア87.3点を獲得しました。",
+      "duration": 4000,
+      "data": {
+        "symbol": "AVGO",
+        "name": "Broadcom Inc",
+        "price": "$339.76",
+        "performance": "+10.88%",
+        "score": "87.3",
+        "probability": "72%"
+      },
+      "audio_duration": 19.56,
+      "recommended_duration": 20560
+    },
+    {
+      "slide": 4,
+      "title": "Aグレード注目銘柄：ZUMZ",
+      "narration": "もう一つのAグレード銘柄は、ズミーズです。株価20.99ドル、13.77%の上昇。43.24%のEPS予想超過により、総合スコア86.1点を記録しています。",
+      "duration": 4000,
+      "data": {
+        "symbol": "ZUMZ",
+        "name": "Zumiez Inc",
+        "price": "$20.99",
+        "performance": "+13.77%",
+        "eps_surprise": "43.24%",
+        "score": "86.1"
+      },
+      "audio_duration": 16.056,
+      "recommended_duration": 17056
+    },
+    {
+      "slide": 5,
+      "title": "Bグレード注目銘柄",
+      "narration": "Bグレード銘柄では、ブレイズが18.66%の大幅上昇で注目されます。403%の驚異的なEPS予想超過を達成。ガイドワイアとサムサラも堅調な決算内容となりました。",
+      "duration": 4000,
+      "data": {
+        "brze": {
+          "symbol": "BRZE",
+          "performance": "+18.66%",
+          "eps": "403.36%"
+        },
+        "gwre": {
+          "symbol": "GWRE",
+          "performance": "+13.89%"
+        },
+        "iot": {
+          "symbol": "IOT",
+          "performance": "+12.42%"
+        }
+      },
+      "audio_duration": 16.824,
+      "recommended_duration": 17824
+    },
+    {
+      "slide": 6,
+      "title": "投資判断とリスク管理",
+      "narration": "今回の分析では、技術的指標と決算内容を総合的に評価しています。特に200日移動平均線上の銘柄は成功確率が高い傾向にあります。投資の際は適切なポジションサイジングとストップロス設定を心がけてください。",
+      "duration": 4000,
+      "audio_duration": 22.68,
+      "recommended_duration": 23680
+    }
+  ]
+}

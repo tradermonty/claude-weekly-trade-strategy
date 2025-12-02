@@ -1,0 +1,949 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Earnings Trade Analysis - October 31, 2025</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .header {
+            background: white;
+            padding: 40px;
+            border-radius: 20px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+            margin-bottom: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            color: #2d3748;
+            margin-bottom: 10px;
+        }
+
+        .header .subtitle {
+            font-size: 1.2em;
+            color: #718096;
+            margin-bottom: 20px;
+        }
+
+        .header .date {
+            font-size: 1.1em;
+            color: #4a5568;
+            font-weight: 600;
+        }
+
+        .section {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+            margin-bottom: 25px;
+        }
+
+        .section-title {
+            font-size: 1.8em;
+            color: #2d3748;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 3px solid #667eea;
+        }
+
+        .grade-badge {
+            display: inline-block;
+            padding: 8px 20px;
+            border-radius: 25px;
+            font-weight: 700;
+            font-size: 1.1em;
+            margin-left: 15px;
+        }
+
+        .grade-a {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            color: white;
+        }
+
+        .grade-b {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            color: white;
+        }
+
+        .stock-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(450px, 1fr));
+            gap: 25px;
+            margin-top: 20px;
+        }
+
+        .stock-card {
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .stock-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+
+        .stock-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #667eea;
+        }
+
+        .stock-symbol {
+            font-size: 2em;
+            font-weight: 800;
+            color: #2d3748;
+        }
+
+        .stock-score {
+            font-size: 2.5em;
+            font-weight: 800;
+            color: #667eea;
+        }
+
+        .stars {
+            color: #ffd700;
+            font-size: 1.3em;
+            margin-top: 5px;
+        }
+
+        .metrics {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin: 20px 0;
+        }
+
+        .metric {
+            background: white;
+            padding: 12px;
+            border-radius: 10px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .metric-label {
+            font-size: 0.85em;
+            color: #718096;
+            text-transform: uppercase;
+            margin-bottom: 5px;
+        }
+
+        .metric-value {
+            font-size: 1.3em;
+            font-weight: 700;
+            color: #2d3748;
+        }
+
+        .metric-value.positive {
+            color: #48bb78;
+        }
+
+        .metric-value.negative {
+            color: #f56565;
+        }
+
+        .score-breakdown {
+            background: white;
+            padding: 15px;
+            border-radius: 10px;
+            margin: 15px 0;
+        }
+
+        .score-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin: 10px 0;
+        }
+
+        .score-label {
+            font-size: 0.95em;
+            color: #4a5568;
+            font-weight: 600;
+        }
+
+        .score-bar-container {
+            flex: 1;
+            height: 20px;
+            background: #e2e8f0;
+            border-radius: 10px;
+            margin: 0 15px;
+            overflow: hidden;
+        }
+
+        .score-bar {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+            border-radius: 10px;
+            transition: width 0.5s ease;
+        }
+
+        .score-value {
+            font-weight: 700;
+            color: #2d3748;
+            min-width: 40px;
+            text-align: right;
+        }
+
+        .analysis {
+            background: white;
+            padding: 15px;
+            border-radius: 10px;
+            margin-top: 15px;
+        }
+
+        .analysis h4 {
+            color: #2d3748;
+            margin-bottom: 10px;
+            font-size: 1.1em;
+        }
+
+        .analysis p {
+            color: #4a5568;
+            line-height: 1.6;
+            font-size: 0.95em;
+        }
+
+        .summary-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin: 20px 0;
+        }
+
+        .stat-box {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 25px;
+            border-radius: 15px;
+            text-align: center;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+
+        .stat-number {
+            font-size: 3em;
+            font-weight: 800;
+            margin-bottom: 10px;
+        }
+
+        .stat-label {
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+
+        .footer {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            text-align: center;
+            margin-top: 30px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+        }
+
+        .footer p {
+            color: #718096;
+            margin: 10px 0;
+            line-height: 1.6;
+        }
+
+        .footer a {
+            color: #667eea;
+            text-decoration: none;
+            font-weight: 600;
+        }
+
+        .footer a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📊 Earnings Trade Analysis</h1>
+            <div class="subtitle">Post-Earnings Gap-Up Stock Analysis with Backtest Scoring</div>
+            <div class="date">October 31, 2025 - Yesterday's After-Hours & Pre-Market Earnings</div>
+        </div>
+
+        <div class="section">
+            <h2 class="section-title">📈 Executive Summary</h2>
+            <div class="summary-stats">
+                <div class="stat-box">
+                    <div class="stat-number">111</div>
+                    <div class="stat-label">Stocks Screened</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-number">6</div>
+                    <div class="stat-label">A-Grade (85+)</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-number">4</div>
+                    <div class="stat-label">B-Grade (70-84)</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-number">70%+</div>
+                    <div class="stat-label">Top Success Rate</div>
+                </div>
+            </div>
+            <div class="analysis">
+                <h4>Market Overview</h4>
+                <p>Screened 111 stocks that reported earnings after yesterday's close or before today's pre-market and are trading higher. Applied 5-factor backtest scoring system analyzing gap size, pre-earnings trend, volume patterns, and moving average positions. Identified 6 exceptional A-grade opportunities with 70%+ historical success rates and 4 solid B-grade candidates.</p>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2 class="section-title">⭐⭐⭐⭐⭐ A-Grade Stocks (85-100 points) <span class="grade-badge grade-a">70%+ Success Rate</span></h2>
+            <div class="stock-grid">
+                <!-- AXTI -->
+                <div class="stock-card">
+                    <div class="stock-header">
+                        <div>
+                            <div class="stock-symbol">$AXTI</div>
+                            <div class="stars">⭐⭐⭐⭐⭐</div>
+                        </div>
+                        <div>
+                            <div class="stock-score">96</div>
+                        </div>
+                    </div>
+
+                    <div class="metrics">
+                        <div class="metric">
+                            <div class="metric-label">Gap Size</div>
+                            <div class="metric-value positive">+11.61%</div>
+                        </div>
+                        <div class="metric">
+                            <div class="metric-label">EPS Surprise</div>
+                            <div class="metric-value positive">+74.70%</div>
+                        </div>
+                        <div class="metric">
+                            <div class="metric-label">MA200 Position</div>
+                            <div class="metric-value positive">+227.74%</div>
+                        </div>
+                        <div class="metric">
+                            <div class="metric-label">MA50 Position</div>
+                            <div class="metric-value positive">+81.99%</div>
+                        </div>
+                    </div>
+
+                    <div class="score-breakdown">
+                        <h4 style="margin-bottom: 15px; color: #2d3748;">Score Breakdown</h4>
+                        <div class="score-item">
+                            <span class="score-label">Gap Size (25%)</span>
+                            <div class="score-bar-container">
+                                <div class="score-bar" style="width: 60%;"></div>
+                            </div>
+                            <span class="score-value">3/5</span>
+                        </div>
+                        <div class="score-item">
+                            <span class="score-label">Pre-Earnings (30%)</span>
+                            <div class="score-bar-container">
+                                <div class="score-bar" style="width: 100%;"></div>
+                            </div>
+                            <span class="score-value">5/5</span>
+                        </div>
+                        <div class="score-item">
+                            <span class="score-label">Volume (20%)</span>
+                            <div class="score-bar-container">
+                                <div class="score-bar" style="width: 80%;"></div>
+                            </div>
+                            <span class="score-value">4/5</span>
+                        </div>
+                        <div class="score-item">
+                            <span class="score-label">MA200 (15%)</span>
+                            <div class="score-bar-container">
+                                <div class="score-bar" style="width: 100%;"></div>
+                            </div>
+                            <span class="score-value">5/5</span>
+                        </div>
+                        <div class="score-item">
+                            <span class="score-label">MA50 (10%)</span>
+                            <div class="score-bar-container">
+                                <div class="score-bar" style="width: 100%;"></div>
+                            </div>
+                            <span class="score-value">5/5</span>
+                        </div>
+                    </div>
+
+                    <div class="analysis">
+                        <h4>Technical Analysis</h4>
+                        <p><strong>Exceptional momentum stock</strong> - Trading 227.74% above 200-day MA shows extraordinary long-term strength. Strong 11.61% gap with solid EPS beat of 74.70%. Very strong pre-earnings uptrend positions this as a momentum continuation candidate. Excellent technical setup across all timeframes.</p>
+                    </div>
+                </div>
+
+                <!-- ATEC -->
+                <div class="stock-card">
+                    <div class="stock-header">
+                        <div>
+                            <div class="stock-symbol">$ATEC</div>
+                            <div class="stars">⭐⭐⭐⭐⭐</div>
+                        </div>
+                        <div>
+                            <div class="stock-score">96</div>
+                        </div>
+                    </div>
+
+                    <div class="metrics">
+                        <div class="metric">
+                            <div class="metric-label">Gap Size</div>
+                            <div class="metric-value positive">+23.70%</div>
+                        </div>
+                        <div class="metric">
+                            <div class="metric-label">EPS Surprise</div>
+                            <div class="metric-value positive">+195.54%</div>
+                        </div>
+                        <div class="metric">
+                            <div class="metric-label">MA200 Position</div>
+                            <div class="metric-value positive">+61.41%</div>
+                        </div>
+                        <div class="metric">
+                            <div class="metric-label">MA50 Position</div>
+                            <div class="metric-value positive">+31.90%</div>
+                        </div>
+                    </div>
+
+                    <div class="score-breakdown">
+                        <h4 style="margin-bottom: 15px; color: #2d3748;">Score Breakdown</h4>
+                        <div class="score-item">
+                            <span class="score-label">Gap Size (25%)</span>
+                            <div class="score-bar-container">
+                                <div class="score-bar" style="width: 40%;"></div>
+                            </div>
+                            <span class="score-value">2/5</span>
+                        </div>
+                        <div class="score-item">
+                            <span class="score-label">Pre-Earnings (30%)</span>
+                            <div class="score-bar-container">
+                                <div class="score-bar" style="width: 100%;"></div>
+                            </div>
+                            <span class="score-value">5/5</span>
+                        </div>
+                        <div class="score-item">
+                            <span class="score-label">Volume (20%)</span>
+                            <div class="score-bar-container">
+                                <div class="score-bar" style="width: 100%;"></div>
+                            </div>
+                            <span class="score-value">5/5</span>
+                        </div>
+                        <div class="score-item">
+                            <span class="score-label">MA200 (15%)</span>
+                            <div class="score-bar-container">
+                                <div class="score-bar" style="width: 100%;"></div>
+                            </div>
+                            <span class="score-value">5/5</span>
+                        </div>
+                        <div class="score-item">
+                            <span class="score-label">MA50 (10%)</span>
+                            <div class="score-bar-container">
+                                <div class="score-bar" style="width: 100%;"></div>
+                            </div>
+                            <span class="score-value">5/5</span>
+                        </div>
+                    </div>
+
+                    <div class="analysis">
+                        <h4>Technical Analysis</h4>
+                        <p><strong>Massive earnings beat</strong> - 195.54% EPS surprise drove a powerful 23.70% gap. Trading well above all key moving averages (61.41% above MA200). High volume surge confirms strong institutional interest. Very strong pre-earnings momentum suggests continuation potential.</p>
+                    </div>
+                </div>
+
+                <!-- TVTX -->
+                <div class="stock-card">
+                    <div class="stock-header">
+                        <div>
+                            <div class="stock-symbol">$TVTX</div>
+                            <div class="stars">⭐⭐⭐⭐⭐</div>
+                        </div>
+                        <div>
+                            <div class="stock-score">94</div>
+                        </div>
+                    </div>
+
+                    <div class="metrics">
+                        <div class="metric">
+                            <div class="metric-label">Gap Size</div>
+                            <div class="metric-value positive">+11.27%</div>
+                        </div>
+                        <div class="metric">
+                            <div class="metric-label">EPS Surprise</div>
+                            <div class="metric-value positive">+192.20%</div>
+                        </div>
+                        <div class="metric">
+                            <div class="metric-label">MA200 Position</div>
+                            <div class="metric-value positive">+71.26%</div>
+                        </div>
+                        <div class="metric">
+                            <div class="metric-label">MA50 Position</div>
+                            <div class="metric-value positive">+36.85%</div>
+                        </div>
+                    </div>
+
+                    <div class="score-breakdown">
+                        <h4 style="margin-bottom: 15px; color: #2d3748;">Score Breakdown</h4>
+                        <div class="score-item">
+                            <span class="score-label">Gap Size (25%)</span>
+                            <div class="score-bar-container">
+                                <div class="score-bar" style="width: 60%;"></div>
+                            </div>
+                            <span class="score-value">3/5</span>
+                        </div>
+                        <div class="score-item">
+                            <span class="score-label">Pre-Earnings (30%)</span>
+                            <div class="score-bar-container">
+                                <div class="score-bar" style="width: 100%;"></div>
+                            </div>
+                            <span class="score-value">5/5</span>
+                        </div>
+                        <div class="score-item">
+                            <span class="score-label">Volume (20%)</span>
+                            <div class="score-bar-container">
+                                <div class="score-bar" style="width: 80%;"></div>
+                            </div>
+                            <span class="score-value">4/5</span>
+                        </div>
+                        <div class="score-item">
+                            <span class="score-label">MA200 (15%)</span>
+                            <div class="score-bar-container">
+                                <div class="score-bar" style="width: 100%;"></div>
+                            </div>
+                            <span class="score-value">5/5</span>
+                        </div>
+                        <div class="score-item">
+                            <span class="score-label">MA50 (10%)</span>
+                            <div class="score-bar-container">
+                                <div class="score-bar" style="width: 100%;"></div>
+                            </div>
+                            <span class="score-value">5/5</span>
+                        </div>
+                    </div>
+
+                    <div class="analysis">
+                        <h4>Technical Analysis</h4>
+                        <p><strong>Outstanding earnings surprise</strong> - 192.20% EPS beat drove an 11.27% gap. Strong positioning above MA200 (+71.26%) and MA50 (+36.85%). Very strong pre-earnings momentum and healthy volume surge. Excellent technical setup for continuation.</p>
+                    </div>
+                </div>
+
+                <!-- WDC -->
+                <div class="stock-card">
+                    <div class="stock-header">
+                        <div>
+                            <div class="stock-symbol">$WDC</div>
+                            <div class="stars">⭐⭐⭐⭐⭐</div>
+                        </div>
+                        <div>
+                            <div class="stock-score">90</div>
+                        </div>
+                    </div>
+
+                    <div class="metrics">
+                        <div class="metric">
+                            <div class="metric-label">Gap Size</div>
+                            <div class="metric-value positive">+13.08%</div>
+                        </div>
+                        <div class="metric">
+                            <div class="metric-label">EPS Surprise</div>
+                            <div class="metric-value positive">+12.03%</div>
+                        </div>
+                        <div class="metric">
+                            <div class="metric-label">MA200 Position</div>
+                            <div class="metric-value positive">+130.03%</div>
+                        </div>
+                        <div class="metric">
+                            <div class="metric-label">MA50 Position</div>
+                            <div class="metric-value positive">+40.85%</div>
+                        </div>
+                    </div>
+
+                    <div class="score-breakdown">
+                        <h4 style="margin-bottom: 15px; color: #2d3748;">Score Breakdown</h4>
+                        <div class="score-item">
+                            <span class="score-label">Gap Size (25%)</span>
+                            <div class="score-bar-container">
+                                <div class="score-bar" style="width: 60%;"></div>
+                            </div>
+                            <span class="score-value">3/5</span>
+                        </div>
+                        <div class="score-item">
+                            <span class="score-label">Pre-Earnings (30%)</span>
+                            <div class="score-bar-container">
+                                <div class="score-bar" style="width: 100%;"></div>
+                            </div>
+                            <span class="score-value">5/5</span>
+                        </div>
+                        <div class="score-item">
+                            <span class="score-label">Volume (20%)</span>
+                            <div class="score-bar-container">
+                                <div class="score-bar" style="width: 60%;"></div>
+                            </div>
+                            <span class="score-value">3/5</span>
+                        </div>
+                        <div class="score-item">
+                            <span class="score-label">MA200 (15%)</span>
+                            <div class="score-bar-container">
+                                <div class="score-bar" style="width: 100%;"></div>
+                            </div>
+                            <span class="score-value">5/5</span>
+                        </div>
+                        <div class="score-item">
+                            <span class="score-label">MA50 (10%)</span>
+                            <div class="score-bar-container">
+                                <div class="score-bar" style="width: 100%;"></div>
+                            </div>
+                            <span class="score-value">5/5</span>
+                        </div>
+                    </div>
+
+                    <div class="analysis">
+                        <h4>Technical Analysis</h4>
+                        <p><strong>Large-cap tech momentum</strong> - Western Digital gapped 13.08% on solid earnings. Trading 130.03% above MA200 shows exceptional long-term trend strength. Strong pre-earnings momentum with healthy volume. Well-positioned above all key moving averages.</p>
+                    </div>
+                </div>
+
+                <!-- AMZN -->
+                <div class="stock-card">
+                    <div class="stock-header">
+                        <div>
+                            <div class="stock-symbol">$AMZN</div>
+                            <div class="stars">⭐⭐⭐⭐⭐</div>
+                        </div>
+                        <div>
+                            <div class="stock-score">90</div>
+                        </div>
+                    </div>
+
+                    <div class="metrics">
+                        <div class="metric">
+                            <div class="metric-label">Gap Size</div>
+                            <div class="metric-value positive">+13.34%</div>
+                        </div>
+                        <div class="metric">
+                            <div class="metric-label">EPS Surprise</div>
+                            <div class="metric-value positive">+24.34%</div>
+                        </div>
+                        <div class="metric">
+                            <div class="metric-label">MA200 Position</div>
+                            <div class="metric-value positive">+17.95%</div>
+                        </div>
+                        <div class="metric">
+                            <div class="metric-label">MA50 Position</div>
+                            <div class="metric-value positive">+12.11%</div>
+                        </div>
+                    </div>
+
+                    <div class="score-breakdown">
+                        <h4 style="margin-bottom: 15px; color: #2d3748;">Score Breakdown</h4>
+                        <div class="score-item">
+                            <span class="score-label">Gap Size (25%)</span>
+                            <div class="score-bar-container">
+                                <div class="score-bar" style="width: 60%;"></div>
+                            </div>
+                            <span class="score-value">3/5</span>
+                        </div>
+                        <div class="score-item">
+                            <span class="score-label">Pre-Earnings (30%)</span>
+                            <div class="score-bar-container">
+                                <div class="score-bar" style="width: 80%;"></div>
+                            </div>
+                            <span class="score-value">4/5</span>
+                        </div>
+                        <div class="score-item">
+                            <span class="score-label">Volume (20%)</span>
+                            <div class="score-bar-container">
+                                <div class="score-bar" style="width: 100%;"></div>
+                            </div>
+                            <span class="score-value">5/5</span>
+                        </div>
+                        <div class="score-item">
+                            <span class="score-label">MA200 (15%)</span>
+                            <div class="score-bar-container">
+                                <div class="score-bar" style="width: 80%;"></div>
+                            </div>
+                            <span class="score-value">4/5</span>
+                        </div>
+                        <div class="score-item">
+                            <span class="score-label">MA50 (10%)</span>
+                            <div class="score-bar-container">
+                                <div class="score-bar" style="width: 80%;"></div>
+                            </div>
+                            <span class="score-value">4/5</span>
+                        </div>
+                    </div>
+
+                    <div class="analysis">
+                        <h4>Technical Analysis</h4>
+                        <p><strong>Mega-cap leader</strong> - Amazon posted a strong 24.34% EPS beat driving a 13.34% gap. Massive volume surge confirms institutional participation. Trading comfortably above MA200 (+17.95%) and MA50 (+12.11%) with strong pre-earnings momentum. Blue-chip quality with excellent risk/reward.</p>
+                    </div>
+                </div>
+
+                <!-- IRTC -->
+                <div class="stock-card">
+                    <div class="stock-header">
+                        <div>
+                            <div class="stock-symbol">$IRTC</div>
+                            <div class="stars">⭐⭐⭐⭐⭐</div>
+                        </div>
+                        <div>
+                            <div class="stock-score">87</div>
+                        </div>
+                    </div>
+
+                    <div class="metrics">
+                        <div class="metric">
+                            <div class="metric-label">Gap Size</div>
+                            <div class="metric-value positive">+10.80%</div>
+                        </div>
+                        <div class="metric">
+                            <div class="metric-label">EPS Surprise</div>
+                            <div class="metric-value positive">+50.65%</div>
+                        </div>
+                        <div class="metric">
+                            <div class="metric-label">MA200 Position</div>
+                            <div class="metric-value positive">+48.67%</div>
+                        </div>
+                        <div class="metric">
+                            <div class="metric-label">MA50 Position</div>
+                            <div class="metric-value positive">+16.60%</div>
+                        </div>
+                    </div>
+
+                    <div class="score-breakdown">
+                        <h4 style="margin-bottom: 15px; color: #2d3748;">Score Breakdown</h4>
+                        <div class="score-item">
+                            <span class="score-label">Gap Size (25%)</span>
+                            <div class="score-bar-container">
+                                <div class="score-bar" style="width: 60%;"></div>
+                            </div>
+                            <span class="score-value">3/5</span>
+                        </div>
+                        <div class="score-item">
+                            <span class="score-label">Pre-Earnings (30%)</span>
+                            <div class="score-bar-container">
+                                <div class="score-bar" style="width: 80%;"></div>
+                            </div>
+                            <span class="score-value">4/5</span>
+                        </div>
+                        <div class="score-item">
+                            <span class="score-label">Volume (20%)</span>
+                            <div class="score-bar-container">
+                                <div class="score-bar" style="width: 80%;"></div>
+                            </div>
+                            <span class="score-value">4/5</span>
+                        </div>
+                        <div class="score-item">
+                            <span class="score-label">MA200 (15%)</span>
+                            <div class="score-bar-container">
+                                <div class="score-bar" style="width: 100%;"></div>
+                            </div>
+                            <span class="score-value">5/5</span>
+                        </div>
+                        <div class="score-item">
+                            <span class="score-label">MA50 (10%)</span>
+                            <div class="score-bar-container">
+                                <div class="score-bar" style="width: 80%;"></div>
+                            </div>
+                            <span class="score-value">4/5</span>
+                        </div>
+                    </div>
+
+                    <div class="analysis">
+                        <h4>Technical Analysis</h4>
+                        <p><strong>Solid earnings beat</strong> - 50.65% EPS surprise drove a 10.80% gap. Trading well above MA200 (+48.67%) with healthy volume surge. Good pre-earnings momentum with strong positioning above key moving averages. Quality setup for continuation play.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2 class="section-title">⭐⭐⭐⭐ B-Grade Stocks (70-84 points) <span class="grade-badge grade-b">55-69% Success Rate</span></h2>
+            <div class="stock-grid">
+                <!-- ARDX -->
+                <div class="stock-card">
+                    <div class="stock-header">
+                        <div>
+                            <div class="stock-symbol">$ARDX</div>
+                            <div class="stars">⭐⭐⭐⭐</div>
+                        </div>
+                        <div>
+                            <div class="stock-score">84</div>
+                        </div>
+                    </div>
+
+                    <div class="metrics">
+                        <div class="metric">
+                            <div class="metric-label">Gap Size</div>
+                            <div class="metric-value positive">+22.75%</div>
+                        </div>
+                        <div class="metric">
+                            <div class="metric-label">EPS Surprise</div>
+                            <div class="metric-value positive">+100.00%</div>
+                        </div>
+                        <div class="metric">
+                            <div class="metric-label">MA200 Position</div>
+                            <div class="metric-value positive">+23.66%</div>
+                        </div>
+                        <div class="metric">
+                            <div class="metric-label">MA50 Position</div>
+                            <div class="metric-value positive">+7.01%</div>
+                        </div>
+                    </div>
+
+                    <div class="analysis">
+                        <h4>Technical Analysis</h4>
+                        <p><strong>Large gap on EPS beat</strong> - Impressive 100% EPS surprise drove a 22.75% gap. Trading above MA200 (+23.66%) and MA50 (+7.01%). Strong volume surge. Large gap size adds some risk but earnings surprise is exceptional.</p>
+                    </div>
+                </div>
+
+                <!-- TWLO -->
+                <div class="stock-card">
+                    <div class="stock-header">
+                        <div>
+                            <div class="stock-symbol">$TWLO</div>
+                            <div class="stars">⭐⭐⭐⭐</div>
+                        </div>
+                        <div>
+                            <div class="stock-score">82</div>
+                        </div>
+                    </div>
+
+                    <div class="metrics">
+                        <div class="metric">
+                            <div class="metric-label">Gap Size</div>
+                            <div class="metric-value positive">+10.76%</div>
+                        </div>
+                        <div class="metric">
+                            <div class="metric-label">EPS Surprise</div>
+                            <div class="metric-value positive">+15.30%</div>
+                        </div>
+                        <div class="metric">
+                            <div class="metric-label">MA200 Position</div>
+                            <div class="metric-value positive">+14.32%</div>
+                        </div>
+                        <div class="metric">
+                            <div class="metric-label">MA50 Position</div>
+                            <div class="metric-value positive">+19.73%</div>
+                        </div>
+                    </div>
+
+                    <div class="analysis">
+                        <h4>Technical Analysis</h4>
+                        <p><strong>Quality tech name</strong> - Twilio posted solid EPS beat of 15.30% with 10.76% gap. Trading above all key MAs with stronger short-term (MA50 +19.73%) than long-term positioning. Good volume and pre-earnings momentum.</p>
+                    </div>
+                </div>
+
+                <!-- NET -->
+                <div class="stock-card">
+                    <div class="stock-header">
+                        <div>
+                            <div class="stock-symbol">$NET</div>
+                            <div class="stars">⭐⭐⭐⭐</div>
+                        </div>
+                        <div>
+                            <div class="stock-score">81</div>
+                        </div>
+                    </div>
+
+                    <div class="metrics">
+                        <div class="metric">
+                            <div class="metric-label">Gap Size</div>
+                            <div class="metric-value positive">+6.88%</div>
+                        </div>
+                        <div class="metric">
+                            <div class="metric-label">EPS Surprise</div>
+                            <div class="metric-value positive">+17.34%</div>
+                        </div>
+                        <div class="metric">
+                            <div class="metric-label">MA200 Position</div>
+                            <div class="metric-value positive">+39.72%</div>
+                        </div>
+                        <div class="metric">
+                            <div class="metric-label">MA50 Position</div>
+                            <div class="metric-value positive">+9.63%</div>
+                        </div>
+                    </div>
+
+                    <div class="analysis">
+                        <h4>Technical Analysis</h4>
+                        <p><strong>Cloudflare momentum</strong> - Solid 17.34% EPS beat with moderate 6.88% gap. Well positioned above MA200 (+39.72%) showing strong long-term trend. Above MA50 with good volume. Conservative gap size reduces volatility risk.</p>
+                    </div>
+                </div>
+
+                <!-- RDDT -->
+                <div class="stock-card">
+                    <div class="stock-header">
+                        <div>
+                            <div class="stock-symbol">$RDDT</div>
+                            <div class="stars">⭐⭐⭐⭐</div>
+                        </div>
+                        <div>
+                            <div class="stock-score">78</div>
+                        </div>
+                    </div>
+
+                    <div class="metrics">
+                        <div class="metric">
+                            <div class="metric-label">Gap Size</div>
+                            <div class="metric-value positive">+11.51%</div>
+                        </div>
+                        <div class="metric">
+                            <div class="metric-label">EPS Surprise</div>
+                            <div class="metric-value positive">+52.41%</div>
+                        </div>
+                        <div class="metric">
+                            <div class="metric-label">MA200 Position</div>
+                            <div class="metric-value positive">+30.82%</div>
+                        </div>
+                        <div class="metric">
+                            <div class="metric-label">MA50 Position</div>
+                            <div class="metric-value negative">-3.01%</div>
+                        </div>
+                    </div>
+
+                    <div class="analysis">
+                        <h4>Technical Analysis</h4>
+                        <p><strong>Reddit IPO momentum</strong> - Strong 52.41% EPS beat drove 11.51% gap. Above MA200 (+30.82%) but slightly below MA50 (-3.01%). Excellent earnings surprise but short-term technical weakness. Higher risk/reward profile.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="footer">
+            <h3 style="color: #2d3748; margin-bottom: 15px;">📊 Methodology</h3>
+            <p><strong>5-Factor Backtest Scoring System</strong></p>
+            <p>Gap Size (25%) • Pre-Earnings Trend (30%) • Volume Analysis (20%) • MA200 Position (15%) • MA50 Position (10%)</p>
+            <p style="margin-top: 20px;">
+                <strong>Data Sources:</strong> Finviz (screening & moving averages) • FMP (fundamentals) • Alpaca Markets (market data)
+            </p>
+            <p style="margin-top: 10px;">
+                <a href="https://elite.finviz.com/screener.ashx?v=211&f=cap_smallover,earningsdate_yesterdayafter|todaybefore,sh_avgvol_o100,sh_price_o5,ta_change_u&ft=4&o=-change" target="_blank">View Full Screener Results →</a>
+            </p>
+            <p style="margin-top: 20px; font-size: 0.9em; color: #a0aec0;">
+                Generated on October 31, 2025 • This analysis is for informational purposes only and should not be considered investment advice.
+            </p>
+        </div>
+    </div>
+</body>
+</html>

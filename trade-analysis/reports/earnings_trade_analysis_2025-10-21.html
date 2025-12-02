@@ -1,0 +1,1463 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Post-Earnings Gap-Up Stock Analysis - October 21, 2025</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            color: white;
+            padding: 40px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            font-weight: 700;
+        }
+
+        .header .subtitle {
+            font-size: 1.2em;
+            opacity: 0.9;
+            margin-bottom: 5px;
+        }
+
+        .header .date {
+            font-size: 1em;
+            opacity: 0.8;
+        }
+
+        .summary {
+            background: #f8f9fa;
+            padding: 30px;
+            border-bottom: 3px solid #e9ecef;
+        }
+
+        .summary h2 {
+            color: #2a5298;
+            margin-bottom: 20px;
+            font-size: 1.8em;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            border-left: 4px solid #667eea;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .stat-card .label {
+            color: #6c757d;
+            font-size: 0.9em;
+            margin-bottom: 5px;
+        }
+
+        .stat-card .value {
+            color: #2a5298;
+            font-size: 1.8em;
+            font-weight: 700;
+        }
+
+        .content {
+            padding: 40px;
+        }
+
+        .grade-section {
+            margin-bottom: 50px;
+        }
+
+        .grade-header {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 25px;
+            padding-bottom: 15px;
+            border-bottom: 3px solid #e9ecef;
+        }
+
+        .grade-badge {
+            font-size: 2.5em;
+            font-weight: 700;
+            padding: 15px 25px;
+            border-radius: 10px;
+            color: white;
+        }
+
+        .grade-a { background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%); }
+        .grade-b { background: linear-gradient(135deg, #4776e6 0%, #8e54e9 100%); }
+        .grade-c { background: linear-gradient(135deg, #f2994a 0%, #f2c94c 100%); }
+        .grade-d { background: linear-gradient(135deg, #eb3349 0%, #f45c43 100%); }
+
+        .grade-info h3 {
+            font-size: 1.5em;
+            color: #2a5298;
+            margin-bottom: 5px;
+        }
+
+        .grade-info .success-rate {
+            color: #6c757d;
+            font-size: 1.1em;
+        }
+
+        .stock-grid {
+            display: grid;
+            gap: 30px;
+        }
+
+        .stock-card {
+            background: #fff;
+            border-radius: 15px;
+            overflow: hidden;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            border: 2px solid #e9ecef;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .stock-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+        }
+
+        .stock-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 25px;
+        }
+
+        .stock-ticker {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .ticker-symbol {
+            font-size: 2em;
+            font-weight: 700;
+        }
+
+        .stock-change {
+            font-size: 1.5em;
+            font-weight: 700;
+        }
+
+        .positive { color: #38ef7d; }
+        .negative { color: #ff6b6b; }
+
+        .stock-name {
+            font-size: 1.1em;
+            opacity: 0.9;
+            margin-bottom: 5px;
+        }
+
+        .stock-sector {
+            font-size: 0.9em;
+            opacity: 0.8;
+        }
+
+        .stock-body {
+            padding: 25px;
+        }
+
+        .score-summary {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+
+        .score-main {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .score-value {
+            font-size: 2.5em;
+            font-weight: 700;
+            color: #2a5298;
+        }
+
+        .stars {
+            font-size: 1.5em;
+        }
+
+        .score-breakdown {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .score-item {
+            background: white;
+            padding: 10px;
+            border-radius: 5px;
+            border-left: 3px solid #667eea;
+        }
+
+        .score-item .label {
+            font-size: 0.85em;
+            color: #6c757d;
+            margin-bottom: 3px;
+        }
+
+        .score-item .value {
+            font-size: 1.2em;
+            font-weight: 600;
+            color: #2a5298;
+        }
+
+        .earnings-data {
+            background: #e7f3ff;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+
+        .earnings-data h4 {
+            color: #2a5298;
+            margin-bottom: 15px;
+            font-size: 1.2em;
+        }
+
+        .earnings-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+        }
+
+        .earnings-metric {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+        }
+
+        .earnings-metric .label {
+            font-size: 0.9em;
+            color: #6c757d;
+            margin-bottom: 5px;
+        }
+
+        .earnings-metric .value {
+            font-size: 1.3em;
+            font-weight: 600;
+            color: #2a5298;
+        }
+
+        .technical-analysis {
+            background: #fff3e0;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+
+        .technical-analysis h4 {
+            color: #f57c00;
+            margin-bottom: 15px;
+            font-size: 1.2em;
+        }
+
+        .ma-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+        }
+
+        .ma-item {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+        }
+
+        .ma-item .ma-label {
+            font-size: 0.9em;
+            color: #6c757d;
+            margin-bottom: 5px;
+        }
+
+        .ma-item .ma-value {
+            font-size: 1.4em;
+            font-weight: 700;
+        }
+
+        .news-analysis {
+            background: #f3e5f5;
+            padding: 20px;
+            border-radius: 10px;
+        }
+
+        .news-analysis h4 {
+            color: #7b1fa2;
+            margin-bottom: 15px;
+            font-size: 1.2em;
+        }
+
+        .news-summary {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            line-height: 1.8;
+        }
+
+        .news-summary ul {
+            padding-left: 20px;
+        }
+
+        .news-summary li {
+            margin-bottom: 8px;
+        }
+
+        .probability-badge {
+            display: inline-block;
+            background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+            color: white;
+            padding: 8px 15px;
+            border-radius: 20px;
+            font-weight: 700;
+            margin-top: 10px;
+        }
+
+        .footer {
+            background: #f8f9fa;
+            padding: 30px;
+            text-align: center;
+            color: #6c757d;
+            border-top: 3px solid #e9ecef;
+        }
+
+        .disclaimer {
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 15px 20px;
+            margin: 20px 0;
+            border-radius: 5px;
+        }
+
+        .disclaimer strong {
+            color: #856404;
+        }
+
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 1.8em;
+            }
+
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .ma-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .score-breakdown {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Post-Earnings Gap-Up Stock Analysis</h1>
+            <div class="subtitle">Backtest-Based Trading Opportunities</div>
+            <div class="date">Tuesday, October 21, 2025</div>
+        </div>
+
+        <div class="summary">
+            <h2>Market Summary</h2>
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="label">Total Stocks Analyzed</div>
+                    <div class="value">10</div>
+                </div>
+                <div class="stat-card">
+                    <div class="label">A-Grade Stocks</div>
+                    <div class="value">3</div>
+                </div>
+                <div class="stat-card">
+                    <div class="label">B-Grade Stocks</div>
+                    <div class="value">5</div>
+                </div>
+                <div class="stat-card">
+                    <div class="label">Average Gap Size</div>
+                    <div class="value">6.4%</div>
+                </div>
+                <div class="stat-card">
+                    <div class="label">Average EPS Surprise</div>
+                    <div class="value">8.7%</div>
+                </div>
+                <div class="stat-card">
+                    <div class="label">Strongest Sector</div>
+                    <div class="value">Industrials</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="content">
+            <!-- A-GRADE STOCKS -->
+            <div class="grade-section">
+                <div class="grade-header">
+                    <div class="grade-badge grade-a">A</div>
+                    <div class="grade-info">
+                        <h3>A-Grade Stocks (85+ Points)</h3>
+                        <div class="success-rate">Success Rate: 70%+ ⭐⭐⭐⭐⭐</div>
+                    </div>
+                </div>
+
+                <div class="stock-grid">
+                    <!-- GM -->
+                    <div class="stock-card">
+                        <div class="stock-header">
+                            <div class="stock-ticker">
+                                <span class="ticker-symbol">$GM</span>
+                                <span class="stock-change positive">+11.22%</span>
+                            </div>
+                            <div class="stock-name">General Motors Company</div>
+                            <div class="stock-sector">Consumer Cyclical</div>
+                        </div>
+                        <div class="stock-body">
+                            <div class="score-summary">
+                                <div class="score-main">
+                                    <div>
+                                        <div style="font-size: 0.9em; color: #6c757d; margin-bottom: 5px;">Backtest Score</div>
+                                        <div class="score-value">88.5</div>
+                                    </div>
+                                    <div class="stars">⭐⭐⭐⭐⭐</div>
+                                </div>
+                                <div class="score-breakdown">
+                                    <div class="score-item">
+                                        <div class="label">Gap Size (25%)</div>
+                                        <div class="value">2.0 pts</div>
+                                    </div>
+                                    <div class="score-item">
+                                        <div class="label">Pre-Earnings (30%)</div>
+                                        <div class="value">4.0 pts</div>
+                                    </div>
+                                    <div class="score-item">
+                                        <div class="label">Volume (20%)</div>
+                                        <div class="value">5.0 pts</div>
+                                    </div>
+                                    <div class="score-item">
+                                        <div class="label">MA200 (15%)</div>
+                                        <div class="value">5.0 pts</div>
+                                    </div>
+                                    <div class="score-item">
+                                        <div class="label">MA50 (10%)</div>
+                                        <div class="value">5.0 pts</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="earnings-data">
+                                <h4>Earnings Performance</h4>
+                                <div class="earnings-grid">
+                                    <div class="earnings-metric">
+                                        <div class="label">EPS Surprise</div>
+                                        <div class="value positive">+8.24%</div>
+                                    </div>
+                                    <div class="earnings-metric">
+                                        <div class="label">Revenue Surprise</div>
+                                        <div class="value positive">+2.45%</div>
+                                    </div>
+                                    <div class="earnings-metric">
+                                        <div class="label">Weekly Performance</div>
+                                        <div class="value positive">+12.88%</div>
+                                    </div>
+                                    <div class="earnings-metric">
+                                        <div class="label">Relative Volume</div>
+                                        <div class="value">4.80x</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="technical-analysis">
+                                <h4>Technical Position</h4>
+                                <div class="ma-grid">
+                                    <div class="ma-item">
+                                        <div class="ma-label">vs MA20</div>
+                                        <div class="ma-value positive">+9.66%</div>
+                                    </div>
+                                    <div class="ma-item">
+                                        <div class="ma-label">vs MA50</div>
+                                        <div class="ma-value positive">+10.76%</div>
+                                    </div>
+                                    <div class="ma-item">
+                                        <div class="ma-label">vs MA200</div>
+                                        <div class="ma-value positive">+25.45%</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="news-analysis">
+                                <h4>News Analysis Summary</h4>
+                                <div class="news-summary">
+                                    <ul>
+                                        <li><strong>Earnings Beat:</strong> Q3 results smashed expectations with strong profit forecast</li>
+                                        <li><strong>Guidance Raised:</strong> Full-year outlook increased, smaller tariff impact than expected</li>
+                                        <li><strong>Core Strength:</strong> Core auto business showing resilience despite EV challenges</li>
+                                        <li><strong>Analyst Reaction:</strong> Positive coverage across major financial outlets</li>
+                                    </ul>
+                                    <div class="probability-badge">Success Probability: 75%</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- GLXY -->
+                    <div class="stock-card">
+                        <div class="stock-header">
+                            <div class="stock-ticker">
+                                <span class="ticker-symbol">$GLXY</span>
+                                <span class="stock-change positive">+10.34%</span>
+                            </div>
+                            <div class="stock-name">Galaxy Digital Inc</div>
+                            <div class="stock-sector">Financial</div>
+                        </div>
+                        <div class="stock-body">
+                            <div class="score-summary">
+                                <div class="score-main">
+                                    <div>
+                                        <div style="font-size: 0.9em; color: #6c757d; margin-bottom: 5px;">Backtest Score</div>
+                                        <div class="score-value">92.0</div>
+                                    </div>
+                                    <div class="stars">⭐⭐⭐⭐⭐</div>
+                                </div>
+                                <div class="score-breakdown">
+                                    <div class="score-item">
+                                        <div class="label">Gap Size (25%)</div>
+                                        <div class="value">3.0 pts</div>
+                                    </div>
+                                    <div class="score-item">
+                                        <div class="label">Pre-Earnings (30%)</div>
+                                        <div class="value">5.0 pts</div>
+                                    </div>
+                                    <div class="score-item">
+                                        <div class="label">Volume (20%)</div>
+                                        <div class="value">5.0 pts</div>
+                                    </div>
+                                    <div class="score-item">
+                                        <div class="label">MA200 (15%)</div>
+                                        <div class="value">5.0 pts</div>
+                                    </div>
+                                    <div class="score-item">
+                                        <div class="label">MA50 (10%)</div>
+                                        <div class="value">5.0 pts</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="earnings-data">
+                                <h4>Earnings Performance</h4>
+                                <div class="earnings-grid">
+                                    <div class="earnings-metric">
+                                        <div class="label">Weekly Performance</div>
+                                        <div class="value positive">+6.34%</div>
+                                    </div>
+                                    <div class="earnings-metric">
+                                        <div class="label">Relative Volume</div>
+                                        <div class="value">2.89x</div>
+                                    </div>
+                                    <div class="earnings-metric">
+                                        <div class="label">Volatility</div>
+                                        <div class="value">8.65%</div>
+                                    </div>
+                                    <div class="earnings-metric">
+                                        <div class="label">Gap Size</div>
+                                        <div class="value positive">10.34%</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="technical-analysis">
+                                <h4>Technical Position</h4>
+                                <div class="ma-grid">
+                                    <div class="ma-item">
+                                        <div class="ma-label">vs MA20</div>
+                                        <div class="ma-value positive">+15.12%</div>
+                                    </div>
+                                    <div class="ma-item">
+                                        <div class="ma-label">vs MA50</div>
+                                        <div class="ma-value positive">+38.84%</div>
+                                    </div>
+                                    <div class="ma-item">
+                                        <div class="ma-label">vs MA200</div>
+                                        <div class="ma-value positive">+99.77%</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="news-analysis">
+                                <h4>News Analysis Summary</h4>
+                                <div class="news-summary">
+                                    <ul>
+                                        <li><strong>Strong Q3 Results:</strong> Crypto platform showing significant growth momentum</li>
+                                        <li><strong>Bitcoin Correlation:</strong> Benefiting from cryptocurrency market strength</li>
+                                        <li><strong>Exceptional Trend:</strong> Nearly 100% above 200-day MA - extremely strong uptrend</li>
+                                        <li><strong>High Momentum:</strong> Very strong pre-earnings momentum continues post-earnings</li>
+                                    </ul>
+                                    <div class="probability-badge">Success Probability: 78%</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- VMI -->
+                    <div class="stock-card">
+                        <div class="stock-header">
+                            <div class="stock-ticker">
+                                <span class="ticker-symbol">$VMI</span>
+                                <span class="stock-change positive">+4.49%</span>
+                            </div>
+                            <div class="stock-name">Valmont Industries, Inc</div>
+                            <div class="stock-sector">Industrials</div>
+                        </div>
+                        <div class="stock-body">
+                            <div class="score-summary">
+                                <div class="score-main">
+                                    <div>
+                                        <div style="font-size: 0.9em; color: #6c757d; margin-bottom: 5px;">Backtest Score</div>
+                                        <div class="score-value">85.5</div>
+                                    </div>
+                                    <div class="stars">⭐⭐⭐⭐⭐</div>
+                                </div>
+                                <div class="score-breakdown">
+                                    <div class="score-item">
+                                        <div class="label">Gap Size (25%)</div>
+                                        <div class="value">3.0 pts</div>
+                                    </div>
+                                    <div class="score-item">
+                                        <div class="label">Pre-Earnings (30%)</div>
+                                        <div class="value">4.0 pts</div>
+                                    </div>
+                                    <div class="score-item">
+                                        <div class="label">Volume (20%)</div>
+                                        <div class="value">3.0 pts</div>
+                                    </div>
+                                    <div class="score-item">
+                                        <div class="label">MA200 (15%)</div>
+                                        <div class="value">5.0 pts</div>
+                                    </div>
+                                    <div class="score-item">
+                                        <div class="label">MA50 (10%)</div>
+                                        <div class="value">5.0 pts</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="earnings-data">
+                                <h4>Earnings Performance</h4>
+                                <div class="earnings-grid">
+                                    <div class="earnings-metric">
+                                        <div class="label">EPS Surprise</div>
+                                        <div class="value positive">+3.57%</div>
+                                    </div>
+                                    <div class="earnings-metric">
+                                        <div class="label">Revenue Surprise</div>
+                                        <div class="value positive">+2.45%</div>
+                                    </div>
+                                    <div class="earnings-metric">
+                                        <div class="label">Weekly Performance</div>
+                                        <div class="value positive">+5.92%</div>
+                                    </div>
+                                    <div class="earnings-metric">
+                                        <div class="label">Relative Volume</div>
+                                        <div class="value">0.11x</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="technical-analysis">
+                                <h4>Technical Position</h4>
+                                <div class="ma-grid">
+                                    <div class="ma-item">
+                                        <div class="ma-label">vs MA20</div>
+                                        <div class="ma-value positive">+7.91%</div>
+                                    </div>
+                                    <div class="ma-item">
+                                        <div class="ma-label">vs MA50</div>
+                                        <div class="ma-value positive">+11.53%</div>
+                                    </div>
+                                    <div class="ma-item">
+                                        <div class="ma-label">vs MA200</div>
+                                        <div class="ma-value positive">+26.46%</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="news-analysis">
+                                <h4>News Analysis Summary</h4>
+                                <div class="news-summary">
+                                    <ul>
+                                        <li><strong>Solid Beat:</strong> Q3 earnings exceeded analyst expectations</li>
+                                        <li><strong>Strong Trend:</strong> Over 26% above 200-day MA showing strong uptrend</li>
+                                        <li><strong>Infrastructure Play:</strong> Industrial sector strength continues</li>
+                                        <li><strong>Quality Setup:</strong> Good pre-earnings momentum with sustainable trend</li>
+                                    </ul>
+                                    <div class="probability-badge">Success Probability: 72%</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- B-GRADE STOCKS -->
+            <div class="grade-section">
+                <div class="grade-header">
+                    <div class="grade-badge grade-b">B</div>
+                    <div class="grade-info">
+                        <h3>B-Grade Stocks (70-84 Points)</h3>
+                        <div class="success-rate">Success Rate: 55-69% ⭐⭐⭐⭐</div>
+                    </div>
+                </div>
+
+                <div class="stock-grid">
+                    <!-- DHR -->
+                    <div class="stock-card">
+                        <div class="stock-header">
+                            <div class="stock-ticker">
+                                <span class="ticker-symbol">$DHR</span>
+                                <span class="stock-change positive">+7.49%</span>
+                            </div>
+                            <div class="stock-name">Danaher Corp</div>
+                            <div class="stock-sector">Healthcare</div>
+                        </div>
+                        <div class="stock-body">
+                            <div class="score-summary">
+                                <div class="score-main">
+                                    <div>
+                                        <div style="font-size: 0.9em; color: #6c757d; margin-bottom: 5px;">Backtest Score</div>
+                                        <div class="score-value">82.0</div>
+                                    </div>
+                                    <div class="stars">⭐⭐⭐⭐</div>
+                                </div>
+                                <div class="score-breakdown">
+                                    <div class="score-item">
+                                        <div class="label">Gap Size (25%)</div>
+                                        <div class="value">3.0 pts</div>
+                                    </div>
+                                    <div class="score-item">
+                                        <div class="label">Pre-Earnings (30%)</div>
+                                        <div class="value">4.0 pts</div>
+                                    </div>
+                                    <div class="score-item">
+                                        <div class="label">Volume (20%)</div>
+                                        <div class="value">5.0 pts</div>
+                                    </div>
+                                    <div class="score-item">
+                                        <div class="label">MA200 (15%)</div>
+                                        <div class="value">4.0 pts</div>
+                                    </div>
+                                    <div class="score-item">
+                                        <div class="label">MA50 (10%)</div>
+                                        <div class="value">5.0 pts</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="earnings-data">
+                                <h4>Earnings Performance</h4>
+                                <div class="earnings-grid">
+                                    <div class="earnings-metric">
+                                        <div class="label">EPS Surprise</div>
+                                        <div class="value positive">+9.80%</div>
+                                    </div>
+                                    <div class="earnings-metric">
+                                        <div class="label">Revenue Surprise</div>
+                                        <div class="value positive">+0.92%</div>
+                                    </div>
+                                    <div class="earnings-metric">
+                                        <div class="label">Weekly Performance</div>
+                                        <div class="value positive">+8.66%</div>
+                                    </div>
+                                    <div class="earnings-metric">
+                                        <div class="label">Relative Volume</div>
+                                        <div class="value">3.05x</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="technical-analysis">
+                                <h4>Technical Position</h4>
+                                <div class="ma-grid">
+                                    <div class="ma-item">
+                                        <div class="ma-label">vs MA20</div>
+                                        <div class="ma-value positive">+9.89%</div>
+                                    </div>
+                                    <div class="ma-item">
+                                        <div class="ma-label">vs MA50</div>
+                                        <div class="ma-value positive">+10.83%</div>
+                                    </div>
+                                    <div class="ma-item">
+                                        <div class="ma-label">vs MA200</div>
+                                        <div class="ma-value positive">+9.89%</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="news-analysis">
+                                <h4>News Analysis Summary</h4>
+                                <div class="news-summary">
+                                    <ul>
+                                        <li><strong>Earnings Beat:</strong> Q3 revenues and profits exceeded estimates</li>
+                                        <li><strong>Bioprocessing Strength:</strong> Strong momentum in core bioprocessing segment</li>
+                                        <li><strong>Mixed Guidance:</strong> Soft full-year outlook tempers enthusiasm slightly</li>
+                                        <li><strong>Technical Setup:</strong> Strong above all major moving averages</li>
+                                    </ul>
+                                    <div class="probability-badge">Success Probability: 65%</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- HAL -->
+                    <div class="stock-card">
+                        <div class="stock-header">
+                            <div class="stock-ticker">
+                                <span class="ticker-symbol">$HAL</span>
+                                <span class="stock-change positive">+6.76%</span>
+                            </div>
+                            <div class="stock-name">Halliburton Co</div>
+                            <div class="stock-sector">Energy</div>
+                        </div>
+                        <div class="stock-body">
+                            <div class="score-summary">
+                                <div class="score-main">
+                                    <div>
+                                        <div style="font-size: 0.9em; color: #6c757d; margin-bottom: 5px;">Backtest Score</div>
+                                        <div class="score-value">75.5</div>
+                                    </div>
+                                    <div class="stars">⭐⭐⭐⭐</div>
+                                </div>
+                                <div class="score-breakdown">
+                                    <div class="score-item">
+                                        <div class="label">Gap Size (25%)</div>
+                                        <div class="value">3.0 pts</div>
+                                    </div>
+                                    <div class="score-item">
+                                        <div class="label">Pre-Earnings (30%)</div>
+                                        <div class="value">3.0 pts</div>
+                                    </div>
+                                    <div class="score-item">
+                                        <div class="label">Volume (20%)</div>
+                                        <div class="value">4.0 pts</div>
+                                    </div>
+                                    <div class="score-item">
+                                        <div class="label">MA200 (15%)</div>
+                                        <div class="value">3.0 pts</div>
+                                    </div>
+                                    <div class="score-item">
+                                        <div class="label">MA50 (10%)</div>
+                                        <div class="value">3.0 pts</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="earnings-data">
+                                <h4>Earnings Performance</h4>
+                                <div class="earnings-grid">
+                                    <div class="earnings-metric">
+                                        <div class="label">EPS Surprise</div>
+                                        <div class="value positive">+16.30%</div>
+                                    </div>
+                                    <div class="earnings-metric">
+                                        <div class="label">Revenue Surprise</div>
+                                        <div class="value positive">+3.92%</div>
+                                    </div>
+                                    <div class="earnings-metric">
+                                        <div class="label">Weekly Performance</div>
+                                        <div class="value positive">+7.62%</div>
+                                    </div>
+                                    <div class="earnings-metric">
+                                        <div class="label">Relative Volume</div>
+                                        <div class="value">1.38x</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="technical-analysis">
+                                <h4>Technical Position</h4>
+                                <div class="ma-grid">
+                                    <div class="ma-item">
+                                        <div class="ma-label">vs MA20</div>
+                                        <div class="ma-value positive">+1.60%</div>
+                                    </div>
+                                    <div class="ma-item">
+                                        <div class="ma-label">vs MA50</div>
+                                        <div class="ma-value positive">+5.97%</div>
+                                    </div>
+                                    <div class="ma-item">
+                                        <div class="ma-label">vs MA200</div>
+                                        <div class="ma-value positive">+4.21%</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="news-analysis">
+                                <h4>News Analysis Summary</h4>
+                                <div class="news-summary">
+                                    <ul>
+                                        <li><strong>Strong EPS Beat:</strong> 16.3% earnings surprise - highest among peers</li>
+                                        <li><strong>Impairment Charges:</strong> Net income impacted but core operations strong</li>
+                                        <li><strong>Strategic Partnerships:</strong> VoltaGrid collaboration for data center power solutions</li>
+                                        <li><strong>Technical Caution:</strong> Near-term MAs show modest strength only</li>
+                                    </ul>
+                                    <div class="probability-badge">Success Probability: 62%</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- RTX -->
+                    <div class="stock-card">
+                        <div class="stock-header">
+                            <div class="stock-ticker">
+                                <span class="ticker-symbol">$RTX</span>
+                                <span class="stock-change positive">+4.93%</span>
+                            </div>
+                            <div class="stock-name">RTX Corp</div>
+                            <div class="stock-sector">Industrials</div>
+                        </div>
+                        <div class="stock-body">
+                            <div class="score-summary">
+                                <div class="score-main">
+                                    <div>
+                                        <div style="font-size: 0.9em; color: #6c757d; margin-bottom: 5px;">Backtest Score</div>
+                                        <div class="score-value">79.0</div>
+                                    </div>
+                                    <div class="stars">⭐⭐⭐⭐</div>
+                                </div>
+                                <div class="score-breakdown">
+                                    <div class="score-item">
+                                        <div class="label">Gap Size (25%)</div>
+                                        <div class="value">3.0 pts</div>
+                                    </div>
+                                    <div class="score-item">
+                                        <div class="label">Pre-Earnings (30%)</div>
+                                        <div class="value">3.0 pts</div>
+                                    </div>
+                                    <div class="score-item">
+                                        <div class="label">Volume (20%)</div>
+                                        <div class="value">4.0 pts</div>
+                                    </div>
+                                    <div class="score-item">
+                                        <div class="label">MA200 (15%)</div>
+                                        <div class="value">4.0 pts</div>
+                                    </div>
+                                    <div class="score-item">
+                                        <div class="label">MA50 (10%)</div>
+                                        <div class="value">3.0 pts</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="earnings-data">
+                                <h4>Earnings Performance</h4>
+                                <div class="earnings-grid">
+                                    <div class="earnings-metric">
+                                        <div class="label">EPS Surprise</div>
+                                        <div class="value positive">+8.16%</div>
+                                    </div>
+                                    <div class="earnings-metric">
+                                        <div class="label">Revenue Surprise</div>
+                                        <div class="value positive">+4.58%</div>
+                                    </div>
+                                    <div class="earnings-metric">
+                                        <div class="label">Weekly Performance</div>
+                                        <div class="value positive">+5.79%</div>
+                                    </div>
+                                    <div class="earnings-metric">
+                                        <div class="label">Relative Volume</div>
+                                        <div class="value">1.00x</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="technical-analysis">
+                                <h4>Technical Position</h4>
+                                <div class="ma-grid">
+                                    <div class="ma-item">
+                                        <div class="ma-label">vs MA20</div>
+                                        <div class="ma-value positive">+3.38%</div>
+                                    </div>
+                                    <div class="ma-item">
+                                        <div class="ma-label">vs MA50</div>
+                                        <div class="ma-value positive">+5.74%</div>
+                                    </div>
+                                    <div class="ma-item">
+                                        <div class="ma-label">vs MA200</div>
+                                        <div class="ma-value positive">+19.89%</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="news-analysis">
+                                <h4>News Analysis Summary</h4>
+                                <div class="news-summary">
+                                    <ul>
+                                        <li><strong>Raised Outlook:</strong> Full-year guidance increased on strong Q3 results</li>
+                                        <li><strong>Defense Momentum:</strong> Building momentum in defense contracting sector</li>
+                                        <li><strong>Solid Beat:</strong> Upbeat quarterly results drive forecast higher</li>
+                                        <li><strong>Long-Term Trend:</strong> Nearly 20% above 200-day MA shows strong foundation</li>
+                                    </ul>
+                                    <div class="probability-badge">Success Probability: 68%</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- GE -->
+                    <div class="stock-card">
+                        <div class="stock-header">
+                            <div class="stock-ticker">
+                                <span class="ticker-symbol">$GE</span>
+                                <span class="stock-change positive">+2.10%</span>
+                            </div>
+                            <div class="stock-name">GE Aerospace</div>
+                            <div class="stock-sector">Industrials</div>
+                        </div>
+                        <div class="stock-body">
+                            <div class="score-summary">
+                                <div class="score-main">
+                                    <div>
+                                        <div style="font-size: 0.9em; color: #6c757d; margin-bottom: 5px;">Backtest Score</div>
+                                        <div class="score-value">81.0</div>
+                                    </div>
+                                    <div class="stars">⭐⭐⭐⭐</div>
+                                </div>
+                                <div class="score-breakdown">
+                                    <div class="score-item">
+                                        <div class="label">Gap Size (25%)</div>
+                                        <div class="value">2.0 pts</div>
+                                    </div>
+                                    <div class="score-item">
+                                        <div class="label">Pre-Earnings (30%)</div>
+                                        <div class="value">3.0 pts</div>
+                                    </div>
+                                    <div class="score-item">
+                                        <div class="label">Volume (20%)</div>
+                                        <div class="value">3.0 pts</div>
+                                    </div>
+                                    <div class="score-item">
+                                        <div class="label">MA200 (15%)</div>
+                                        <div class="value">5.0 pts</div>
+                                    </div>
+                                    <div class="score-item">
+                                        <div class="label">MA50 (10%)</div>
+                                        <div class="value">3.0 pts</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="earnings-data">
+                                <h4>Earnings Performance</h4>
+                                <div class="earnings-grid">
+                                    <div class="earnings-metric">
+                                        <div class="label">EPS Surprise</div>
+                                        <div class="value positive">+13.47%</div>
+                                    </div>
+                                    <div class="earnings-metric">
+                                        <div class="label">Revenue Surprise</div>
+                                        <div class="value positive">+8.86%</div>
+                                    </div>
+                                    <div class="earnings-metric">
+                                        <div class="label">Weekly Performance</div>
+                                        <div class="value positive">+2.98%</div>
+                                    </div>
+                                    <div class="earnings-metric">
+                                        <div class="label">Relative Volume</div>
+                                        <div class="value">0.90x</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="technical-analysis">
+                                <h4>Technical Position</h4>
+                                <div class="ma-grid">
+                                    <div class="ma-item">
+                                        <div class="ma-label">vs MA20</div>
+                                        <div class="ma-value positive">+3.22%</div>
+                                    </div>
+                                    <div class="ma-item">
+                                        <div class="ma-label">vs MA50</div>
+                                        <div class="ma-value positive">+7.59%</div>
+                                    </div>
+                                    <div class="ma-item">
+                                        <div class="ma-label">vs MA200</div>
+                                        <div class="ma-value positive">+30.84%</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="news-analysis">
+                                <h4>News Analysis Summary</h4>
+                                <div class="news-summary">
+                                    <ul>
+                                        <li><strong>Exceptional EPS Beat:</strong> 13.47% surprise - second highest among group</li>
+                                        <li><strong>Raised Guidance:</strong> Full-year outlook increased alongside GM</li>
+                                        <li><strong>Turnaround Complete:</strong> Post-restructuring GE showing aerospace strength</li>
+                                        <li><strong>Very Strong Base:</strong> Over 30% above 200-day MA - solid long-term trend</li>
+                                    </ul>
+                                    <div class="probability-badge">Success Probability: 66%</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- DGX -->
+                    <div class="stock-card">
+                        <div class="stock-header">
+                            <div class="stock-ticker">
+                                <span class="ticker-symbol">$DGX</span>
+                                <span class="stock-change positive">+3.99%</span>
+                            </div>
+                            <div class="stock-name">Quest Diagnostics, Inc</div>
+                            <div class="stock-sector">Healthcare</div>
+                        </div>
+                        <div class="stock-body">
+                            <div class="score-summary">
+                                <div class="score-main">
+                                    <div>
+                                        <div style="font-size: 0.9em; color: #6c757d; margin-bottom: 5px;">Backtest Score</div>
+                                        <div class="score-value">73.0</div>
+                                    </div>
+                                    <div class="stars">⭐⭐⭐⭐</div>
+                                </div>
+                                <div class="score-breakdown">
+                                    <div class="score-item">
+                                        <div class="label">Gap Size (25%)</div>
+                                        <div class="value">2.0 pts</div>
+                                    </div>
+                                    <div class="score-item">
+                                        <div class="label">Pre-Earnings (30%)</div>
+                                        <div class="value">3.0 pts</div>
+                                    </div>
+                                    <div class="score-item">
+                                        <div class="label">Volume (20%)</div>
+                                        <div class="value">3.0 pts</div>
+                                    </div>
+                                    <div class="score-item">
+                                        <div class="label">MA200 (15%)</div>
+                                        <div class="value">4.0 pts</div>
+                                    </div>
+                                    <div class="score-item">
+                                        <div class="label">MA50 (10%)</div>
+                                        <div class="value">3.0 pts</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="earnings-data">
+                                <h4>Earnings Performance</h4>
+                                <div class="earnings-grid">
+                                    <div class="earnings-metric">
+                                        <div class="label">EPS Surprise</div>
+                                        <div class="value positive">+3.88%</div>
+                                    </div>
+                                    <div class="earnings-metric">
+                                        <div class="label">Revenue Surprise</div>
+                                        <div class="value positive">+2.94%</div>
+                                    </div>
+                                    <div class="earnings-metric">
+                                        <div class="label">Weekly Performance</div>
+                                        <div class="value positive">+6.80%</div>
+                                    </div>
+                                    <div class="earnings-metric">
+                                        <div class="label">Relative Volume</div>
+                                        <div class="value">0.11x</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="technical-analysis">
+                                <h4>Technical Position</h4>
+                                <div class="ma-grid">
+                                    <div class="ma-item">
+                                        <div class="ma-label">vs MA20</div>
+                                        <div class="ma-value positive">+6.74%</div>
+                                    </div>
+                                    <div class="ma-item">
+                                        <div class="ma-label">vs MA50</div>
+                                        <div class="ma-value positive">+8.19%</div>
+                                    </div>
+                                    <div class="ma-item">
+                                        <div class="ma-label">vs MA200</div>
+                                        <div class="ma-value positive">+14.45%</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="news-analysis">
+                                <h4>News Analysis Summary</h4>
+                                <div class="news-summary">
+                                    <ul>
+                                        <li><strong>Solid Results:</strong> Beat on both earnings and revenue expectations</li>
+                                        <li><strong>Healthcare Stability:</strong> Defensive healthcare sector showing resilience</li>
+                                        <li><strong>Good Weekly Trend:</strong> Strong 6.8% weekly performance</li>
+                                        <li><strong>Volume Concern:</strong> Low relative volume may limit upside momentum</li>
+                                    </ul>
+                                    <div class="probability-badge">Success Probability: 60%</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- C-GRADE STOCKS -->
+            <div class="grade-section">
+                <div class="grade-header">
+                    <div class="grade-badge grade-c">C</div>
+                    <div class="grade-info">
+                        <h3>C-Grade Stocks (55-69 Points)</h3>
+                        <div class="success-rate">Success Rate: 40-54% ⭐⭐⭐</div>
+                    </div>
+                </div>
+
+                <div class="stock-grid">
+                    <!-- KO -->
+                    <div class="stock-card">
+                        <div class="stock-header">
+                            <div class="stock-ticker">
+                                <span class="ticker-symbol">$KO</span>
+                                <span class="stock-change positive">+2.75%</span>
+                            </div>
+                            <div class="stock-name">Coca-Cola Co</div>
+                            <div class="stock-sector">Consumer Defensive</div>
+                        </div>
+                        <div class="stock-body">
+                            <div class="score-summary">
+                                <div class="score-main">
+                                    <div>
+                                        <div style="font-size: 0.9em; color: #6c757d; margin-bottom: 5px;">Backtest Score</div>
+                                        <div class="score-value">67.5</div>
+                                    </div>
+                                    <div class="stars">⭐⭐⭐</div>
+                                </div>
+                                <div class="score-breakdown">
+                                    <div class="score-item">
+                                        <div class="label">Gap Size (25%)</div>
+                                        <div class="value">2.0 pts</div>
+                                    </div>
+                                    <div class="score-item">
+                                        <div class="label">Pre-Earnings (30%)</div>
+                                        <div class="value">3.0 pts</div>
+                                    </div>
+                                    <div class="score-item">
+                                        <div class="label">Volume (20%)</div>
+                                        <div class="value">4.0 pts</div>
+                                    </div>
+                                    <div class="score-item">
+                                        <div class="label">MA200 (15%)</div>
+                                        <div class="value">3.0 pts</div>
+                                    </div>
+                                    <div class="score-item">
+                                        <div class="label">MA50 (10%)</div>
+                                        <div class="value">3.0 pts</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="earnings-data">
+                                <h4>Earnings Performance</h4>
+                                <div class="earnings-grid">
+                                    <div class="earnings-metric">
+                                        <div class="label">EPS Surprise</div>
+                                        <div class="value positive">+5.26%</div>
+                                    </div>
+                                    <div class="earnings-metric">
+                                        <div class="label">Revenue Surprise</div>
+                                        <div class="value positive">+0.40%</div>
+                                    </div>
+                                    <div class="earnings-metric">
+                                        <div class="label">Weekly Performance</div>
+                                        <div class="value positive">+4.16%</div>
+                                    </div>
+                                    <div class="earnings-metric">
+                                        <div class="label">Relative Volume</div>
+                                        <div class="value">1.76x</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="technical-analysis">
+                                <h4>Technical Position</h4>
+                                <div class="ma-grid">
+                                    <div class="ma-item">
+                                        <div class="ma-label">vs MA20</div>
+                                        <div class="ma-value positive">+5.04%</div>
+                                    </div>
+                                    <div class="ma-item">
+                                        <div class="ma-label">vs MA50</div>
+                                        <div class="ma-value positive">+3.66%</div>
+                                    </div>
+                                    <div class="ma-item">
+                                        <div class="ma-label">vs MA200</div>
+                                        <div class="ma-value positive">+2.08%</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="news-analysis">
+                                <h4>News Analysis Summary</h4>
+                                <div class="news-summary">
+                                    <ul>
+                                        <li><strong>Modest Beat:</strong> Earnings beat expectations in defensive consumer sector</li>
+                                        <li><strong>Weak MA Position:</strong> Just barely above 200-day MA - limited technical support</li>
+                                        <li><strong>Small Gap:</strong> 2.75% gap is moderate - lower risk but also lower reward potential</li>
+                                        <li><strong>Defensive Play:</strong> Blue-chip stability but limited momentum</li>
+                                    </ul>
+                                    <div class="probability-badge">Success Probability: 52%</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- BCPC -->
+                    <div class="stock-card">
+                        <div class="stock-header">
+                            <div class="stock-ticker">
+                                <span class="ticker-symbol">$BCPC</span>
+                                <span class="stock-change positive">+4.19%</span>
+                            </div>
+                            <div class="stock-name">Balchem Corp</div>
+                            <div class="stock-sector">Basic Materials</div>
+                        </div>
+                        <div class="stock-body">
+                            <div class="score-summary">
+                                <div class="score-main">
+                                    <div>
+                                        <div style="font-size: 0.9em; color: #6c757d; margin-bottom: 5px;">Backtest Score</div>
+                                        <div class="score-value">65.0</div>
+                                    </div>
+                                    <div class="stars">⭐⭐⭐</div>
+                                </div>
+                                <div class="score-breakdown">
+                                    <div class="score-item">
+                                        <div class="label">Gap Size (25%)</div>
+                                        <div class="value">3.0 pts</div>
+                                    </div>
+                                    <div class="score-item">
+                                        <div class="label">Pre-Earnings (30%)</div>
+                                        <div class="value">4.0 pts</div>
+                                    </div>
+                                    <div class="score-item">
+                                        <div class="label">Volume (20%)</div>
+                                        <div class="value">2.0 pts</div>
+                                    </div>
+                                    <div class="score-item">
+                                        <div class="label">MA200 (15%)</div>
+                                        <div class="value">2.0 pts</div>
+                                    </div>
+                                    <div class="score-item">
+                                        <div class="label">MA50 (10%)</div>
+                                        <div class="value">3.0 pts</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="earnings-data">
+                                <h4>Earnings Performance</h4>
+                                <div class="earnings-grid">
+                                    <div class="earnings-metric">
+                                        <div class="label">EPS Surprise</div>
+                                        <div class="value positive">+4.46%</div>
+                                    </div>
+                                    <div class="earnings-metric">
+                                        <div class="label">Revenue Surprise</div>
+                                        <div class="value positive">+2.06%</div>
+                                    </div>
+                                    <div class="earnings-metric">
+                                        <div class="label">Weekly Performance</div>
+                                        <div class="value positive">+10.36%</div>
+                                    </div>
+                                    <div class="earnings-metric">
+                                        <div class="label">Relative Volume</div>
+                                        <div class="value">0.06x</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="technical-analysis">
+                                <h4>Technical Position</h4>
+                                <div class="ma-grid">
+                                    <div class="ma-item">
+                                        <div class="ma-label">vs MA20</div>
+                                        <div class="ma-value positive">+7.17%</div>
+                                    </div>
+                                    <div class="ma-item">
+                                        <div class="ma-label">vs MA50</div>
+                                        <div class="ma-value positive">+1.79%</div>
+                                    </div>
+                                    <div class="ma-item">
+                                        <div class="ma-label">vs MA200</div>
+                                        <div class="ma-value negative">-1.82%</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="news-analysis">
+                                <h4>News Analysis Summary</h4>
+                                <div class="news-summary">
+                                    <ul>
+                                        <li><strong>Strong Weekly Trend:</strong> Excellent 10.36% weekly performance</li>
+                                        <li><strong>MA200 Concern:</strong> Below 200-day MA - lacks long-term trend support</li>
+                                        <li><strong>Volume Risk:</strong> Extremely low relative volume (0.06x) - liquidity concern</li>
+                                        <li><strong>Mixed Setup:</strong> Good earnings but weak technical foundation</li>
+                                    </ul>
+                                    <div class="probability-badge">Success Probability: 48%</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="footer">
+            <div class="disclaimer">
+                <strong>Disclaimer:</strong> This analysis is based on historical backtest data and technical/fundamental factors. Past performance does not guarantee future results. All trading involves risk. Position sizing and stop-loss discipline are essential. This is not financial advice - please conduct your own research and consult with a financial advisor before making investment decisions.
+            </div>
+            <p>Analysis Generated: October 21, 2025 | Data Sources: Finviz, Financial Modeling Prep</p>
+            <p>Methodology: 20+ Years of Earnings Trading Backtest Data</p>
+            <p style="margin-top: 15px; color: #2a5298; font-weight: 600;">Backtest Scoring Factors: Gap Size (25%) | Pre-Earnings Trend (30%) | Volume Analysis (20%) | MA200 Position (15%) | MA50 Position (10%)</p>
+        </div>
+    </div>
+</body>
+</html>

@@ -1,0 +1,792 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>After Market Report - November 14, 2025</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px;
+            line-height: 1.6;
+            color: #333;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+
+        header {
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            color: white;
+            padding: 40px;
+            text-align: center;
+        }
+
+        header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            font-weight: 700;
+        }
+
+        header .date {
+            font-size: 1.2em;
+            opacity: 0.9;
+            font-weight: 300;
+        }
+
+        .content {
+            padding: 40px;
+        }
+
+        .section {
+            margin-bottom: 40px;
+        }
+
+        .section-title {
+            font-size: 1.8em;
+            color: #1e3c72;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 3px solid #667eea;
+            font-weight: 600;
+        }
+
+        .highlight-box {
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            padding: 25px;
+            border-radius: 15px;
+            margin-bottom: 25px;
+            border-left: 5px solid #667eea;
+        }
+
+        .metric-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .metric-card {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            border-top: 4px solid #667eea;
+            transition: transform 0.3s ease;
+        }
+
+        .metric-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .metric-label {
+            font-size: 0.9em;
+            color: #666;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .metric-value {
+            font-size: 1.8em;
+            font-weight: 700;
+            color: #1e3c72;
+        }
+
+        .metric-change {
+            font-size: 1.1em;
+            margin-top: 5px;
+        }
+
+        .positive {
+            color: #10b981;
+        }
+
+        .negative {
+            color: #ef4444;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            background: white;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+
+        th {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 15px;
+            text-align: left;
+            font-weight: 600;
+            text-transform: uppercase;
+            font-size: 0.85em;
+            letter-spacing: 0.5px;
+        }
+
+        td {
+            padding: 12px 15px;
+            border-bottom: 1px solid #e5e7eb;
+        }
+
+        tr:hover {
+            background-color: #f9fafb;
+        }
+
+        .news-item {
+            background: white;
+            padding: 20px;
+            margin-bottom: 15px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+            border-left: 4px solid #667eea;
+        }
+
+        .news-title {
+            font-weight: 600;
+            color: #1e3c72;
+            margin-bottom: 8px;
+            font-size: 1.1em;
+        }
+
+        .news-meta {
+            color: #6b7280;
+            font-size: 0.9em;
+            margin-bottom: 5px;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.8em;
+            font-weight: 600;
+            margin-right: 5px;
+        }
+
+        .badge-healthcare {
+            background-color: #dbeafe;
+            color: #1e40af;
+        }
+
+        .badge-tech {
+            background-color: #ddd6fe;
+            color: #5b21b6;
+        }
+
+        .badge-energy {
+            background-color: #fef3c7;
+            color: #92400e;
+        }
+
+        .badge-financial {
+            background-color: #d1fae5;
+            color: #065f46;
+        }
+
+        footer {
+            background: #f9fafb;
+            padding: 30px;
+            text-align: center;
+            color: #6b7280;
+            border-top: 1px solid #e5e7eb;
+        }
+
+        .volume-surge-highlight {
+            background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+            border-left-color: #f59e0b;
+        }
+
+        @media (max-width: 768px) {
+            .metric-grid {
+                grid-template-columns: 1fr;
+            }
+
+            header h1 {
+                font-size: 1.8em;
+            }
+
+            .content {
+                padding: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>After Market Report</h1>
+            <div class="date">Thursday, November 14, 2025 | Market Close: 4:00 PM EST</div>
+        </header>
+
+        <div class="content">
+            <!-- Executive Summary -->
+            <div class="section">
+                <h2 class="section-title">Executive Summary</h2>
+                <div class="highlight-box">
+                    <p style="font-size: 1.1em; line-height: 1.8;">
+                        U.S. markets ended a volatile week on mixed notes as investors reassess the Federal Reserve's rate cut trajectory.
+                        The S&P 500 declined modestly by 0.04% to close at 6,735, while the tech-heavy Nasdaq managed a slight gain of 0.13%
+                        to 22,900. The Dow Jones underperformed, falling 0.65% to 47,147 as industrial and financial sectors weighed on the index.
+                        Small caps showed resilience with the Russell 2000 (IWM) advancing 0.30%. Technology emerged as the day's leader,
+                        surging 0.57%, while Energy also posted strong gains of 1.20%. Volatility remained elevated with the VIX rising 0.8% to 20.16,
+                        suggesting improving investor confidence despite persistent uncertainty about the Fed's next move.
+                    </p>
+                </div>
+            </div>
+
+            <!-- Major Indices Performance -->
+            <div class="section">
+                <h2 class="section-title">Major Indices Performance</h2>
+                <div class="metric-grid">
+                    <div class="metric-card">
+                        <div class="metric-label">S&P 500</div>
+                        <div class="metric-value">6,735.10</div>
+                        <div class="metric-change negative">-2.39 (-0.04%)</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-label">Dow Jones</div>
+                        <div class="metric-value">47,147.49</div>
+                        <div class="metric-change negative">-309.73 (-0.65%)</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-label">Nasdaq</div>
+                        <div class="metric-value">22,900</div>
+                        <div class="metric-change positive">+29.17 (+0.13%)</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-label">Russell 2000 (IWM)</div>
+                        <div class="metric-value">237.51</div>
+                        <div class="metric-change positive">+0.30%</div>
+                    </div>
+                </div>
+
+                <div class="metric-grid">
+                    <div class="metric-card">
+                        <div class="metric-label">VIX (Volatility Index)</div>
+                        <div class="metric-value">20.16</div>
+                        <div class="metric-change positive">+0.16 (+0.80%)</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-label">Gold Futures</div>
+                        <div class="metric-value">$4,087.40</div>
+                        <div class="metric-change negative">-107.10 (-2.55%)</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-label">10-Year Treasury</div>
+                        <div class="metric-value">TLT: $88.87</div>
+                        <div class="metric-change negative">-0.57%</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-label">EUR/USD</div>
+                        <div class="metric-value">1.1621</div>
+                        <div class="metric-change negative">-0.00135 (-0.12%)</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Sector Performance -->
+            <div class="section">
+                <h2 class="section-title">Sector Performance Analysis</h2>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Sector</th>
+                            <th>Performance</th>
+                            <th>Market Cap</th>
+                            <th>P/E Ratio</th>
+                            <th>Div Yield</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>Energy</strong> 🔥</td>
+                            <td class="positive">+1.20%</td>
+                            <td>$3.64T</td>
+                            <td>16.49</td>
+                            <td>4.09%</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Technology</strong> 🚀</td>
+                            <td class="positive">+0.57%</td>
+                            <td>$26.35T</td>
+                            <td>40.92</td>
+                            <td>0.56%</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Real Estate</strong></td>
+                            <td class="positive">+0.21%</td>
+                            <td>$1.67T</td>
+                            <td>33.81</td>
+                            <td>3.91%</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Utilities</strong></td>
+                            <td class="negative">-0.05%</td>
+                            <td>$1.80T</td>
+                            <td>21.67</td>
+                            <td>2.84%</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Industrials</strong></td>
+                            <td class="negative">-0.02%</td>
+                            <td>$6.49T</td>
+                            <td>27.87</td>
+                            <td>1.21%</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Consumer Defensive</strong></td>
+                            <td class="negative">-0.19%</td>
+                            <td>$4.11T</td>
+                            <td>25.66</td>
+                            <td>2.60%</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Healthcare</strong></td>
+                            <td class="negative">-0.38%</td>
+                            <td>$8.37T</td>
+                            <td>25.45</td>
+                            <td>1.55%</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Financial</strong></td>
+                            <td class="negative">-0.63%</td>
+                            <td>$13.74T</td>
+                            <td>18.79</td>
+                            <td>1.81%</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Communication Services</strong></td>
+                            <td class="negative">-0.74%</td>
+                            <td>$11.33T</td>
+                            <td>35.84</td>
+                            <td>0.57%</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Consumer Cyclical</strong></td>
+                            <td class="negative">-0.80%</td>
+                            <td>$9.09T</td>
+                            <td>28.13</td>
+                            <td>0.77%</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Basic Materials</strong></td>
+                            <td class="negative">-0.95%</td>
+                            <td>$2.31T</td>
+                            <td>22.83</td>
+                            <td>2.03%</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <div class="highlight-box">
+                    <h3 style="margin-bottom: 15px; color: #1e3c72;">Sector Rotation Insights</h3>
+                    <ul style="line-height: 2;">
+                        <li><strong>Energy Leadership:</strong> The Energy sector topped the leaderboard with a 1.20% gain, benefiting from stabilizing oil prices and strong demand fundamentals.</li>
+                        <li><strong>Tech Resilience:</strong> Technology advanced 0.57%, maintaining its leadership position with the highest market capitalization at $26.35T.</li>
+                        <li><strong>Defensive Weakness:</strong> Basic Materials (-0.95%), Consumer Cyclical (-0.80%), and Communication Services (-0.74%) underperformed as investors rotated away from cyclical and growth names.</li>
+                        <li><strong>Value Over Growth:</strong> Real Estate and Utilities held up relatively well, suggesting continued interest in dividend-yielding defensive plays.</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Volume Surge Stocks Analysis -->
+            <div class="section">
+                <h2 class="section-title">Volume Surge Stocks - Top Performers</h2>
+                <div class="highlight-box volume-surge-highlight">
+                    <h3 style="margin-bottom: 15px; color: #92400e;">64 Stocks With Explosive Volume & Price Action</h3>
+                    <p style="margin-bottom: 15px; font-size: 1.05em;">
+                        Today's volume surge screener identified 64 stocks with exceptional trading activity, averaging 2.7x normal volume
+                        and price gains of 7.7%. These stocks exceeded $10 in price, maintained market caps above $300M, and broke above
+                        their 200-day moving averages - key indicators of institutional interest and potential trend reversals.
+                    </p>
+                </div>
+
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Symbol</th>
+                            <th>Company</th>
+                            <th>Sector</th>
+                            <th>Price</th>
+                            <th>% Change</th>
+                            <th>Volume</th>
+                            <th>Rel. Volume</th>
+                            <th>Market Cap</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr style="background-color: #fef3c7;">
+                            <td><strong>CDTX</strong></td>
+                            <td>Cidara Therapeutics</td>
+                            <td><span class="badge badge-healthcare">Healthcare</span></td>
+                            <td>$217.71</td>
+                            <td class="positive">+105.41%</td>
+                            <td>17.1M</td>
+                            <td style="color: #dc2626; font-weight: 600;">19.66x</td>
+                            <td>$6.8B</td>
+                        </tr>
+                        <tr>
+                            <td><strong>SRRK</strong></td>
+                            <td>Scholar Rock Holding</td>
+                            <td><span class="badge badge-healthcare">Healthcare</span></td>
+                            <td>$37.41</td>
+                            <td class="positive">+24.41%</td>
+                            <td>7.1M</td>
+                            <td style="color: #dc2626; font-weight: 600;">2.86x</td>
+                            <td>$3.6B</td>
+                        </tr>
+                        <tr>
+                            <td><strong>AVDL</strong></td>
+                            <td>Avadel Pharmaceuticals</td>
+                            <td><span class="badge badge-healthcare">Healthcare</span></td>
+                            <td>$23.56</td>
+                            <td class="positive">+22.45%</td>
+                            <td>12.8M</td>
+                            <td style="color: #dc2626; font-weight: 600;">5.23x</td>
+                            <td>$2.3B</td>
+                        </tr>
+                        <tr>
+                            <td><strong>SEPN</strong></td>
+                            <td>Septerna Inc</td>
+                            <td><span class="badge badge-healthcare">Healthcare</span></td>
+                            <td>$23.26</td>
+                            <td class="positive">+20.92%</td>
+                            <td>1.5M</td>
+                            <td style="color: #dc2626; font-weight: 600;">5.37x</td>
+                            <td>$1.0B</td>
+                        </tr>
+                        <tr>
+                            <td><strong>LGN</strong></td>
+                            <td>Legence Corp</td>
+                            <td><span class="badge badge-financial">Industrials</span></td>
+                            <td>$40.27</td>
+                            <td class="positive">+20.86%</td>
+                            <td>2.8M</td>
+                            <td style="color: #dc2626; font-weight: 600;">2.41x</td>
+                            <td>$1.9B</td>
+                        </tr>
+                        <tr>
+                            <td><strong>CSIQ</strong></td>
+                            <td>Canadian Solar</td>
+                            <td><span class="badge badge-tech">Technology</span></td>
+                            <td>$33.58</td>
+                            <td class="positive">+17.33%</td>
+                            <td>11.7M</td>
+                            <td style="color: #dc2626; font-weight: 600;">3.40x</td>
+                            <td>$2.2B</td>
+                        </tr>
+                        <tr>
+                            <td><strong>DNTH</strong></td>
+                            <td>Dianthus Therapeutics</td>
+                            <td><span class="badge badge-healthcare">Healthcare</span></td>
+                            <td>$40.85</td>
+                            <td class="positive">+15.07%</td>
+                            <td>1.6M</td>
+                            <td style="color: #dc2626; font-weight: 600;">2.21x</td>
+                            <td>$1.8B</td>
+                        </tr>
+                        <tr>
+                            <td><strong>EWTX</strong></td>
+                            <td>Edgewise Therapeutics</td>
+                            <td><span class="badge badge-healthcare">Healthcare</span></td>
+                            <td>$22.75</td>
+                            <td class="positive">+11.41%</td>
+                            <td>2.5M</td>
+                            <td style="color: #dc2626; font-weight: 600;">2.68x</td>
+                            <td>$2.4B</td>
+                        </tr>
+                        <tr>
+                            <td><strong>JBIO</strong></td>
+                            <td>Jade Biosciences</td>
+                            <td><span class="badge badge-healthcare">Healthcare</span></td>
+                            <td>$10.70</td>
+                            <td class="positive">+10.54%</td>
+                            <td>579.9K</td>
+                            <td style="color: #dc2626; font-weight: 600;">4.16x</td>
+                            <td>$349M</td>
+                        </tr>
+                        <tr>
+                            <td><strong>ABVX</strong></td>
+                            <td>Abivax ADR</td>
+                            <td><span class="badge badge-healthcare">Healthcare</span></td>
+                            <td>$110.39</td>
+                            <td class="positive">+9.41%</td>
+                            <td>2.4M</td>
+                            <td style="color: #dc2626; font-weight: 600;">2.27x</td>
+                            <td>$8.6B</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <div class="highlight-box">
+                    <h3 style="margin-bottom: 15px; color: #1e3c72;">Volume Surge Analysis - Key Takeaways</h3>
+                    <ul style="line-height: 2;">
+                        <li><strong>Healthcare Dominance:</strong> 8 out of 10 top volume surge stocks are healthcare/biotech companies, indicating strong sector momentum and potential M&A activity or positive clinical trial results.</li>
+                        <li><strong>CDTX Explosion:</strong> Cidara Therapeutics led with an exceptional 105.41% gain on 19.66x average volume, the highest relative volume of the day, suggesting major news or institutional accumulation.</li>
+                        <li><strong>Quality Meets Momentum:</strong> All identified stocks maintain market caps above $300M and trade above their 200-day moving averages, filtering out low-quality pumps.</li>
+                        <li><strong>Breadth Strength:</strong> With 564 stocks in uptrend and 64 showing volume surges, market breadth indicates healthy participation beyond mega-cap names.</li>
+                        <li><strong>Watch Canadian Solar (CSIQ):</strong> The only tech name in the top 10, gaining 17.33% on 3.4x volume, potentially benefiting from renewable energy policy developments.</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Top Gainers & Losers -->
+            <div class="section">
+                <h2 class="section-title">Top Gainers & Losers</h2>
+
+                <h3 style="color: #10b981; margin-bottom: 15px;">Top Gainers</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Symbol</th>
+                            <th>Company</th>
+                            <th>Price</th>
+                            <th>Change %</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>PTN</strong></td>
+                            <td>Palatin Technologies</td>
+                            <td>$10.415</td>
+                            <td class="positive">+2,256.33%</td>
+                        </tr>
+                        <tr>
+                            <td><strong>CDTX</strong></td>
+                            <td>Cidara Therapeutics</td>
+                            <td>$217.71</td>
+                            <td class="positive">+105.41%</td>
+                        </tr>
+                        <tr>
+                            <td><strong>CYPH</strong></td>
+                            <td>Cypherpunk Technologies</td>
+                            <td>$2.68</td>
+                            <td class="positive">+52.27%</td>
+                        </tr>
+                        <tr>
+                            <td><strong>CYCU</strong></td>
+                            <td>Cycurion Inc</td>
+                            <td>$6.32</td>
+                            <td class="positive">+51.20%</td>
+                        </tr>
+                        <tr>
+                            <td><strong>CMCT</strong></td>
+                            <td>Creative Media & Community Trust</td>
+                            <td>$9.25</td>
+                            <td class="positive">+36.43%</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <h3 style="color: #ef4444; margin-bottom: 15px; margin-top: 30px;">Top Losers</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Symbol</th>
+                            <th>Company</th>
+                            <th>Price</th>
+                            <th>Change %</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>ONEG</strong></td>
+                            <td>OneConstruction Group</td>
+                            <td>$5.14</td>
+                            <td class="negative">-49.90%</td>
+                        </tr>
+                        <tr>
+                            <td><strong>NVVE</strong></td>
+                            <td>Nuvve Holding Corp</td>
+                            <td>$0.2566</td>
+                            <td class="negative">-46.07%</td>
+                        </tr>
+                        <tr>
+                            <td><strong>TSSI</strong></td>
+                            <td>TSS Inc</td>
+                            <td>$8.64</td>
+                            <td class="negative">-43.34%</td>
+                        </tr>
+                        <tr>
+                            <td><strong>DTCK</strong></td>
+                            <td>Davis Commodities</td>
+                            <td>$0.63</td>
+                            <td class="negative">-43.24%</td>
+                        </tr>
+                        <tr>
+                            <td><strong>AVXL</strong></td>
+                            <td>Anavex Life Sciences</td>
+                            <td>$3.645</td>
+                            <td class="negative">-35.94%</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Market Breadth -->
+            <div class="section">
+                <h2 class="section-title">Market Breadth Indicators</h2>
+                <div class="metric-grid">
+                    <div class="metric-card">
+                        <div class="metric-label">Uptrend Stocks</div>
+                        <div class="metric-value">564</div>
+                        <div style="color: #6b7280; font-size: 0.9em;">Stocks Above 200-Day SMA</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-label">Volume Surge Stocks</div>
+                        <div class="metric-value">64</div>
+                        <div style="color: #6b7280; font-size: 0.9em;">2.7x Avg Volume, +7.7% Avg Gain</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-label">Earnings This Week</div>
+                        <div class="metric-value">815</div>
+                        <div style="color: #6b7280; font-size: 0.9em;">Companies Reporting</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-label">SPY Volume</div>
+                        <div class="metric-value">91.9M</div>
+                        <div style="color: #6b7280; font-size: 0.9em;">S&P 500 ETF Trading Volume</div>
+                    </div>
+                </div>
+
+                <div class="highlight-box">
+                    <h3 style="margin-bottom: 15px; color: #1e3c72;">Breadth Analysis</h3>
+                    <p style="line-height: 1.8;">
+                        Market breadth showed encouraging signs despite the mixed close. With 564 stocks maintaining uptrends above their
+                        200-day moving averages and 64 stocks experiencing significant volume surges, participation extended beyond large-cap
+                        tech names. The SPY's 91.9 million share volume and IWM's 57.1 million share volume indicate active trading in both
+                        large and small caps. Healthcare led with 139 uptrend stocks, followed by Financials with 98 and Industrials with 63,
+                        suggesting rotation into cyclical and defensive names rather than concentration in a single sector.
+                    </p>
+                </div>
+            </div>
+
+            <!-- Key Market Events & News -->
+            <div class="section">
+                <h2 class="section-title">Key Market Events & News</h2>
+
+                <div class="news-item">
+                    <div class="news-title">Markets Close Mixed as Fed Rate Cut Doubts Grow</div>
+                    <div class="news-meta">Yahoo Finance | November 14, 2025 4:00 PM</div>
+                    <p style="margin-top: 10px; line-height: 1.6;">
+                        The S&P 500 and Dow slipped while Nasdaq posted modest gains to cap a volatile week as investors grappled with
+                        increasing doubts about the Federal Reserve's rate cut path. Recent economic data showing resilient consumer spending
+                        and persistent inflation has led traders to scale back expectations for near-term rate cuts.
+                    </p>
+                </div>
+
+                <div class="news-item">
+                    <div class="news-title">Netflix Stock Split Announcement Looms</div>
+                    <div class="news-meta">Investor's Business Daily | November 14, 2025 3:35 PM</div>
+                    <p style="margin-top: 10px; line-height: 1.6;">
+                        Netflix shares continue to attract attention as speculation builds around a potential stock split announcement.
+                        The streaming giant has seen its share price climb significantly this year, making it a candidate for a split to
+                        improve accessibility for retail investors.
+                    </p>
+                </div>
+
+                <div class="news-item">
+                    <div class="news-title">Nuvalent Announces Pivotal Data Timing for ALK-positive NSCLC Treatment</div>
+                    <div class="news-meta">PR Newswire | November 14, 2025 4:01 PM</div>
+                    <p style="margin-top: 10px; line-height: 1.6;">
+                        Nuvalent announced the timing of topline pivotal data for TKI pre-treated patients with advanced ALK-positive NSCLC
+                        from the ALKOVE-1 clinical trial of Neladalkib, contributing to the strong performance in biotech stocks today.
+                    </p>
+                </div>
+
+                <div class="news-item">
+                    <div class="news-title">Barrick Mining Stock Spikes on Split Consideration Report</div>
+                    <div class="news-meta">Investing.com | November 14, 2025 3:53 PM</div>
+                    <p style="margin-top: 10px; line-height: 1.6;">
+                        Barrick Gold shares jumped following reports the company is considering a potential stock split. The move comes as
+                        gold prices retreated from recent highs, with futures falling 2.55% to $4,087 per ounce.
+                    </p>
+                </div>
+
+                <div class="news-item">
+                    <div class="news-title">Trump Calls for DOJ Investigation Rattles Markets</div>
+                    <div class="news-meta">CNBC TV | November 14, 2025 3:47 PM</div>
+                    <p style="margin-top: 10px; line-height: 1.6;">
+                        Political headlines added to market volatility as former President Trump called for a DOJ investigation into JPMorgan
+                        and others involved with Jeffrey Epstein, adding uncertainty to financial sector stocks.
+                    </p>
+                </div>
+            </div>
+
+            <!-- Technical Outlook -->
+            <div class="section">
+                <h2 class="section-title">Technical Analysis & Forward Outlook</h2>
+                <div class="highlight-box">
+                    <h3 style="margin-bottom: 15px; color: #1e3c72;">Key Technical Levels</h3>
+                    <ul style="line-height: 2;">
+                        <li><strong>S&P 500 (6,735):</strong> Support at 6,647 (today's low), resistance at 6,774 (intraday high). Critical level to hold is the 50-day moving average around 6,650.</li>
+                        <li><strong>Nasdaq (22,900):</strong> Trading near mid-range between 22,437 support and 23,073 resistance. Bias remains positive above 22,500.</li>
+                        <li><strong>Dow (47,147):</strong> Broke below 47,200 support. Next key support at 46,863 (today's low). Needs to reclaim 47,400 to resume uptrend.</li>
+                        <li><strong>VIX (20.16):</strong> Slight uptick from 20.00, remaining elevated. Above 20 indicates heightened market anxiety; watch for moves above 25 for significant stress signals.</li>
+                    </ul>
+                </div>
+
+                <div class="highlight-box">
+                    <h3 style="margin-bottom: 15px; color: #1e3c72;">What to Watch Next Week</h3>
+                    <ul style="line-height: 2;">
+                        <li><strong>Fed Speakers:</strong> Several Federal Reserve officials scheduled to speak next week will provide crucial insights into the rate path.</li>
+                        <li><strong>Economic Data:</strong> Retail sales, jobless claims, and housing data will offer clues about economic momentum and inflation pressures.</li>
+                        <li><strong>Earnings Season Wind-Down:</strong> With 815 companies still scheduled to report, late-season results could provide catalysts for laggard sectors.</li>
+                        <li><strong>Sector Rotation:</strong> Monitor whether Energy's leadership and Tech resilience can continue, or if defensive sectors gain favor.</li>
+                        <li><strong>Volume Surge Names:</strong> Track follow-through in CDTX, SRRK, AVDL, and other biotech names that showed explosive volume today.</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Risk Factors -->
+            <div class="section">
+                <h2 class="section-title">Risk Factors & Market Sentiment</h2>
+                <div class="highlight-box">
+                    <h3 style="margin-bottom: 15px; color: #dc2626;">Key Risks</h3>
+                    <ul style="line-height: 2;">
+                        <li><strong>Rate Cut Uncertainty:</strong> Growing doubts about Fed rate cuts could pressure equity valuations, particularly in rate-sensitive growth sectors.</li>
+                        <li><strong>Elevated Valuations:</strong> S&P 500 P/E ratios remain historically high, leaving little margin for error if earnings disappoint.</li>
+                        <li><strong>Geopolitical Tensions:</strong> Ongoing political uncertainty and international conflicts continue to pose headline risk.</li>
+                        <li><strong>Gold Decline:</strong> The 2.55% drop in gold suggests reduced safe-haven demand, but also reflects rising real rates.</li>
+                        <li><strong>Small-Cap Volatility:</strong> While Russell 2000 gained today, the sector remains vulnerable to economic slowdown concerns.</li>
+                    </ul>
+                </div>
+
+                <div class="highlight-box">
+                    <h3 style="margin-bottom: 15px; color: #10b981;">Positive Catalysts</h3>
+                    <ul style="line-height: 2;">
+                        <li><strong>Stable Volatility:</strong> VIX holding near 20 shows manageable market anxiety, not in panic territory despite rate uncertainty.</li>
+                        <li><strong>Broadening Leadership:</strong> 564 stocks in uptrends and strong performance across Energy and Tech indicates healthy market breadth.</li>
+                        <li><strong>Biotech Momentum:</strong> Exceptional performance in healthcare/biotech with multiple volume surge stocks suggests sector rotation opportunity.</li>
+                        <li><strong>Small-Cap Strength:</strong> Russell 2000 outperforming suggests risk appetite and optimism about economic growth.</li>
+                        <li><strong>Buy-the-Dip Mentality:</strong> Market resilience despite rate cut doubts demonstrates strong underlying bid from long-term investors.</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <footer>
+            <p><strong>Disclaimer:</strong> This report is for informational purposes only and does not constitute investment advice.
+            Market data sourced from Finviz, Financial Modeling Prep, and Alpaca Markets as of November 14, 2025, 4:00 PM EST.</p>
+            <p style="margin-top: 10px;">Report Generated: November 14, 2025 | Analysis by TradeMonty Market Intelligence</p>
+        </footer>
+    </div>
+</body>
+</html>

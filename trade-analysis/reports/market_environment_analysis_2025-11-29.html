@@ -1,0 +1,673 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Market Environment Analysis - November 29, 2025</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            line-height: 1.6;
+            color: #1a1a1a;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        .report-wrapper {
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+
+        header {
+            background: linear-gradient(135deg, #2c3e50 0%, #3498db 100%);
+            color: white;
+            padding: 3rem 2rem;
+            text-align: center;
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+            font-weight: 700;
+        }
+
+        .subtitle {
+            font-size: 1.2rem;
+            opacity: 0.9;
+            margin-bottom: 1rem;
+        }
+
+        .report-meta {
+            display: flex;
+            justify-content: center;
+            gap: 2rem;
+            font-size: 0.9rem;
+            opacity: 0.8;
+        }
+
+        .content {
+            padding: 2rem;
+        }
+
+        .executive-summary {
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            padding: 2rem;
+            border-radius: 12px;
+            margin-bottom: 2rem;
+        }
+
+        .market-regime {
+            background: #2c3e50;
+            color: white;
+            padding: 1.5rem;
+            border-radius: 8px;
+            margin-top: 1rem;
+        }
+
+        .regime-badge {
+            display: inline-block;
+            background: #3498db;
+            padding: 0.5rem 1rem;
+            border-radius: 24px;
+            font-weight: bold;
+            margin-bottom: 1rem;
+        }
+
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1.5rem;
+            margin: 2rem 0;
+        }
+
+        .metric-card {
+            background: white;
+            border: 1px solid #e0e0e0;
+            border-radius: 12px;
+            padding: 1.5rem;
+            transition: transform 0.3s, box-shadow 0.3s;
+        }
+
+        .metric-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 8px 24px rgba(0,0,0,0.1);
+        }
+
+        .metric-label {
+            font-size: 0.9rem;
+            color: #666;
+            margin-bottom: 0.5rem;
+        }
+
+        .metric-value {
+            font-size: 1.8rem;
+            font-weight: bold;
+            color: #2c3e50;
+        }
+
+        .metric-change {
+            font-size: 1rem;
+            margin-top: 0.5rem;
+        }
+
+        .positive {
+            color: #27ae60;
+        }
+
+        .negative {
+            color: #e74c3c;
+        }
+
+        .neutral {
+            color: #95a5a6;
+        }
+
+        .section {
+            margin: 3rem 0;
+        }
+
+        .section-title {
+            font-size: 1.8rem;
+            color: #2c3e50;
+            margin-bottom: 1.5rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 3px solid #3498db;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1rem 0;
+        }
+
+        th {
+            background: #34495e;
+            color: white;
+            padding: 0.75rem;
+            text-align: left;
+        }
+
+        td {
+            padding: 0.75rem;
+            border-bottom: 1px solid #ecf0f1;
+        }
+
+        tr:hover {
+            background: #f8f9fa;
+        }
+
+        .sector-performance {
+            background: #ecf0f1;
+            border-radius: 8px;
+            padding: 1rem;
+            margin: 1rem 0;
+        }
+
+        .heatmap {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 0.5rem;
+            margin: 1rem 0;
+        }
+
+        .heatmap-cell {
+            padding: 1rem;
+            border-radius: 6px;
+            text-align: center;
+            color: white;
+            font-weight: bold;
+        }
+
+        .heat-positive-high {
+            background: #27ae60;
+        }
+
+        .heat-positive-low {
+            background: #2ecc71;
+        }
+
+        .heat-neutral {
+            background: #95a5a6;
+        }
+
+        .heat-negative-low {
+            background: #e67e22;
+        }
+
+        .heat-negative-high {
+            background: #e74c3c;
+        }
+
+        .alert-box {
+            padding: 1.5rem;
+            border-radius: 8px;
+            margin: 1rem 0;
+        }
+
+        .alert-bullish {
+            background: #d4edda;
+            border-left: 4px solid #27ae60;
+        }
+
+        .alert-bearish {
+            background: #f8d7da;
+            border-left: 4px solid #e74c3c;
+        }
+
+        .alert-neutral {
+            background: #d1ecf1;
+            border-left: 4px solid #3498db;
+        }
+
+        .strategy-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1.5rem;
+            margin: 2rem 0;
+        }
+
+        .strategy-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 1.5rem;
+            border-radius: 12px;
+        }
+
+        .strategy-card h3 {
+            margin-bottom: 1rem;
+            font-size: 1.3rem;
+        }
+
+        .strategy-list {
+            list-style: none;
+        }
+
+        .strategy-list li {
+            padding: 0.5rem 0;
+            border-bottom: 1px solid rgba(255,255,255,0.2);
+        }
+
+        .key-levels {
+            display: flex;
+            justify-content: space-around;
+            flex-wrap: wrap;
+            gap: 1rem;
+            margin: 1rem 0;
+        }
+
+        .level-card {
+            flex: 1;
+            min-width: 200px;
+            background: white;
+            border: 2px solid #3498db;
+            border-radius: 8px;
+            padding: 1rem;
+            text-align: center;
+        }
+
+        .level-label {
+            font-size: 0.9rem;
+            color: #7f8c8d;
+            margin-bottom: 0.5rem;
+        }
+
+        .level-value {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #2c3e50;
+        }
+
+        .footer {
+            background: #2c3e50;
+            color: white;
+            padding: 2rem;
+            text-align: center;
+            margin-top: 3rem;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 12px;
+            font-size: 0.85rem;
+            font-weight: bold;
+            margin: 0.25rem;
+        }
+
+        .badge-success {
+            background: #27ae60;
+            color: white;
+        }
+
+        .badge-danger {
+            background: #e74c3c;
+            color: white;
+        }
+
+        .badge-warning {
+            background: #f39c12;
+            color: white;
+        }
+
+        .badge-info {
+            background: #3498db;
+            color: white;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 1rem;
+            }
+
+            h1 {
+                font-size: 1.8rem;
+            }
+
+            .metrics-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="report-wrapper">
+            <header>
+                <h1>Market Environment Analysis</h1>
+                <div class="subtitle">Comprehensive Strategic Assessment</div>
+                <div class="report-meta">
+                    <span>📅 November 29, 2025</span>
+                    <span>🎯 Black Friday Session Analysis</span>
+                    <span>📊 Data: Finviz, Alpaca, FMP</span>
+                </div>
+            </header>
+
+            <div class="content">
+                <div class="executive-summary">
+                    <h2>Executive Summary</h2>
+                    <p style="margin: 1rem 0; font-size: 1.1rem;">
+                        The US equity markets closed the shortened Black Friday session with mixed performance,
+                        reflecting a cautious but constructive market environment. Major indices are consolidating
+                        near all-time highs with healthy market breadth showing 877 stocks in confirmed uptrends.
+                    </p>
+
+                    <div class="market-regime">
+                        <div class="regime-badge">MATURE BULL MARKET - SELECTIVE OPPORTUNITY PHASE</div>
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">
+                            <div>
+                                <strong>Primary Trend:</strong> Bullish (Above 200-day MA)
+                            </div>
+                            <div>
+                                <strong>Risk Environment:</strong> Risk-On with Defensive Rotation
+                            </div>
+                            <div>
+                                <strong>Volatility Regime:</strong> Low (VIX < 20)
+                            </div>
+                            <div>
+                                <strong>Recommended Stance:</strong> Cautiously Optimistic
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="section">
+                    <h2 class="section-title">📈 Major Market Indices</h2>
+                    <div class="metrics-grid">
+                        <div class="metric-card">
+                            <div class="metric-label">S&P 500</div>
+                            <div class="metric-value">6,849.09</div>
+                            <div class="metric-change negative">-36.48 (-0.53%)</div>
+                            <small>52W Range: 4,835 - 6,920</small>
+                        </div>
+
+                        <div class="metric-card">
+                            <div class="metric-label">NASDAQ Composite</div>
+                            <div class="metric-value">23,365.69</div>
+                            <div class="metric-change negative">-150.00 (-0.64%)</div>
+                            <small>52W Range: 14,784 - 24,020</small>
+                        </div>
+
+                        <div class="metric-card">
+                            <div class="metric-label">Dow Jones</div>
+                            <div class="metric-value">47,716.42</div>
+                            <div class="metric-change negative">-289.29 (-0.60%)</div>
+                            <small>52W Range: 36,611 - 48,432</small>
+                        </div>
+
+                        <div class="metric-card">
+                            <div class="metric-label">Russell 2000</div>
+                            <div class="metric-value">2,500.43</div>
+                            <div class="metric-change negative">-14.32 (-0.57%)</div>
+                            <small>52W Range: 1,733 - 2,542</small>
+                        </div>
+
+                        <div class="metric-card">
+                            <div class="metric-label">VIX</div>
+                            <div class="metric-value">16.35</div>
+                            <div class="metric-change positive">-0.84 (-4.89%)</div>
+                            <small>Low Volatility Environment</small>
+                        </div>
+
+                        <div class="metric-card">
+                            <div class="metric-label">Market Breadth</div>
+                            <div class="metric-value">877</div>
+                            <div class="metric-change positive">Stocks in Uptrend</div>
+                            <small>Above Key Moving Averages</small>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="section">
+                    <h2 class="section-title">🎯 S&P 500 Key Levels</h2>
+                    <div class="key-levels">
+                        <div class="level-card">
+                            <div class="level-label">Strong Resistance</div>
+                            <div class="level-value">6,920</div>
+                        </div>
+                        <div class="level-card">
+                            <div class="level-label">Near Resistance</div>
+                            <div class="level-value">6,900</div>
+                        </div>
+                        <div class="level-card">
+                            <div class="level-label">Current Level</div>
+                            <div class="level-value" style="color: #3498db;">6,849</div>
+                        </div>
+                        <div class="level-card">
+                            <div class="level-label">Near Support</div>
+                            <div class="level-value">6,800</div>
+                        </div>
+                        <div class="level-card">
+                            <div class="level-label">Strong Support</div>
+                            <div class="level-value">6,750</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="section">
+                    <h2 class="section-title">🔄 Sector Performance Heatmap</h2>
+                    <div class="heatmap">
+                        <div class="heatmap-cell heat-positive-high">
+                            Energy<br>+1.10%
+                        </div>
+                        <div class="heatmap-cell heat-positive-low">
+                            Consumer Cyclical<br>+0.81%
+                        </div>
+                        <div class="heatmap-cell heat-positive-low">
+                            Communication<br>+0.75%
+                        </div>
+                        <div class="heatmap-cell heat-positive-low">
+                            Financial<br>+0.70%
+                        </div>
+                        <div class="heatmap-cell heat-positive-low">
+                            Utilities<br>+0.69%
+                        </div>
+                        <div class="heatmap-cell heat-positive-low">
+                            Technology<br>+0.63%
+                        </div>
+                        <div class="heatmap-cell heat-positive-low">
+                            Consumer Defensive<br>+0.62%
+                        </div>
+                        <div class="heatmap-cell heat-positive-low">
+                            Industrials<br>+0.56%
+                        </div>
+                        <div class="heatmap-cell heat-neutral">
+                            Real Estate<br>+0.30%
+                        </div>
+                        <div class="heatmap-cell heat-negative-low">
+                            Healthcare<br>-0.33%
+                        </div>
+                    </div>
+                </div>
+
+                <div class="section">
+                    <h2 class="section-title">📊 Market Internals & Breadth</h2>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Indicator</th>
+                                <th>Value</th>
+                                <th>Signal</th>
+                                <th>Interpretation</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>Stocks in Uptrend</td>
+                                <td>877</td>
+                                <td><span class="badge badge-success">Bullish</span></td>
+                                <td>Strong participation in rally</td>
+                            </tr>
+                            <tr>
+                                <td>Most Active Leader</td>
+                                <td>NVDA (-2.08%)</td>
+                                <td><span class="badge badge-warning">Caution</span></td>
+                                <td>Tech leader showing weakness</td>
+                            </tr>
+                            <tr>
+                                <td>High Volume Stocks</td>
+                                <td>15 (>2x avg)</td>
+                                <td><span class="badge badge-info">Neutral</span></td>
+                                <td>Normal for shortened session</td>
+                            </tr>
+                            <tr>
+                                <td>Top Gainer</td>
+                                <td>SMX (+245%)</td>
+                                <td><span class="badge badge-success">Bullish</span></td>
+                                <td>IPO momentum continues</td>
+                            </tr>
+                            <tr>
+                                <td>VIX Level</td>
+                                <td>16.35</td>
+                                <td><span class="badge badge-success">Bullish</span></td>
+                                <td>Low fear, potential complacency</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="section">
+                    <h2 class="section-title">💰 Economic Context</h2>
+                    <div class="metrics-grid">
+                        <div class="metric-card">
+                            <div class="metric-label">Bonds (TLT)</div>
+                            <div class="metric-value">$90.21</div>
+                            <div class="metric-change negative">-0.47%</div>
+                            <small>Rates staying elevated</small>
+                        </div>
+
+                        <div class="metric-card">
+                            <div class="metric-label">Gold (GLD)</div>
+                            <div class="metric-value">$388.25</div>
+                            <div class="metric-change positive">+1.34%</div>
+                            <small>Safe haven bid</small>
+                        </div>
+
+                        <div class="metric-card">
+                            <div class="metric-label">Oil (USO)</div>
+                            <div class="metric-value">$71.07</div>
+                            <div class="metric-change positive">+1.47%</div>
+                            <small>Energy strength</small>
+                        </div>
+
+                        <div class="metric-card">
+                            <div class="metric-label">Dollar (UUP)</div>
+                            <div class="metric-value">$28.21</div>
+                            <div class="metric-change negative">-0.07%</div>
+                            <small>Stable near highs</small>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="section">
+                    <h2 class="section-title">🎯 Strategic Trading Recommendations</h2>
+                    <div class="strategy-grid">
+                        <div class="strategy-card">
+                            <h3>🚀 Active Traders</h3>
+                            <ul class="strategy-list">
+                                <li>✅ Long bias with stops above 6,800 SPX</li>
+                                <li>✅ Focus on momentum leaders in Tech</li>
+                                <li>✅ Hedge with VIX calls (cheap protection)</li>
+                                <li>✅ Day trade volatility: NVDA, semiconductors</li>
+                            </ul>
+                        </div>
+
+                        <div class="strategy-card" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);">
+                            <h3>📈 Swing Traders (1-4 weeks)</h3>
+                            <ul class="strategy-list">
+                                <li>✅ Buy dips in quality names above 200-MA</li>
+                                <li>✅ Sector rotation: Long Energy/Financials</li>
+                                <li>✅ Focus on earnings winners</li>
+                                <li>✅ Bull flags in AAPL, GOOGL, MSFT</li>
+                            </ul>
+                        </div>
+
+                        <div class="strategy-card" style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);">
+                            <h3>📊 Position Traders (1-3 months)</h3>
+                            <ul class="strategy-list">
+                                <li>✅ Maintain 70% long exposure</li>
+                                <li>✅ Add defensive dividend aristocrats</li>
+                                <li>✅ Barbell: Growth tech + Value energy</li>
+                                <li>✅ Consider international diversification</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="section">
+                    <h2 class="section-title">⚠️ Risk Factors & Catalysts</h2>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem;">
+                        <div>
+                            <h3 style="color: #27ae60; margin-bottom: 1rem;">Positive Catalysts</h3>
+                            <div class="alert-box alert-bullish">
+                                <ul style="list-style: none; padding-left: 0;">
+                                    <li>✅ December seasonality (Santa rally)</li>
+                                    <li>✅ Year-end window dressing</li>
+                                    <li>✅ Continued economic resilience</li>
+                                    <li>✅ Fed pause continuation</li>
+                                    <li>✅ Strong corporate earnings</li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div>
+                            <h3 style="color: #e74c3c; margin-bottom: 1rem;">Risk Factors</h3>
+                            <div class="alert-box alert-bearish">
+                                <ul style="list-style: none; padding-left: 0;">
+                                    <li>⚠️ Overvaluation (Tech P/E: 39.72)</li>
+                                    <li>⚠️ VIX complacency at lows</li>
+                                    <li>⚠️ Concentration risk in mega-caps</li>
+                                    <li>⚠️ Tax-loss selling pressure</li>
+                                    <li>⚠️ Geopolitical uncertainties</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="section">
+                    <h2 class="section-title">📋 Actionable Next Steps</h2>
+                    <div class="alert-box alert-neutral">
+                        <h3 style="margin-bottom: 1rem;">Immediate Actions (Next 1-5 Days)</h3>
+                        <ul style="margin-left: 2rem;">
+                            <li><strong>Maintain Long Bias</strong> above SPX 6,800 with tight risk management</li>
+                            <li><strong>Add VIX Hedges</strong> while volatility remains below 17</li>
+                            <li><strong>Focus on Sector Leaders:</strong> Energy, Financials, select Technology</li>
+                            <li><strong>Avoid Healthcare</strong> until sector shows stabilization</li>
+                            <li><strong>Monitor</strong> year-end positioning flows and tax considerations</li>
+                        </ul>
+                    </div>
+
+                    <div class="alert-box alert-bullish" style="margin-top: 1rem;">
+                        <h3 style="margin-bottom: 1rem;">Weekly Outlook</h3>
+                        <p><strong>Bullish above 6,800 SPX</strong> with initial target of 6,950 and stretch target of 7,000.
+                        Key support at 6,750. Watch for December monthly options expiration flows.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="footer">
+                <h3 style="margin-bottom: 1rem;">Market Environment Report</h3>
+                <p>Generated: November 29, 2025 | Data Sources: Finviz, Alpaca, Financial Modeling Prep</p>
+                <p style="margin-top: 1rem;">Next Update: December 2, 2025 (Monday Market Open)</p>
+                <p style="margin-top: 1rem; font-size: 0.9rem; opacity: 0.8;">
+                    This report is for informational purposes only and does not constitute investment advice.
+                </p>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

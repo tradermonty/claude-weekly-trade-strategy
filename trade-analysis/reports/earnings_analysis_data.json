@@ -1,0 +1,86 @@
+[
+  {
+    "ticker": "FBK",
+    "name": "FB Financial Corporation",
+    "grade": "C",
+    "total_score": 67.0,
+    "scores": {
+      "gap_score": 2,
+      "trend_score": 3,
+      "volume_score": 4,
+      "ma200_score": 5,
+      "ma50_score": 4,
+      "total_score": 67.0,
+      "raw_total": 3.35
+    },
+    "data": {
+      "name": "FB Financial Corporation",
+      "gap_pct": 0.75,
+      "pre_earnings_trend": 5.55,
+      "volume_ratio": 106.02,
+      "ma200_position": 119.6,
+      "ma50_position": 109.0,
+      "eps_surprise": 11.45,
+      "revenue_surprise": 3.65,
+      "eps_growth_qoq": -92.62,
+      "sales_growth_qoq": -27.61,
+      "current_price": 56.31
+    }
+  },
+  {
+    "ticker": "ERIC",
+    "name": "Telefonaktiebolaget LM Ericsson",
+    "grade": "C",
+    "total_score": 60.0,
+    "scores": {
+      "gap_score": 1,
+      "trend_score": 3,
+      "volume_score": 3,
+      "ma200_score": 5,
+      "ma50_score": 5,
+      "total_score": 60.0,
+      "raw_total": 3.0
+    },
+    "data": {
+      "name": "Telefonaktiebolaget LM Ericsson",
+      "gap_pct": -0.85,
+      "pre_earnings_trend": 3.55,
+      "volume_ratio": 95.92,
+      "ma200_position": 116.66,
+      "ma50_position": 117.7,
+      "eps_surprise": 24.52,
+      "revenue_surprise": -0.42,
+      "eps_growth_qoq": 145.25,
+      "sales_growth_qoq": 3.78,
+      "current_price": 8.17
+    }
+  },
+  {
+    "ticker": "WFC",
+    "name": "Wells Fargo & Company",
+    "grade": "D",
+    "total_score": 48.0,
+    "scores": {
+      "gap_score": 2,
+      "trend_score": 2,
+      "volume_score": 2,
+      "ma200_score": 4,
+      "ma50_score": 3,
+      "total_score": 48.0,
+      "raw_total": 2.4
+    },
+    "data": {
+      "name": "Wells Fargo & Company",
+      "gap_pct": 1.67,
+      "pre_earnings_trend": -3.29,
+      "volume_ratio": 85.61,
+      "ma200_position": 107.08,
+      "ma50_position": 101.23,
+      "eps_surprise": 13.56,
+      "revenue_surprise": 0.32,
+      "eps_growth_qoq": 19.91,
+      "sales_growth_qoq": -3.57,
+      "current_price": 78.92
+    }
+  }
+]

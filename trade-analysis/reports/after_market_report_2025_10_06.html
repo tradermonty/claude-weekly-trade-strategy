@@ -1,0 +1,876 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🇺🇸 U.S. Stock Market Analysis - October 6, 2025</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            color: #ffffff;
+            padding: 20px;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+            padding: 40px 20px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+        }
+
+        .header h1 {
+            font-size: 3em;
+            margin-bottom: 10px;
+            text-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
+        }
+
+        .header .date {
+            font-size: 1.2em;
+            opacity: 0.9;
+            margin-top: 10px;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 30px;
+            margin-bottom: 40px;
+        }
+
+        .card {
+            background: rgba(255, 255, 255, 0.15);
+            border-radius: 20px;
+            padding: 30px;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.4);
+        }
+
+        .card h2 {
+            margin-bottom: 20px;
+            font-size: 1.5em;
+            border-bottom: 2px solid rgba(255, 255, 255, 0.3);
+            padding-bottom: 10px;
+        }
+
+        .etf-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 40px;
+        }
+
+        .etf-card {
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 15px;
+            padding: 20px;
+            text-align: center;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.2);
+            transition: transform 0.3s ease;
+        }
+
+        .etf-card:hover {
+            transform: scale(1.05);
+        }
+
+        .etf-symbol {
+            font-size: 1.8em;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+
+        .etf-price {
+            font-size: 1.5em;
+            margin: 10px 0;
+        }
+
+        .positive {
+            color: #00ff88;
+            text-shadow: 0 0 10px rgba(0, 255, 136, 0.5);
+        }
+
+        .negative {
+            color: #ff6b6b;
+            text-shadow: 0 0 10px rgba(255, 107, 107, 0.5);
+        }
+
+        .neutral {
+            color: #ffd700;
+        }
+
+        .change {
+            font-size: 1.3em;
+            font-weight: bold;
+            margin-top: 5px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+        }
+
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        th {
+            background: rgba(255, 255, 255, 0.1);
+            font-weight: bold;
+        }
+
+        tr:hover {
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-top: 15px;
+        }
+
+        .stat-item {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 2em;
+            font-weight: bold;
+            color: #00ff88;
+            margin-top: 10px;
+        }
+
+        .stat-label {
+            font-size: 0.9em;
+            opacity: 0.8;
+        }
+
+        .key-points {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 20px;
+            padding: 30px;
+            margin-top: 30px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+        }
+
+        .key-points ul {
+            list-style: none;
+            padding-left: 0;
+        }
+
+        .key-points li {
+            padding: 15px;
+            margin: 10px 0;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            border-left: 4px solid #00ff88;
+        }
+
+        .key-points li:before {
+            content: "✓ ";
+            color: #00ff88;
+            font-weight: bold;
+            margin-right: 10px;
+        }
+
+        .afterhours-section {
+            background: linear-gradient(135deg, #ff6b6b 0%, #ffa500 100%);
+            border-left: 5px solid #ffff00;
+            border-radius: 20px;
+            padding: 30px;
+            margin: 30px 0;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+        }
+
+        .earnings-card {
+            background: rgba(255, 255, 255, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 15px;
+            padding: 20px;
+            margin: 15px 0;
+            position: relative;
+        }
+
+        .afterhours-badge {
+            position: absolute;
+            top: -10px;
+            right: -10px;
+            background: #ff4444;
+            color: #fff;
+            padding: 5px 10px;
+            border-radius: 15px;
+            font-size: 0.8em;
+            font-weight: bold;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+        }
+
+        .earnings-surprise {
+            display: flex;
+            justify-content: space-between;
+            margin: 10px 0;
+            flex-wrap: wrap;
+        }
+
+        .surprise-positive {
+            color: #00ff88;
+            font-weight: bold;
+        }
+
+        .surprise-negative {
+            color: #ff6b6b;
+            font-weight: bold;
+        }
+
+        .footer {
+            text-align: center;
+            margin-top: 50px;
+            padding: 30px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            font-size: 0.9em;
+            opacity: 0.8;
+        }
+
+        .volume-badge {
+            display: inline-block;
+            padding: 5px 10px;
+            background: rgba(255, 215, 0, 0.3);
+            border-radius: 5px;
+            font-size: 0.85em;
+            margin-left: 5px;
+        }
+
+        .sector-bar {
+            height: 30px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 5px;
+            margin: 10px 0;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .sector-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #00ff88 0%, #00cc6a 100%);
+            transition: width 0.5s ease;
+            display: flex;
+            align-items: center;
+            padding-left: 10px;
+            font-weight: bold;
+        }
+
+        .sector-fill.negative {
+            background: linear-gradient(90deg, #ff6b6b 0%, #cc5555 100%);
+        }
+
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 2em;
+            }
+
+            .grid {
+                grid-template-columns: 1fr;
+            }
+
+            .etf-grid {
+                grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            }
+        }
+
+        .highlight-box {
+            background: rgba(255, 215, 0, 0.2);
+            border: 2px solid #ffd700;
+            border-radius: 10px;
+            padding: 15px;
+            margin: 15px 0;
+        }
+
+        .ticker-symbol {
+            color: #00d4ff;
+            font-weight: bold;
+            font-family: monospace;
+        }
+
+        .volume-indicator {
+            color: #ffd700;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <h1>🇺🇸 U.S. Stock Market Analysis</h1>
+            <div class="date">📅 October 6, 2025 – Final After-Market Data</div>
+            <div style="margin-top: 15px; font-size: 1.1em;">
+                <span class="positive">Market Closed</span> | VIX: $16.36 (-1.74%)
+            </div>
+        </div>
+
+        <!-- Executive Summary -->
+        <div class="card" style="grid-column: 1 / -1; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+            <h2>📊 Executive Summary</h2>
+            <p style="font-size: 1.2em; line-height: 1.8;">
+                U.S. markets delivered a <strong class="positive">strong performance</strong> on Monday, October 6, 2025, with technology stocks leading the charge.
+                The <strong class="ticker-symbol">NASDAQ</strong> surged <span class="positive">+0.72%</span>, while the <strong class="ticker-symbol">S&P 500</strong> gained <span class="positive">+0.36%</span>.
+                The session was characterized by explosive volume in semiconductor and AI-related stocks, with <strong class="ticker-symbol">AMD</strong> skyrocketing <span class="positive">+23.71%</span>
+                on massive volume following positive developments. A total of <strong class="volume-indicator">99 stocks</strong> exhibited volume surge patterns with an average gain of <strong class="positive">+8.0%</strong>.
+                Gold rallied <span class="positive">+1.88%</span> while bonds weakened, reflecting a risk-on sentiment. The VIX declined to 16.36, indicating low market anxiety.
+            </p>
+        </div>
+
+        <!-- Major ETF Performance -->
+        <div class="card" style="grid-column: 1 / -1;">
+            <h2>💼 Major ETF Performance</h2>
+            <div class="etf-grid">
+                <div class="etf-card">
+                    <div class="etf-symbol">SPY</div>
+                    <div class="etf-price">$671.61</div>
+                    <div class="change positive">+0.36%</div>
+                    <div style="font-size: 0.85em; margin-top: 10px; opacity: 0.8;">S&P 500 ETF</div>
+                    <div style="font-size: 0.8em; margin-top: 5px;">Vol: 51.6M</div>
+                </div>
+                <div class="etf-card">
+                    <div class="etf-symbol">QQQ</div>
+                    <div class="etf-price">$607.72</div>
+                    <div class="change positive">+0.75%</div>
+                    <div style="font-size: 0.85em; margin-top: 10px; opacity: 0.8;">Nasdaq-100 ETF</div>
+                    <div style="font-size: 0.8em; margin-top: 5px;">Vol: 40.7M</div>
+                </div>
+                <div class="etf-card">
+                    <div class="etf-symbol">DIA</div>
+                    <div class="etf-price">$466.84</div>
+                    <div class="change negative">-0.14%</div>
+                    <div style="font-size: 0.85em; margin-top: 10px; opacity: 0.8;">Dow Jones ETF</div>
+                    <div style="font-size: 0.8em; margin-top: 5px;">Vol: 7.2M</div>
+                </div>
+                <div class="etf-card">
+                    <div class="etf-symbol">IWM</div>
+                    <div class="etf-price">$246.81</div>
+                    <div class="change positive">+0.40%</div>
+                    <div style="font-size: 0.85em; margin-top: 10px; opacity: 0.8;">Russell 2000 ETF</div>
+                    <div style="font-size: 0.8em; margin-top: 5px;">Vol: 30.8M</div>
+                </div>
+                <div class="etf-card">
+                    <div class="etf-symbol">TLT</div>
+                    <div class="etf-price">$88.68</div>
+                    <div class="change negative">-0.78%</div>
+                    <div style="font-size: 0.85em; margin-top: 10px; opacity: 0.8;">20+ Yr Treasury</div>
+                    <div style="font-size: 0.8em; margin-top: 5px;">Vol: 27.9M</div>
+                </div>
+                <div class="etf-card">
+                    <div class="etf-symbol">GLD</div>
+                    <div class="etf-price">$364.38</div>
+                    <div class="change positive">+1.88%</div>
+                    <div style="font-size: 0.85em; margin-top: 10px; opacity: 0.8;">Gold ETF</div>
+                    <div style="font-size: 0.8em; margin-top: 5px;">Vol: 16.8M</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Top Volume Surge Tickers -->
+        <div class="card" style="grid-column: 1 / -1;">
+            <h2>🔥 Top Volume Surge Tickers (1.5x+ Volume, 2%+ Gain)</h2>
+            <div class="highlight-box">
+                <strong>99 stocks detected</strong> with elevated volume and positive momentum, averaging <strong class="positive">+8.0%</strong> gains with <strong class="volume-indicator">2.8x</strong> relative volume
+            </div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Symbol</th>
+                        <th>Company</th>
+                        <th>Sector</th>
+                        <th>Price</th>
+                        <th>Change</th>
+                        <th>Volume</th>
+                        <th>Rel Volume</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong class="ticker-symbol">CRML</strong></td>
+                        <td>Critical Metals Corp</td>
+                        <td>Basic Materials</td>
+                        <td>$11.59</td>
+                        <td class="positive">+45.24%</td>
+                        <td class="volume-indicator">157.6M</td>
+                        <td><span class="volume-badge">28.73x</span></td>
+                    </tr>
+                    <tr>
+                        <td><strong class="ticker-symbol">ORIC</strong></td>
+                        <td>ORIC Pharmaceuticals</td>
+                        <td>Healthcare</td>
+                        <td>$14.41</td>
+                        <td class="positive">+24.60%</td>
+                        <td class="volume-indicator">3.7M</td>
+                        <td><span class="volume-badge">3.31x</span></td>
+                    </tr>
+                    <tr>
+                        <td><strong class="ticker-symbol">AMD</strong></td>
+                        <td>Advanced Micro Devices</td>
+                        <td>Technology</td>
+                        <td>$203.71</td>
+                        <td class="positive">+23.71%</td>
+                        <td class="volume-indicator">245.8M</td>
+                        <td><span class="volume-badge">4.60x</span></td>
+                    </tr>
+                    <tr>
+                        <td><strong class="ticker-symbol">AIP</strong></td>
+                        <td>Arteris Inc</td>
+                        <td>Technology</td>
+                        <td>$13.58</td>
+                        <td class="positive">+23.68%</td>
+                        <td class="volume-indicator">4.4M</td>
+                        <td><span class="volume-badge">4.36x</span></td>
+                    </tr>
+                    <tr>
+                        <td><strong class="ticker-symbol">SANM</strong></td>
+                        <td>Sanmina Corp</td>
+                        <td>Technology</td>
+                        <td>$140.00</td>
+                        <td class="positive">+22.72%</td>
+                        <td class="volume-indicator">4.4M</td>
+                        <td><span class="volume-badge">6.02x</span></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- After-Hours Earnings Section -->
+        <div class="afterhours-section">
+            <h2>⏰ Post-Close Earnings & After-Hours Trading</h2>
+
+            <div class="highlight-box" style="background: rgba(255, 255, 255, 0.3); border-color: #fff;">
+                <strong>Limited Earnings Activity:</strong> Only 2 stocks were identified in today's earnings screener with post-close reporting scheduled.
+                After-hours volume remained relatively muted with no major earnings surprises detected in the immediate post-close period.
+            </div>
+
+            <div class="earnings-card">
+                <div class="afterhours-badge">Today After</div>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                    <div>
+                        <strong class="ticker-symbol" style="font-size: 1.5em;">STZ</strong>
+                        <div style="font-size: 0.9em; opacity: 0.9;">Constellation Brands Inc</div>
+                    </div>
+                    <div style="text-align: right;">
+                        <div style="font-size: 1.3em;" class="negative">$138.74 (-2.43%)</div>
+                        <div style="font-size: 0.85em;">Consumer Defensive</div>
+                    </div>
+                </div>
+                <div class="earnings-surprise">
+                    <span>EPS: <span class="surprise-negative">-2.66%</span></span>
+                    <span>Revenue: <span class="surprise-negative">-1.51%</span></span>
+                    <span>1M Perf: <span class="negative">-6.53%</span></span>
+                </div>
+            </div>
+
+            <div class="earnings-card">
+                <div class="afterhours-badge">Today After</div>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                    <div>
+                        <strong class="ticker-symbol" style="font-size: 1.5em;">AEHR</strong>
+                        <div style="font-size: 0.9em; opacity: 0.9;">Aehr Test Systems</div>
+                    </div>
+                    <div style="text-align: right;">
+                        <div style="font-size: 1.3em;" class="positive">$31.65 (+2.03%)</div>
+                        <div style="font-size: 0.85em;">Technology</div>
+                    </div>
+                </div>
+                <div class="earnings-surprise">
+                    <span>EPS: <span class="surprise-positive">+36.71%</span></span>
+                    <span>Revenue: <span class="surprise-negative">-4.73%</span></span>
+                    <span>1M Perf: <span class="positive">+23.83%</span></span>
+                </div>
+            </div>
+
+            <div style="margin-top: 20px; padding: 15px; background: rgba(255, 255, 255, 0.2); border-radius: 10px;">
+                <strong>📌 After-Hours Note:</strong> Light earnings calendar today with minimal after-hours volatility.
+                AEHR showed a strong EPS beat despite revenue miss, while STZ disappointed on both metrics.
+                Traders should monitor for any late-breaking announcements or guidance revisions.
+            </div>
+        </div>
+
+        <!-- Market Statistics -->
+        <div class="card">
+            <h2>📈 Market Statistics</h2>
+            <div class="stats-grid">
+                <div class="stat-item">
+                    <div class="stat-label">Volume Surge Stocks</div>
+                    <div class="stat-value">99</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-label">Uptrend Stocks</div>
+                    <div class="stat-value">790</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-label">Avg Relative Volume</div>
+                    <div class="stat-value">2.8x</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-label">Avg Price Move</div>
+                    <div class="stat-value positive">+8.0%</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-label">Earnings Releases</div>
+                    <div class="stat-value">2</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-label">VIX Level</div>
+                    <div class="stat-value neutral">16.36</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sector Performance -->
+        <div class="card">
+            <h2>🏢 Sector Performance</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Sector</th>
+                        <th>Market Cap (B)</th>
+                        <th>P/E</th>
+                        <th>Stocks</th>
+                        <th>Change</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>Technology</strong></td>
+                        <td>$26,775.3</td>
+                        <td>43.94</td>
+                        <td>778</td>
+                        <td class="positive">+1.12%</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Utilities</strong></td>
+                        <td>$1,805.5</td>
+                        <td>21.87</td>
+                        <td>107</td>
+                        <td class="positive">+0.98%</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Consumer Cyclical</strong></td>
+                        <td>$9,456.6</td>
+                        <td>30.26</td>
+                        <td>571</td>
+                        <td class="positive">+0.67%</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Basic Materials</strong></td>
+                        <td>$2,392.9</td>
+                        <td>25.12</td>
+                        <td>275</td>
+                        <td class="positive">+0.57%</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Industrials</strong></td>
+                        <td>$6,674.5</td>
+                        <td>29.02</td>
+                        <td>690</td>
+                        <td class="positive">+0.50%</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Energy</strong></td>
+                        <td>$3,564.4</td>
+                        <td>15.87</td>
+                        <td>252</td>
+                        <td class="positive">+0.49%</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Communication Services</strong></td>
+                        <td>$11,075.7</td>
+                        <td>37.09</td>
+                        <td>274</td>
+                        <td class="positive">+0.31%</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Financial</strong></td>
+                        <td>$13,973.0</td>
+                        <td>19.12</td>
+                        <td>980</td>
+                        <td class="negative">-0.08%</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Healthcare</strong></td>
+                        <td>$8,048.3</td>
+                        <td>25.18</td>
+                        <td>1,114</td>
+                        <td class="negative">-0.34%</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Consumer Defensive</strong></td>
+                        <td>$4,100.0</td>
+                        <td>26.03</td>
+                        <td>248</td>
+                        <td class="negative">-0.60%</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Real Estate</strong></td>
+                        <td>$1,693.1</td>
+                        <td>38.54</td>
+                        <td>264</td>
+                        <td class="negative">-0.94%</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Today's Key Points -->
+        <div class="key-points">
+            <h2>🎯 Today's Key Points</h2>
+            <ul>
+                <li><strong>Technology Dominance:</strong> Tech sector led all sectors with a +1.12% gain, driven by explosive moves in semiconductors. AMD surged +23.71% on 245.8M shares (4.6x average volume), catalyzing strength across the semiconductor supply chain.</li>
+
+                <li><strong>Volume Surge Phenomenon:</strong> 99 stocks exhibited volume surge patterns (1.5x+ relative volume with 2%+ gains), averaging +8.0% gains. Critical Metals (CRML) led with a spectacular +45.24% surge on 28.73x normal volume.</li>
+
+                <li><strong>Sector Rotation Evident:</strong> Utilities (+0.98%) and Consumer Cyclical (+0.67%) showed strength, while defensive sectors lagged. Real Estate was the worst performer at -0.94%, reflecting rising bond yields.</li>
+
+                <li><strong>Limited Earnings Impact:</strong> Light earnings calendar with only 2 notable reports. AEHR beat EPS estimates by 36.71% despite revenue miss, while STZ disappointed on both metrics (-2.66% EPS surprise, -1.51% revenue surprise).</li>
+
+                <li><strong>Broad Market Health:</strong> S&P 500 +0.36%, Nasdaq +0.72%, with 790 stocks in confirmed uptrends. Small caps (IWM +0.40%) participated, suggesting broad-based strength rather than narrow leadership.</li>
+
+                <li><strong>Safe Haven Dynamics:</strong> Gold rallied strongly (+1.88% to $364.38) despite risk-on sentiment, suggesting portfolio hedging. Bonds weakened (TLT -0.78%) as yields rose on economic optimism.</li>
+
+                <li><strong>Volatility Compression:</strong> VIX declined to 16.36 (-1.74%), indicating low market anxiety and potential complacency. This could set up for increased volatility if market narratives shift.</li>
+
+                <li><strong>Key Themes:</strong> AI/semiconductor strength, volume expansion in technology names, flight to quality in gold, and sector rotation from defensives to cyclicals and growth.</li>
+            </ul>
+        </div>
+
+        <!-- Technical Analysis -->
+        <div class="card" style="grid-column: 1 / -1;">
+            <h2>📊 Technical Analysis & Market Breadth</h2>
+            <div class="grid" style="margin-top: 20px;">
+                <div>
+                    <h3 style="margin-bottom: 15px;">📈 Bullish Signals</h3>
+                    <ul style="list-style: none; padding: 0;">
+                        <li style="padding: 10px; margin: 5px 0; background: rgba(0, 255, 136, 0.1); border-radius: 5px;">✓ 790 stocks in confirmed uptrends above 200-day SMA</li>
+                        <li style="padding: 10px; margin: 5px 0; background: rgba(0, 255, 136, 0.1); border-radius: 5px;">✓ Technology sector leading with strong momentum (RSI 70+)</li>
+                        <li style="padding: 10px; margin: 5px 0; background: rgba(0, 255, 136, 0.1); border-radius: 5px;">✓ Volume expansion on up days (99 volume surge stocks)</li>
+                        <li style="padding: 10px; margin: 5px 0; background: rgba(0, 255, 136, 0.1); border-radius: 5px;">✓ Low VIX (16.36) suggests market confidence</li>
+                        <li style="padding: 10px; margin: 5px 0; background: rgba(0, 255, 136, 0.1); border-radius: 5px;">✓ Small caps participating (IWM +0.40%)</li>
+                    </ul>
+                </div>
+                <div>
+                    <h3 style="margin-bottom: 15px;">⚠️ Risk Factors</h3>
+                    <ul style="list-style: none; padding: 0;">
+                        <li style="padding: 10px; margin: 5px 0; background: rgba(255, 107, 107, 0.1); border-radius: 5px;">⚠ Overbought conditions in semiconductors (AMD RSI 78.97)</li>
+                        <li style="padding: 10px; margin: 5px 0; background: rgba(255, 107, 107, 0.1); border-radius: 5px;">⚠ Rising bond yields pressuring rate-sensitive sectors</li>
+                        <li style="padding: 10px; margin: 5px 0; background: rgba(255, 107, 107, 0.1); border-radius: 5px;">⚠ Defensive sectors underperforming (Healthcare -0.34%)</li>
+                        <li style="padding: 10px; margin: 5px 0; background: rgba(255, 107, 107, 0.1); border-radius: 5px;">⚠ Low VIX could indicate complacency before volatility spike</li>
+                        <li style="padding: 10px; margin: 5px 0; background: rgba(255, 107, 107, 0.1); border-radius: 5px;">⚠ Light earnings calendar limits fundamental catalysts</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div style="margin-top: 30px; padding: 20px; background: rgba(255, 215, 0, 0.2); border-radius: 10px; border: 2px solid #ffd700;">
+                <h3 style="margin-bottom: 15px;">🎯 Key Levels to Watch</h3>
+                <div class="grid">
+                    <div>
+                        <strong>S&P 500 (SPY):</strong><br>
+                        Resistance: $672.50 (intraday high)<br>
+                        Support: $669.00 (previous close area)
+                    </div>
+                    <div>
+                        <strong>Nasdaq (QQQ):</strong><br>
+                        Resistance: $610.00 (psychological level)<br>
+                        Support: $605.00 (gap fill area)
+                    </div>
+                    <div>
+                        <strong>VIX:</strong><br>
+                        Key Level: $15.00 (extreme complacency)<br>
+                        Spike Alert: $18.00+ (volatility expansion)
+                    </div>
+                    <div>
+                        <strong>Gold (GLD):</strong><br>
+                        Resistance: $365.30 (today's high)<br>
+                        Support: $360.00 (round number support)
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Notable Stock Movements -->
+        <div class="card" style="grid-column: 1 / -1;">
+            <h2>🚀 Notable Stock Movements & Fundamentals</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Symbol</th>
+                        <th>Company</th>
+                        <th>Price</th>
+                        <th>1D</th>
+                        <th>1W</th>
+                        <th>Volume</th>
+                        <th>Catalyst / Notes</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr style="background: rgba(0, 255, 136, 0.1);">
+                        <td><strong class="ticker-symbol">AMD</strong></td>
+                        <td>Advanced Micro Devices</td>
+                        <td>$203.71</td>
+                        <td class="positive">+23.71%</td>
+                        <td class="positive">+26.25%</td>
+                        <td class="volume-indicator">245.8M (4.6x)</td>
+                        <td>Semiconductor rally; AI chip demand strong; P/E 117.26</td>
+                    </tr>
+                    <tr style="background: rgba(0, 255, 136, 0.1);">
+                        <td><strong class="ticker-symbol">CRML</strong></td>
+                        <td>Critical Metals</td>
+                        <td>$11.59</td>
+                        <td class="positive">+45.24%</td>
+                        <td class="positive">+78.31%</td>
+                        <td class="volume-indicator">157.6M (28.7x)</td>
+                        <td>Explosive volume; commodity metals exposure; RSI 81.64 overbought</td>
+                    </tr>
+                    <tr style="background: rgba(0, 255, 136, 0.1);">
+                        <td><strong class="ticker-symbol">ORIC</strong></td>
+                        <td>ORIC Pharmaceuticals</td>
+                        <td>$14.41</td>
+                        <td class="positive">+24.60%</td>
+                        <td class="positive">+24.01%</td>
+                        <td class="volume-indicator">3.7M (3.3x)</td>
+                        <td>Biotech momentum; clinical pipeline progress</td>
+                    </tr>
+                    <tr style="background: rgba(0, 255, 136, 0.1);">
+                        <td><strong class="ticker-symbol">SANM</strong></td>
+                        <td>Sanmina Corp</td>
+                        <td>$140.00</td>
+                        <td class="positive">+22.72%</td>
+                        <td class="positive">+23.25%</td>
+                        <td class="volume-indicator">4.4M (6.0x)</td>
+                        <td>Tech manufacturing; EPS beat +8%; P/E 29.97 reasonable</td>
+                    </tr>
+                    <tr style="background: rgba(0, 255, 136, 0.1);">
+                        <td><strong class="ticker-symbol">AAOI</strong></td>
+                        <td>Applied Optoelectronics</td>
+                        <td>$33.79</td>
+                        <td class="positive">+20.98%</td>
+                        <td class="positive">+30.26%</td>
+                        <td class="volume-indicator">10.7M (2.2x)</td>
+                        <td>Optical components; 5G/datacenter demand; volatile (7.01%)</td>
+                    </tr>
+                    <tr style="background: rgba(0, 255, 136, 0.1);">
+                        <td><strong class="ticker-symbol">NNE</strong></td>
+                        <td>Nano Nuclear Energy</td>
+                        <td>$53.63</td>
+                        <td class="positive">+20.54%</td>
+                        <td class="positive">+37.02%</td>
+                        <td class="volume-indicator">8.8M (2.7x)</td>
+                        <td>Nuclear energy play; high beta 6.80; speculative</td>
+                    </tr>
+                    <tr style="background: rgba(0, 255, 136, 0.1);">
+                        <td><strong class="ticker-symbol">ACHR</strong></td>
+                        <td>Archer Aviation</td>
+                        <td>$13.63</td>
+                        <td class="positive">+17.80%</td>
+                        <td class="positive">+41.24%</td>
+                        <td class="volume-indicator">152.0M (4.2x)</td>
+                        <td>eVTOL/aviation; RSI 81.45 extremely overbought</td>
+                    </tr>
+                </tbody>
+            </table>
+            <div style="margin-top: 15px; padding: 15px; background: rgba(255, 215, 0, 0.15); border-radius: 10px;">
+                <strong>⚠️ Trading Caution:</strong> Many volume surge leaders are showing RSI readings above 75-80, indicating overbought conditions.
+                Consider profit-taking strategies and watch for reversal patterns. High beta stocks (ACHR 3.05, NNE 6.80) carry elevated volatility risk.
+            </div>
+        </div>
+
+        <!-- Market Outlook -->
+        <div class="card" style="grid-column: 1 / -1; background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);">
+            <h2>🔮 Market Outlook & Trading Strategy</h2>
+
+            <h3 style="margin-top: 20px; margin-bottom: 15px;">📅 Short-Term Outlook (1-5 Days)</h3>
+            <p style="line-height: 1.8;">
+                <strong>Bullish Bias with Caution:</strong> The market is exhibiting strong technical momentum with technology leadership,
+                but overbought conditions in key names warrant selective profit-taking. Watch for consolidation in semiconductors after
+                today's explosive moves. The light earnings calendar suggests technical factors will dominate price action.
+            </p>
+
+            <h3 style="margin-top: 20px; margin-bottom: 15px;">🎯 Trading Strategies</h3>
+            <div class="grid">
+                <div style="background: rgba(255, 255, 255, 0.1); padding: 20px; border-radius: 10px;">
+                    <h4 class="positive">Long Opportunities</h4>
+                    <ul style="margin-top: 10px;">
+                        <li>Pullbacks in tech leaders with strong fundamentals (P/E < 40)</li>
+                        <li>Utilities and defensive plays on any sector rotation</li>
+                        <li>Gold (GLD) continuation on safe-haven demand</li>
+                        <li>Volume confirmation breakouts above 200-day SMA</li>
+                    </ul>
+                </div>
+                <div style="background: rgba(255, 255, 255, 0.1); padding: 20px; border-radius: 10px;">
+                    <h4 class="negative">Short/Hedge Opportunities</h4>
+                    <ul style="margin-top: 10px;">
+                        <li>Overbought semiconductors on RSI divergence</li>
+                        <li>Real Estate (IYR) weakness on rising yields</li>
+                        <li>Consumer Defensive laggards with poor earnings</li>
+                        <li>VIX long positions as complacency hedge</li>
+                    </ul>
+                </div>
+            </div>
+
+            <h3 style="margin-top: 20px; margin-bottom: 15px;">⚠️ Risk Management</h3>
+            <ul style="line-height: 1.8;">
+                <li><strong>Position Sizing:</strong> Reduce exposure in stocks with RSI > 75 and relative volume > 5x</li>
+                <li><strong>Stop Losses:</strong> Use trailing stops on volume surge winners to protect gains</li>
+                <li><strong>Correlation Risk:</strong> Be aware of semiconductor concentration risk; AMD represents significant market cap</li>
+                <li><strong>Volatility Watch:</strong> Monitor VIX for any spike above 18; current 16.36 may be too complacent</li>
+                <li><strong>Economic Data:</strong> Watch for upcoming Fed commentary, CPI data, and earnings from major tech names</li>
+            </ul>
+
+            <div style="margin-top: 20px; padding: 20px; background: rgba(0, 0, 0, 0.3); border-radius: 10px; border-left: 4px solid #ffd700;">
+                <strong>💡 Tomorrow's Focus:</strong> Watch for follow-through in semiconductors, continuation of sector rotation,
+                and any after-hours earnings developments. Key support levels: SPY $669, QQQ $605. Monitor gold's ability to hold above $360
+                and watch for any VIX spikes that could signal shifting sentiment.
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="footer">
+            <p><strong>📊 Data Sources:</strong> Finviz Elite, Alpaca Markets, Financial Modeling Prep (FMP)</p>
+            <p><strong>⏰ Last Updated:</strong> October 6, 2025 at 4:10 PM ET (Post-Market Close)</p>
+            <p><strong>📋 Report Type:</strong> Final After-Market Analysis with Post-Close Earnings Data</p>
+            <p style="margin-top: 15px; font-size: 0.85em;">
+                <strong>⚠️ Disclaimer:</strong> This report is for informational purposes only and does not constitute financial advice.
+                Market data is subject to change. Earnings figures may be preliminary. Always conduct your own research and consult
+                with a financial advisor before making investment decisions. Past performance does not guarantee future results.
+            </p>
+            <p style="margin-top: 10px; font-size: 0.85em; opacity: 0.7;">
+                Generated by AI-Powered Market Analysis System | Trade Analysis Platform v1.0
+            </p>
+        </div>
+    </div>
+</body>
+</html>

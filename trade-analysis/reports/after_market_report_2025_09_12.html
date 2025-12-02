@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🇺🇸 U.S. Stock Market Analysis - 2025-09-12</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            color: white;
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+            padding: 30px;
+            background: rgba(255, 255, 255, 0.15);
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            backdrop-filter: blur(10px);
+        }
+        
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+        }
+        
+        .header .date {
+            font-size: 1.2em;
+            opacity: 0.9;
+        }
+        
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+        
+        .card {
+            background: rgba(255, 255, 255, 0.15);
+            border-radius: 20px;
+            padding: 30px;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            transition: all 0.3s ease;
+        }
+        
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.4);
+        }
+        
+        .card h2 {
+            font-size: 1.5em;
+            margin-bottom: 20px;
+            color: #ffffff;
+            border-bottom: 2px solid rgba(255, 255, 255, 0.3);
+            padding-bottom: 10px;
+        }
+        
+        .etf-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+        }
+        
+        .etf-item {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 15px;
+            border-radius: 10px;
+            text-align: center;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .etf-symbol {
+            font-weight: bold;
+            font-size: 1.1em;
+            margin-bottom: 5px;
+        }
+        
+        .etf-price {
+            font-size: 1.2em;
+            margin: 5px 0;
+        }
+        
+        .etf-change {
+            font-weight: bold;
+            padding: 5px 10px;
+            border-radius: 15px;
+        }
+        
+        .positive {
+            color: #00ff88;
+            text-shadow: 0 0 10px rgba(0, 255, 136, 0.3);
+        }
+        
+        .negative {
+            color: #ff6b6b;
+            text-shadow: 0 0 10px rgba(255, 107, 107, 0.3);
+        }
+        
+        .volume-surge {
+            background: linear-gradient(135deg, #ff6b6b 0%, #ffa500 100%);
+            border-left: 5px solid #ffff00;
+        }
+        
+        .stock-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px;
+            background: rgba(255, 255, 255, 0.1);
+            margin: 10px 0;
+            border-radius: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .stock-symbol {
+            font-weight: bold;
+            font-size: 1.1em;
+        }
+        
+        .stock-name {
+            font-size: 0.9em;
+            opacity: 0.8;
+            margin-left: 10px;
+        }
+        
+        .stock-change {
+            font-weight: bold;
+            font-size: 1.1em;
+        }
+        
+        .sector-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        
+        .sector-table th,
+        .sector-table td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .sector-table th {
+            background: rgba(255, 255, 255, 0.1);
+            font-weight: bold;
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+        }
+        
+        .stat-item {
+            text-align: center;
+            background: rgba(255, 255, 255, 0.1);
+            padding: 20px;
+            border-radius: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .stat-number {
+            font-size: 2em;
+            font-weight: bold;
+            color: #00ff88;
+            text-shadow: 0 0 10px rgba(0, 255, 136, 0.3);
+        }
+        
+        .stat-label {
+            margin-top: 5px;
+            opacity: 0.8;
+        }
+        
+        .key-points {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        
+        .key-points ul {
+            list-style: none;
+            padding-left: 0;
+        }
+        
+        .key-points li {
+            padding: 10px 0;
+            padding-left: 25px;
+            position: relative;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .key-points li:before {
+            content: "📊";
+            position: absolute;
+            left: 0;
+        }
+        
+        .footer {
+            text-align: center;
+            padding: 30px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            margin-top: 30px;
+            backdrop-filter: blur(10px);
+        }
+        
+        .news-item {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 10px;
+            border-left: 4px solid #00ff88;
+        }
+        
+        .news-title {
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        
+        .news-source {
+            font-size: 0.9em;
+            opacity: 0.7;
+        }
+        
+        @media (max-width: 768px) {
+            .grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .header h1 {
+                font-size: 2em;
+            }
+            
+            .etf-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            
+            .stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🇺🇸 U.S. Stock Market Analysis</h1>
+            <div class="date">📅 2025-09-12 – Final After-Market Data</div>
+        </div>
+        
+        <div class="grid">
+            <div class="card">
+                <h2>📈 Major ETF Performance</h2>
+                <div class="etf-grid">
+                    <div class="etf-item">
+                        <div class="etf-symbol">SPY</div>
+                        <div class="etf-price">$657.40</div>
+                        <div class="etf-change negative">-0.03%</div>
+                    </div>
+                    <div class="etf-item">
+                        <div class="etf-symbol">QQQ</div>
+                        <div class="etf-price">$586.67</div>
+                        <div class="etf-change positive">+0.44%</div>
+                    </div>
+                    <div class="etf-item">
+                        <div class="etf-symbol">DIA</div>
+                        <div class="etf-price">$459.32</div>
+                        <div class="etf-change negative">-0.56%</div>
+                    </div>
+                    <div class="etf-item">
+                        <div class="etf-symbol">IWM</div>
+                        <div class="etf-price">$238.32</div>
+                        <div class="etf-change negative">-1.03%</div>
+                    </div>
+                    <div class="etf-item">
+                        <div class="etf-symbol">TLT</div>
+                        <div class="etf-price">$89.95</div>
+                        <div class="etf-change negative">-0.43%</div>
+                    </div>
+                    <div class="etf-item">
+                        <div class="etf-symbol">GLD</div>
+                        <div class="etf-price">$335.42</div>
+                        <div class="etf-change positive">+0.20%</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="card volume-surge">
+                <h2>🔥 Top Volume-Surge Tickers</h2>
+                <div class="stock-item">
+                    <div>
+                        <span class="stock-symbol">IONQ</span>
+                        <span class="stock-name">IonQ Inc</span>
+                    </div>
+                    <div class="stock-change positive">+18.20%</div>
+                </div>
+                <div class="stock-item">
+                    <div>
+                        <span class="stock-symbol">IBEX</span>
+                        <span class="stock-name">IBEX Holdings Ltd</span>
+                    </div>
+                    <div class="stock-change positive">+36.45%</div>
+                </div>
+                <div class="stock-item">
+                    <div>
+                        <span class="stock-symbol">WBD</span>
+                        <span class="stock-name">Warner Bros Discovery</span>
+                    </div>
+                    <div class="stock-change positive">+16.94%</div>
+                </div>
+                <div class="stock-item">
+                    <div>
+                        <span class="stock-symbol">TSLA</span>
+                        <span class="stock-name">Tesla Inc</span>
+                    </div>
+                    <div class="stock-change positive">+7.37%</div>
+                </div>
+                <div class="stock-item">
+                    <div>
+                        <span class="stock-symbol">QSG</span>
+                        <span class="stock-name">Quaker Resources Corp</span>
+                    </div>
+                    <div class="stock-change positive">+20.25%</div>
+                </div>
+            </div>
+            
+            <div class="card">
+                <h2>📊 Market Statistics</h2>
+                <div class="stats-grid">
+                    <div class="stat-item">
+                        <div class="stat-number">35</div>
+                        <div class="stat-label">Volume-Surge Stocks</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-number">816</div>
+                        <div class="stat-label">Up-Trend Stocks</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-number">2.7x</div>
+                        <div class="stat-label">Avg. Relative Volume</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-number">+8.1%</div>
+                        <div class="stat-label">Avg. Price Move</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="card">
+                <h2>🏢 Sector Performance</h2>
+                <table class="sector-table">
+                    <thead>
+                        <tr>
+                            <th>Sector</th>
+                            <th>Change</th>
+                            <th>Stocks</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Utilities</td>
+                            <td class="positive">+0.44%</td>
+                            <td>107</td>
+                        </tr>
+                        <tr>
+                            <td>Communication Services</td>
+                            <td class="positive">+0.25%</td>
+                            <td>275</td>
+                        </tr>
+                        <tr>
+                            <td>Technology</td>
+                            <td class="positive">+0.19%</td>
+                            <td>773</td>
+                        </tr>
+                        <tr>
+                            <td>Consumer Cyclical</td>
+                            <td class="positive">+0.12%</td>
+                            <td>570</td>
+                        </tr>
+                        <tr>
+                            <td>Consumer Defensive</td>
+                            <td class="negative">-0.27%</td>
+                            <td>250</td>
+                        </tr>
+                        <tr>
+                            <td>Financial</td>
+                            <td class="negative">-0.46%</td>
+                            <td>961</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            
+            <div class="card key-points">
+                <h2>🎯 Today's Key Points</h2>
+                <ul>
+                    <li><strong>Quantum Computing Surge:</strong> IonQ (+18.2%) leads quantum sector rally on Oxford Ionics acquisition news</li>
+                    <li><strong>Media Merger Mania:</strong> WBD (+16.9%) soars on Paramount Skydance bid rumors</li>
+                    <li><strong>Tesla Momentum:</strong> TSLA (+7.4%) reaches 7-month high driven by energy business growth</li>
+                    <li><strong>Volume Leaders:</strong> 35 stocks with 1.5x+ volume and 2%+ gains identified</li>
+                    <li><strong>Sector Rotation:</strong> Utilities (+0.44%) and Tech (+0.19%) outperform</li>
+                    <li><strong>Small-Cap Weakness:</strong> IWM (-1.03%) underperforms large-cap indices</li>
+                    <li><strong>Bond Yields:</strong> TLT (-0.43%) suggests rising rate expectations</li>
+                    <li><strong>Gold Resilience:</strong> GLD (+0.20%) holds steady amid market uncertainty</li>
+                </ul>
+            </div>
+            
+            <div class="card">
+                <h2>📰 Key Market News</h2>
+                <div class="news-item">
+                    <div class="news-title">IonQ Secures UK Regulatory Approval for Oxford Ionics Acquisition</div>
+                    <div class="news-source">Business Wire | Quantum computing consolidation accelerates</div>
+                </div>
+                <div class="news-item">
+                    <div class="news-title">Paramount Skydance Prepares Bid for Warner Bros. Discovery</div>
+                    <div class="news-source">Wall Street Journal | Media mega-merger talks intensify</div>
+                </div>
+                <div class="news-item">
+                    <div class="news-title">Tesla Stock Soars to Seven-Month High on Energy Business Momentum</div>
+                    <div class="news-source">GuruFocus | Beyond EVs growth story takes shape</div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="footer">
+            <p><strong>Data Sources:</strong> Finviz, Alpaca Markets, FMP API</p>
+            <p><strong>Last Updated:</strong> 2025-09-12 20:02 ET</p>
+            <p><strong>Note:</strong> Final after-market data + real-time analysis</p>
+        </div>
+    </div>
+</body>
+</html>

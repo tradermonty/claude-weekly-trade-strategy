@@ -1,0 +1,904 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>After-Market Report - November 5, 2025</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            color: white;
+            padding: 40px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+        }
+
+        .header .date {
+            font-size: 1.2em;
+            opacity: 0.9;
+            font-weight: 300;
+        }
+
+        .content {
+            padding: 40px;
+        }
+
+        .section {
+            margin-bottom: 40px;
+        }
+
+        .section-title {
+            font-size: 1.8em;
+            color: #1e3c72;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 3px solid #667eea;
+            display: flex;
+            align-items: center;
+        }
+
+        .section-title::before {
+            content: "▶";
+            margin-right: 15px;
+            color: #667eea;
+        }
+
+        .executive-summary {
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            padding: 30px;
+            border-radius: 15px;
+            font-size: 1.1em;
+            line-height: 1.8;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .index-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        .index-card {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .index-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+        }
+
+        .index-card h3 {
+            color: #1e3c72;
+            font-size: 1.3em;
+            margin-bottom: 15px;
+        }
+
+        .index-value {
+            font-size: 2em;
+            font-weight: bold;
+            color: #2a5298;
+            margin: 10px 0;
+        }
+
+        .index-change {
+            font-size: 1.3em;
+            font-weight: bold;
+            padding: 8px 15px;
+            border-radius: 8px;
+            display: inline-block;
+            margin-top: 10px;
+        }
+
+        .positive {
+            color: #10b981;
+            background: rgba(16, 185, 129, 0.1);
+        }
+
+        .negative {
+            color: #ef4444;
+            background: rgba(239, 68, 68, 0.1);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        thead {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        th {
+            padding: 15px;
+            text-align: left;
+            font-weight: 600;
+            font-size: 0.95em;
+        }
+
+        td {
+            padding: 12px 15px;
+            border-bottom: 1px solid #f0f0f0;
+        }
+
+        tbody tr {
+            transition: background-color 0.3s ease;
+        }
+
+        tbody tr:hover {
+            background-color: #f8f9fa;
+        }
+
+        tbody tr:nth-child(even) {
+            background-color: #fafafa;
+        }
+
+        .ticker {
+            font-weight: bold;
+            color: #1e3c72;
+            font-size: 1.1em;
+        }
+
+        .highlight-box {
+            background: linear-gradient(135deg, #ffeaa7 0%, #fdcb6e 100%);
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+            border-left: 5px solid #f39c12;
+        }
+
+        .highlight-box h4 {
+            color: #2c3e50;
+            margin-bottom: 10px;
+            font-size: 1.2em;
+        }
+
+        .sector-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .sector-item {
+            background: white;
+            padding: 15px;
+            border-radius: 10px;
+            border-left: 4px solid #667eea;
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .sector-name {
+            font-weight: bold;
+            color: #1e3c72;
+            margin-bottom: 5px;
+        }
+
+        .metric-row {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 10px;
+            padding: 10px;
+            background: #f8f9fa;
+            border-radius: 5px;
+        }
+
+        .footer {
+            background: #1e3c72;
+            color: white;
+            padding: 30px;
+            text-align: center;
+            font-size: 0.9em;
+        }
+
+        .footer p {
+            margin: 5px 0;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 5px 10px;
+            border-radius: 5px;
+            font-size: 0.85em;
+            font-weight: bold;
+            margin-right: 5px;
+        }
+
+        .badge-earnings {
+            background: #8b5cf6;
+            color: white;
+        }
+
+        .badge-volume {
+            background: #f59e0b;
+            color: white;
+        }
+
+        .badge-mover {
+            background: #10b981;
+            color: white;
+        }
+
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 1.8em;
+            }
+
+            .index-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .content {
+                padding: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>After-Market Report</h1>
+            <p class="date">November 5, 2025 | Market Close Analysis</p>
+        </div>
+
+        <div class="content">
+            <!-- Executive Summary -->
+            <section class="section">
+                <h2 class="section-title">Executive Summary</h2>
+                <div class="executive-summary">
+                    <p><strong>Market Snapshot:</strong> U.S. equities displayed mixed performance on November 5, 2025, with small-caps leading the charge while major indices showed modest gains. The S&P 500 added 24.4 points (+0.36%) to close at 6,795.95, while the Dow Jones climbed 225.87 points (+0.48%) to 47,311.12. The NASDAQ Composite advanced 151.12 points (+0.65%) to 23,499.76.</p>
+
+                    <p><strong>Key Highlights:</strong> Small-cap stocks significantly outperformed with the Russell 2000 (IWM) surging +1.44%, suggesting renewed appetite for risk and rotation into value-oriented sectors. Technology and Communication Services sectors led sector performance with +1.33% gains each, while Consumer Defensive stocks lagged with a slight decline of -0.03%.</p>
+
+                    <p><strong>Volume & Volatility:</strong> Market activity showed robust participation with 181 stocks experiencing volume surges above 1.5x their average, indicating strong conviction moves. After-hours earnings releases drove significant moves in select names, with Encore Capital (ECPG) surging +11.93% on stellar earnings beats.</p>
+
+                    <p><strong>Market Breadth:</strong> Breadth indicators remained constructive with 636 stocks in confirmed uptrends, particularly concentrated in Healthcare (136 stocks), Technology (117 stocks), and Industrials (103 stocks), pointing to broad-based market strength.</p>
+                </div>
+            </section>
+
+            <!-- Market Overview -->
+            <section class="section">
+                <h2 class="section-title">Major Indices Performance</h2>
+                <div class="index-grid">
+                    <div class="index-card">
+                        <h3>S&P 500</h3>
+                        <div class="index-value">6,795.95</div>
+                        <div class="index-change positive">+24.4 (+0.36%)</div>
+                        <div class="metric-row">
+                            <span>Day Range:</span>
+                            <span>6,763.11 - 6,829.78</span>
+                        </div>
+                        <div class="metric-row">
+                            <span>52-Week Range:</span>
+                            <span>4,835.04 - 6,920.34</span>
+                        </div>
+                    </div>
+
+                    <div class="index-card">
+                        <h3>Dow Jones</h3>
+                        <div class="index-value">47,311.12</div>
+                        <div class="index-change positive">+225.87 (+0.48%)</div>
+                        <div class="metric-row">
+                            <span>Day Range:</span>
+                            <span>47,041.31 - 47,460.36</span>
+                        </div>
+                        <div class="metric-row">
+                            <span>52-Week Range:</span>
+                            <span>36,611.78 - 48,040.64</span>
+                        </div>
+                    </div>
+
+                    <div class="index-card">
+                        <h3>NASDAQ</h3>
+                        <div class="index-value">23,499.76</div>
+                        <div class="index-change positive">+151.12 (+0.65%)</div>
+                        <div class="metric-row">
+                            <span>Day Range:</span>
+                            <span>23,286.87 - 23,636.53</span>
+                        </div>
+                        <div class="metric-row">
+                            <span>52-Week Range:</span>
+                            <span>14,784.03 - 24,019.99</span>
+                        </div>
+                    </div>
+
+                    <div class="index-card">
+                        <h3>Russell 2000 (IWM)</h3>
+                        <div class="index-value">244.68</div>
+                        <div class="index-change positive">+1.44%</div>
+                        <div class="metric-row">
+                            <span>Volume:</span>
+                            <span>37.3M</span>
+                        </div>
+                        <div class="metric-row">
+                            <span>Status:</span>
+                            <span><strong>Outperformer</strong></span>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Top Gainers -->
+            <section class="section">
+                <h2 class="section-title">Top Market Gainers</h2>
+                <div class="highlight-box">
+                    <h4>Standout Performers</h4>
+                    <p>Multiple stocks posted exceptional gains exceeding 30%, led by MMTec (MTC) with a stunning +327.6% surge. Notable strength in EV sector (RIVN +23.36%), InsurTech (LMND +34.13%), and biotech names.</p>
+                </div>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Rank</th>
+                            <th>Symbol</th>
+                            <th>Company</th>
+                            <th>Price</th>
+                            <th>Change</th>
+                            <th>Change %</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>1</td>
+                            <td class="ticker">MTC</td>
+                            <td>MMTec, Inc.</td>
+                            <td>$1.30</td>
+                            <td class="positive">+$0.996</td>
+                            <td class="positive">+327.63%</td>
+                        </tr>
+                        <tr>
+                            <td>2</td>
+                            <td class="ticker">LMNX</td>
+                            <td>Luminex Corporation</td>
+                            <td>$40.17</td>
+                            <td class="positive">+$16.46</td>
+                            <td class="positive">+69.42%</td>
+                        </tr>
+                        <tr>
+                            <td>3</td>
+                            <td class="ticker">SLDP</td>
+                            <td>Solid Power, Inc.</td>
+                            <td>$8.51</td>
+                            <td class="positive">+$2.90</td>
+                            <td class="positive">+51.56%</td>
+                        </tr>
+                        <tr>
+                            <td>4</td>
+                            <td class="ticker">LMND</td>
+                            <td>Lemonade, Inc.</td>
+                            <td>$78.68</td>
+                            <td class="positive">+$20.02</td>
+                            <td class="positive">+34.13%</td>
+                        </tr>
+                        <tr>
+                            <td>5</td>
+                            <td class="ticker">RIGL</td>
+                            <td>Rigel Pharmaceuticals</td>
+                            <td>$37.85</td>
+                            <td class="positive">+$9.47</td>
+                            <td class="positive">+33.37%</td>
+                        </tr>
+                        <tr>
+                            <td>6</td>
+                            <td class="ticker">TDC</td>
+                            <td>Teradata Corporation</td>
+                            <td>$27.48</td>
+                            <td class="positive">+$6.77</td>
+                            <td class="positive">+32.69%</td>
+                        </tr>
+                        <tr>
+                            <td>7</td>
+                            <td class="ticker">SEDG</td>
+                            <td>SolarEdge Technologies</td>
+                            <td>$41.02</td>
+                            <td class="positive">+$9.20</td>
+                            <td class="positive">+28.91%</td>
+                        </tr>
+                        <tr>
+                            <td>8</td>
+                            <td class="ticker">RIVN</td>
+                            <td>Rivian Automotive</td>
+                            <td>$15.42</td>
+                            <td class="positive">+$2.92</td>
+                            <td class="positive">+23.36%</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </section>
+
+            <!-- Volume Surge Analysis -->
+            <section class="section">
+                <h2 class="section-title">Volume Surge Analysis</h2>
+                <div class="highlight-box">
+                    <h4><span class="badge badge-volume">181 STOCKS</span> Volume Surge Detected</h4>
+                    <p>Stocks trading with 1.5x+ average volume, above $10 price, and above 200-day moving average. Average relative volume: 2.3x | Average price change: +7.8%</p>
+                </div>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Symbol</th>
+                            <th>Company</th>
+                            <th>Sector</th>
+                            <th>Performance</th>
+                            <th>Volume Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td class="ticker">NPCE</td>
+                            <td>NeuroPace, Inc.</td>
+                            <td>Healthcare</td>
+                            <td class="positive">Strong Surge</td>
+                            <td><span class="badge badge-volume">HIGH</span></td>
+                        </tr>
+                        <tr>
+                            <td class="ticker">LMND</td>
+                            <td>Lemonade, Inc.</td>
+                            <td>Financial Services</td>
+                            <td class="positive">+34.13%</td>
+                            <td><span class="badge badge-volume">HIGH</span></td>
+                        </tr>
+                        <tr>
+                            <td class="ticker">RIVN</td>
+                            <td>Rivian Automotive</td>
+                            <td>Consumer Cyclical</td>
+                            <td class="positive">+23.36%</td>
+                            <td><span class="badge badge-volume">EXTREME</span></td>
+                        </tr>
+                        <tr>
+                            <td class="ticker">QCOM</td>
+                            <td>Qualcomm Inc.</td>
+                            <td>Technology</td>
+                            <td class="positive">Moderate</td>
+                            <td><span class="badge badge-volume">HIGH</span></td>
+                        </tr>
+                        <tr>
+                            <td class="ticker">SBUX</td>
+                            <td>Starbucks Corporation</td>
+                            <td>Consumer Cyclical</td>
+                            <td class="positive">Moderate</td>
+                            <td><span class="badge badge-volume">HIGH</span></td>
+                        </tr>
+                    </tbody>
+                </table>
+                <p style="margin-top: 15px; font-size: 0.95em; color: #666;">
+                    <strong>Key Volume Leaders:</strong> NPCE, LMND, RIGL, TDC, SEDG, RIVN, LITE, ALGT, VCYT, QCOM, SBUX, MAR, ALK, CDW, RL, MCD, LLY
+                </p>
+            </section>
+
+            <!-- After-Hours Earnings -->
+            <section class="section">
+                <h2 class="section-title">After-Hours Earnings Highlights</h2>
+                <div class="highlight-box">
+                    <h4><span class="badge badge-earnings">17 STOCKS</span> Reported After-Hours</h4>
+                    <p>Companies reporting earnings after market close with significant price movements. Focus on EPS and Revenue surprises driving volatility.</p>
+                </div>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Symbol</th>
+                            <th>Company</th>
+                            <th>Price</th>
+                            <th>Day Change</th>
+                            <th>After-Hours</th>
+                            <th>EPS Surprise</th>
+                            <th>Rev Surprise</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td class="ticker">ECPG</td>
+                            <td>Encore Capital Group</td>
+                            <td>$42.75</td>
+                            <td class="positive">+4.01%</td>
+                            <td class="positive">+11.93%</td>
+                            <td class="positive">+75.60%</td>
+                            <td class="positive">+15.31%</td>
+                        </tr>
+                        <tr>
+                            <td class="ticker">LZ</td>
+                            <td>LegalZoom.com</td>
+                            <td>$10.18</td>
+                            <td class="positive">+2.57%</td>
+                            <td class="positive">+8.60%</td>
+                            <td class="negative">-2.02%</td>
+                            <td class="positive">+5.33%</td>
+                        </tr>
+                        <tr>
+                            <td class="ticker">CWAN</td>
+                            <td>Clearwater Analytics</td>
+                            <td>$17.32</td>
+                            <td class="negative">-0.32%</td>
+                            <td class="positive">+8.58%</td>
+                            <td class="positive">+8.30%</td>
+                            <td class="positive">+4.48%</td>
+                        </tr>
+                        <tr>
+                            <td class="ticker">SEZL</td>
+                            <td>Sezzle Inc.</td>
+                            <td>$66.25</td>
+                            <td class="positive">+7.76%</td>
+                            <td class="positive">+8.20%</td>
+                            <td class="positive">+18.97%</td>
+                            <td class="positive">+3.97%</td>
+                        </tr>
+                        <tr>
+                            <td class="ticker">ARM</td>
+                            <td>Arm Holdings</td>
+                            <td>$160.19</td>
+                            <td class="negative">-0.34%</td>
+                            <td class="positive">+5.72%</td>
+                            <td class="positive">+0.26%</td>
+                            <td class="negative">-0.17%</td>
+                        </tr>
+                        <tr>
+                            <td class="ticker">CPRX</td>
+                            <td>Catalyst Pharmaceuticals</td>
+                            <td>$21.38</td>
+                            <td class="positive">+0.19%</td>
+                            <td class="positive">+5.29%</td>
+                            <td class="positive">+4.59%</td>
+                            <td class="positive">+4.35%</td>
+                        </tr>
+                        <tr>
+                            <td class="ticker">ADMA</td>
+                            <td>Adma Biologics</td>
+                            <td>$15.37</td>
+                            <td class="positive">+5.06%</td>
+                            <td class="positive">+4.75%</td>
+                            <td class="positive">+7.75%</td>
+                            <td class="positive">+0.18%</td>
+                        </tr>
+                        <tr>
+                            <td class="ticker">KVYO</td>
+                            <td>Klaviyo Inc.</td>
+                            <td>$26.94</td>
+                            <td class="positive">+3.62%</td>
+                            <td class="positive">+4.31%</td>
+                            <td class="positive">+25.89%</td>
+                            <td class="positive">+5.17%</td>
+                        </tr>
+                        <tr>
+                            <td class="ticker">IONQ</td>
+                            <td>IonQ Inc.</td>
+                            <td>$55.38</td>
+                            <td class="positive">+3.75%</td>
+                            <td class="positive">+3.83%</td>
+                            <td class="negative">-139.32%</td>
+                            <td class="positive">+20.12%</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <div style="margin-top: 30px; padding: 20px; background: #f0f4f8; border-radius: 10px;">
+                    <h4 style="color: #1e3c72; margin-bottom: 15px;">Earnings Analysis Spotlight</h4>
+
+                    <div style="margin-bottom: 20px;">
+                        <strong style="color: #667eea;">ECPG - Encore Capital Group:</strong>
+                        <p style="margin-top: 5px;">Specialty finance company delivered exceptional Q2 results with EPS of $2.49 (vs est. $1.42), representing a massive 75.6% beat. Revenue of $442.1M beat estimates by 15.31%. Stock surged 11.93% after-hours as the company demonstrated strong debt recovery operations and portfolio management efficiency. Market cap in Financial Services sector positions it as a key debt collection player.</p>
+                    </div>
+
+                    <div style="margin-bottom: 20px;">
+                        <strong style="color: #667eea;">ARM - Arm Holdings:</strong>
+                        <p style="margin-top: 5px;">Semiconductor IP giant reported Q1 FY2026 revenue of $1.053B with EPS of $0.12, meeting analyst expectations. After-hours pop of 5.72% reflects market approval of solid execution in the AI chip licensing business. Gross margin remains exceptional at 94.3%, highlighting the high-margin nature of IP licensing. R&D spend of $654M underscores continued investment in next-gen architectures.</p>
+                    </div>
+
+                    <div style="margin-bottom: 20px;">
+                        <strong style="color: #667eea;">KVYO - Klaviyo:</strong>
+                        <p style="margin-top: 5px;">Marketing automation platform crushed expectations with a stunning 25.89% EPS surprise and 5.17% revenue beat. The 4.31% after-hours gain caps a strong day (+3.62%) as investors reward the company's ability to monetize its email/SMS marketing platform. Technology sector strength evident in customer acquisition metrics.</p>
+                    </div>
+
+                    <div>
+                        <strong style="color: #667eea;">Sector Breakdown:</strong>
+                        <p style="margin-top: 5px;">Technology (6 stocks), Healthcare (4 stocks), Industrials (3 stocks), Financial (2 stocks), Communication Services (1 stock). Average EPS surprise: +14.16%. Technology continues to dominate earnings strength.</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Sector Rotation -->
+            <section class="section">
+                <h2 class="section-title">Sector Rotation Analysis</h2>
+                <div class="sector-grid">
+                    <div class="sector-item">
+                        <div class="sector-name">Communication Services</div>
+                        <div class="index-change positive">+1.33%</div>
+                        <div style="font-size: 0.9em; color: #666; margin-top: 5px;">
+                            Market Cap: $11.53T | P/E: 37.1 | 273 Stocks
+                        </div>
+                    </div>
+
+                    <div class="sector-item">
+                        <div class="sector-name">Basic Materials</div>
+                        <div class="index-change positive">+1.33%</div>
+                        <div style="font-size: 0.9em; color: #666; margin-top: 5px;">
+                            Market Cap: $2.25T | P/E: 22.5 | 272 Stocks
+                        </div>
+                    </div>
+
+                    <div class="sector-item">
+                        <div class="sector-name">Consumer Cyclical</div>
+                        <div class="index-change positive">+1.05%</div>
+                        <div style="font-size: 0.9em; color: #666; margin-top: 5px;">
+                            Market Cap: $9.52T | P/E: 29.8 | 575 Stocks
+                        </div>
+                    </div>
+
+                    <div class="sector-item">
+                        <div class="sector-name">Industrials</div>
+                        <div class="index-change positive">+0.70%</div>
+                        <div style="font-size: 0.9em; color: #666; margin-top: 5px;">
+                            Market Cap: $6.63T | P/E: 28.4 | 691 Stocks
+                        </div>
+                    </div>
+
+                    <div class="sector-item">
+                        <div class="sector-name">Financial</div>
+                        <div class="index-change positive">+0.50%</div>
+                        <div style="font-size: 0.9em; color: #666; margin-top: 5px;">
+                            Market Cap: $13.70T | P/E: 17.7 | 990 Stocks
+                        </div>
+                    </div>
+
+                    <div class="sector-item">
+                        <div class="sector-name">Energy</div>
+                        <div class="index-change positive">+0.47%</div>
+                        <div style="font-size: 0.9em; color: #666; margin-top: 5px;">
+                            Market Cap: $3.49T | P/E: 15.5 | Div: 4.28%
+                        </div>
+                    </div>
+
+                    <div class="sector-item">
+                        <div class="sector-name">Healthcare</div>
+                        <div class="index-change positive">+0.45%</div>
+                        <div style="font-size: 0.9em; color: #666; margin-top: 5px;">
+                            Market Cap: $8.06T | P/E: 24.7 | 1,110 Stocks
+                        </div>
+                    </div>
+
+                    <div class="sector-item">
+                        <div class="sector-name">Utilities</div>
+                        <div class="index-change positive">+0.28%</div>
+                        <div style="font-size: 0.9em; color: #666; margin-top: 5px;">
+                            Market Cap: $1.80T | P/E: 21.2 | Div: 2.85%
+                        </div>
+                    </div>
+
+                    <div class="sector-item">
+                        <div class="sector-name">Technology</div>
+                        <div class="index-change positive">+0.18%</div>
+                        <div style="font-size: 0.9em; color: #666; margin-top: 5px;">
+                            Market Cap: $27.07T | P/E: 41.8 | 786 Stocks
+                        </div>
+                    </div>
+
+                    <div class="sector-item">
+                        <div class="sector-name">Real Estate</div>
+                        <div class="index-change positive">+0.10%</div>
+                        <div style="font-size: 0.9em; color: #666; margin-top: 5px;">
+                            Market Cap: $1.66T | P/E: 34.0 | Div: 3.94%
+                        </div>
+                    </div>
+
+                    <div class="sector-item">
+                        <div class="sector-name">Consumer Defensive</div>
+                        <div class="index-change negative">-0.03%</div>
+                        <div style="font-size: 0.9em; color: #666; margin-top: 5px;">
+                            Market Cap: $4.06T | P/E: 25.2 | Div: 2.63%
+                        </div>
+                    </div>
+                </div>
+
+                <div style="margin-top: 30px; padding: 20px; background: #f0f4f8; border-radius: 10px;">
+                    <h4 style="color: #1e3c72; margin-bottom: 10px;">Sector Insights</h4>
+                    <p><strong>Leaders:</strong> Communication Services and Basic Materials tied for top performance at +1.33%, showing strength in cyclical and growth-oriented sectors. The Communication Services outperformance suggests continued investor appetite for mega-cap tech communication platforms.</p>
+                    <p style="margin-top: 10px;"><strong>Laggards:</strong> Consumer Defensive was the only sector in negative territory (-0.03%), indicating rotation away from safety into higher-beta opportunities. Technology's modest +0.18% gain suggests some profit-taking after recent strength, though sector remains well-supported.</p>
+                    <p style="margin-top: 10px;"><strong>Valuation Spread:</strong> Technology trades at a premium 41.8x P/E while Energy remains attractive at 15.5x, presenting a clear value vs. growth dichotomy. Financial sector's 17.7x P/E combined with +0.50% gain suggests reasonable valuation with improving sentiment.</p>
+                </div>
+            </section>
+
+            <!-- Market Breadth & Technical -->
+            <section class="section">
+                <h2 class="section-title">Market Breadth & Technical Analysis</h2>
+                <div class="index-grid">
+                    <div class="index-card">
+                        <h3>SPY - S&P 500 ETF</h3>
+                        <div class="index-value">$677.48</div>
+                        <div class="index-change positive">+0.33%</div>
+                        <div class="metric-row">
+                            <span>Volume:</span>
+                            <span>66.6M</span>
+                        </div>
+                    </div>
+
+                    <div class="index-card">
+                        <h3>QQQ - NASDAQ ETF</h3>
+                        <div class="index-value">$623.29</div>
+                        <div class="index-change positive">+0.65%</div>
+                        <div class="metric-row">
+                            <span>Volume:</span>
+                            <span>46.9M</span>
+                        </div>
+                    </div>
+
+                    <div class="index-card">
+                        <h3>IWM - Russell 2000</h3>
+                        <div class="index-value">$244.68</div>
+                        <div class="index-change positive">+1.44%</div>
+                        <div class="metric-row">
+                            <span>Volume:</span>
+                            <span>37.3M (HIGH)</span>
+                        </div>
+                    </div>
+
+                    <div class="index-card">
+                        <h3>TLT - 20Y Treasury</h3>
+                        <div class="index-value">$88.96</div>
+                        <div class="index-change negative">-1.09%</div>
+                        <div class="metric-row">
+                            <span>Volume:</span>
+                            <span>44.2M</span>
+                        </div>
+                    </div>
+
+                    <div class="index-card">
+                        <h3>GLD - Gold ETF</h3>
+                        <div class="index-value">$366.53</div>
+                        <div class="index-change positive">+1.16%</div>
+                        <div class="metric-row">
+                            <span>Volume:</span>
+                            <span>8.2M</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div style="margin-top: 30px; padding: 20px; background: #e8f4f8; border-radius: 10px; border-left: 5px solid #3498db;">
+                    <h4 style="color: #1e3c72; margin-bottom: 15px;">Key Technical Observations</h4>
+                    <ul style="line-height: 1.8; margin-left: 20px;">
+                        <li><strong>Small-Cap Breakout:</strong> IWM's +1.44% surge with heavy volume (37.3M) signals potential rotation into smaller-cap names, often a bullish breadth indicator</li>
+                        <li><strong>Risk-On Environment:</strong> Gold's +1.16% gain alongside equity strength suggests defensive hedging alongside growth, indicating cautious optimism</li>
+                        <li><strong>Bond Weakness:</strong> TLT's -1.09% decline indicates rising yields and confirms risk-on sentiment as capital flows from safe havens to equities</li>
+                        <li><strong>Tech Leadership:</strong> QQQ outperforming SPY (+0.65% vs +0.33%) maintains the growth-tech leadership theme</li>
+                        <li><strong>Breadth Strength:</strong> 636 stocks in uptrends with Healthcare (136), Technology (117), and Industrials (103) leading suggests broad participation</li>
+                        <li><strong>Volume Conviction:</strong> 181 stocks with volume surges averaging 2.3x normal indicates institutional participation and conviction moves</li>
+                    </ul>
+                </div>
+            </section>
+
+            <!-- Forward Looking -->
+            <section class="section">
+                <h2 class="section-title">Forward-Looking Commentary</h2>
+                <div style="padding: 25px; background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%); border-radius: 15px; border-left: 5px solid #2196f3;">
+                    <h4 style="color: #1e3c72; margin-bottom: 15px;">Key Levels to Watch</h4>
+                    <div style="margin-bottom: 20px;">
+                        <strong style="color: #1976d2;">S&P 500:</strong>
+                        <p style="margin-top: 5px;">Support at 6,763 (today's low), Resistance at 6,830 (intraday high). Watch for breakout above 6,830 to challenge all-time highs near 6,920. Key pivot at 6,771 (prior close).</p>
+                    </div>
+
+                    <div style="margin-bottom: 20px;">
+                        <strong style="color: #1976d2;">NASDAQ:</strong>
+                        <p style="margin-top: 5px;">Strong momentum above 23,348. Resistance zone at 23,636 tested today. All-time high at 24,020 within striking distance. Support cluster 23,286-23,348.</p>
+                    </div>
+
+                    <div>
+                        <strong style="color: #1976d2;">Russell 2000:</strong>
+                        <p style="margin-top: 5px;">Breakout move today signals potential catch-up trade. Monitor IWM holding above $244 for continuation. Small-cap strength often precedes broader market rallies.</p>
+                    </div>
+                </div>
+
+                <div style="margin-top: 25px; padding: 25px; background: #fff3cd; border-radius: 15px; border-left: 5px solid #ffc107;">
+                    <h4 style="color: #856404; margin-bottom: 15px;">Market Catalysts & Events</h4>
+                    <ul style="line-height: 1.8; margin-left: 20px; color: #856404;">
+                        <li><strong>Earnings Season:</strong> 1,388 companies reporting this week - monitor guidance revisions and sector trends</li>
+                        <li><strong>Economic Data:</strong> Watch for employment reports, inflation data, and Fed commentary for interest rate implications</li>
+                        <li><strong>Sector Rotation:</strong> Small-cap strength may signal early-cycle positioning - monitor for sustainability</li>
+                        <li><strong>After-Hours Follow-Through:</strong> Watch ARM, ECPG, KVYO opens tomorrow for continuation or reversal patterns</li>
+                        <li><strong>Volume Leaders:</strong> RIVN, LMND, TDC showing exceptional volume deserve continued monitoring for trend development</li>
+                    </ul>
+                </div>
+
+                <div style="margin-top: 25px; padding: 25px; background: #ffebee; border-radius: 15px; border-left: 5px solid #f44336;">
+                    <h4 style="color: #c62828; margin-bottom: 15px;">Risk Factors</h4>
+                    <ul style="line-height: 1.8; margin-left: 20px; color: #c62828;">
+                        <li><strong>Valuation Concerns:</strong> Technology sector P/E of 41.8x elevated vs. historical averages - vulnerable to rate sensitivity</li>
+                        <li><strong>Bond Market Signals:</strong> TLT weakness suggests rising rates could pressure equity multiples</li>
+                        <li><strong>Concentration Risk:</strong> Large-cap tech communication services driving indices - breadth deterioration risk</li>
+                        <li><strong>Geopolitical:</strong> Monitor macro events that could trigger risk-off sentiment and defensive rotation</li>
+                        <li><strong>Earnings Misses:</strong> High expectations leave room for disappointment - watch guidance carefully</li>
+                    </ul>
+                </div>
+            </section>
+
+            <!-- Summary Stats -->
+            <section class="section">
+                <h2 class="section-title">Daily Summary Statistics</h2>
+                <div class="sector-grid">
+                    <div class="sector-item" style="border-left-color: #10b981;">
+                        <div class="sector-name">Volume Surge Stocks</div>
+                        <div style="font-size: 2em; font-weight: bold; color: #10b981;">181</div>
+                        <div style="font-size: 0.9em; color: #666;">Avg Relative Volume: 2.3x</div>
+                    </div>
+
+                    <div class="sector-item" style="border-left-color: #8b5cf6;">
+                        <div class="sector-name">Uptrend Stocks</div>
+                        <div style="font-size: 2em; font-weight: bold; color: #8b5cf6;">636</div>
+                        <div style="font-size: 0.9em; color: #666;">Above key moving averages</div>
+                    </div>
+
+                    <div class="sector-item" style="border-left-color: #f59e0b;">
+                        <div class="sector-name">Earnings This Week</div>
+                        <div style="font-size: 2em; font-weight: bold; color: #f59e0b;">1,388</div>
+                        <div style="font-size: 0.9em; color: #666;">Companies reporting</div>
+                    </div>
+
+                    <div class="sector-item" style="border-left-color: #ef4444;">
+                        <div class="sector-name">After-Hours Movers</div>
+                        <div style="font-size: 2em; font-weight: bold; color: #ef4444;">17</div>
+                        <div style="font-size: 0.9em; color: #666;">Avg EPS Surprise: +14.16%</div>
+                    </div>
+
+                    <div class="sector-item" style="border-left-color: #3b82f6;">
+                        <div class="sector-name">Sector Leaders</div>
+                        <div style="font-size: 1.3em; font-weight: bold; color: #3b82f6;">Comm Services</div>
+                        <div style="font-size: 0.9em; color: #666;">+1.33% | Basic Materials +1.33%</div>
+                    </div>
+
+                    <div class="sector-item" style="border-left-color: #06b6d4;">
+                        <div class="sector-name">Market Breadth</div>
+                        <div style="font-size: 1.3em; font-weight: bold; color: #06b6d4;">Positive</div>
+                        <div style="font-size: 0.9em; color: #666;">Small-caps +1.44% outperform</div>
+                    </div>
+                </div>
+            </section>
+        </div>
+
+        <div class="footer">
+            <p><strong>After-Market Report</strong></p>
+            <p>November 5, 2025 | Generated at Market Close</p>
+            <p style="margin-top: 15px; font-size: 0.85em; opacity: 0.8;">
+                Data Sources: Financial Modeling Prep API, Finviz Elite, Market Data Feeds
+            </p>
+            <p style="font-size: 0.85em; opacity: 0.8;">
+                This report is for informational purposes only and does not constitute investment advice.
+            </p>
+            <p style="margin-top: 10px; font-size: 0.85em;">
+                For questions or feedback: contact@tradinganalysis.com
+            </p>
+        </div>
+    </div>
+</body>
+</html>

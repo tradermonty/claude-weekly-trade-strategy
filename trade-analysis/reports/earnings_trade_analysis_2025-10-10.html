@@ -1,0 +1,558 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Post-Earnings Gap-Up Stock Analysis - October 10, 2025</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            color: white;
+            padding: 40px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .header p {
+            font-size: 1.2em;
+            opacity: 0.9;
+        }
+
+        .summary-box {
+            background: #f8f9fa;
+            padding: 30px;
+            border-bottom: 3px solid #e9ecef;
+        }
+
+        .summary-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            text-align: center;
+            border-left: 4px solid #667eea;
+        }
+
+        .stat-card h3 {
+            color: #495057;
+            font-size: 0.9em;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 10px;
+        }
+
+        .stat-card .value {
+            font-size: 2em;
+            font-weight: bold;
+            color: #1e3c72;
+        }
+
+        .stock-section {
+            padding: 40px;
+        }
+
+        .stock-card {
+            background: white;
+            border: 2px solid #e9ecef;
+            border-radius: 15px;
+            padding: 30px;
+            margin-bottom: 30px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .stock-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+        }
+
+        .stock-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #e9ecef;
+        }
+
+        .stock-title {
+            flex: 1;
+        }
+
+        .stock-title h2 {
+            color: #1e3c72;
+            font-size: 1.8em;
+            margin-bottom: 5px;
+        }
+
+        .stock-title .ticker {
+            font-size: 1.2em;
+            color: #667eea;
+            font-weight: bold;
+        }
+
+        .rating-badge {
+            padding: 15px 30px;
+            border-radius: 50px;
+            font-weight: bold;
+            font-size: 1.2em;
+            text-align: center;
+            min-width: 150px;
+        }
+
+        .grade-a {
+            background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+            color: white;
+        }
+
+        .grade-b {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            color: white;
+        }
+
+        .grade-c {
+            background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+            color: white;
+        }
+
+        .grade-d {
+            background: linear-gradient(135deg, #ff6b6b 0%, #ee5a6f 100%);
+            color: white;
+        }
+
+        .score-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+
+        .score-item {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 10px;
+            border-left: 4px solid #667eea;
+        }
+
+        .score-item h4 {
+            color: #495057;
+            font-size: 0.9em;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+        }
+
+        .score-item .score-value {
+            font-size: 1.5em;
+            font-weight: bold;
+            color: #1e3c72;
+        }
+
+        .score-item .score-detail {
+            font-size: 0.85em;
+            color: #6c757d;
+            margin-top: 5px;
+        }
+
+        .analysis-section {
+            margin: 20px 0;
+        }
+
+        .analysis-section h3 {
+            color: #1e3c72;
+            margin-bottom: 15px;
+            font-size: 1.3em;
+            border-left: 4px solid #667eea;
+            padding-left: 15px;
+        }
+
+        .analysis-content {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+            line-height: 1.8;
+        }
+
+        .analysis-content ul {
+            list-style-position: inside;
+            margin-left: 20px;
+        }
+
+        .analysis-content li {
+            margin-bottom: 10px;
+        }
+
+        .probability-meter {
+            margin: 20px 0;
+            text-align: center;
+        }
+
+        .probability-bar {
+            width: 100%;
+            height: 40px;
+            background: #e9ecef;
+            border-radius: 20px;
+            overflow: hidden;
+            position: relative;
+            margin: 15px 0;
+        }
+
+        .probability-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #11998e 0%, #38ef7d 100%);
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            font-size: 1.1em;
+            transition: width 1s ease;
+        }
+
+        .technical-factors {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+
+        .factor-card {
+            background: white;
+            border: 2px solid #e9ecef;
+            padding: 15px;
+            border-radius: 10px;
+        }
+
+        .factor-card h4 {
+            color: #667eea;
+            margin-bottom: 10px;
+            font-size: 1em;
+        }
+
+        .factor-value {
+            font-size: 1.3em;
+            font-weight: bold;
+            color: #1e3c72;
+        }
+
+        .positive {
+            color: #28a745;
+        }
+
+        .negative {
+            color: #dc3545;
+        }
+
+        .neutral {
+            color: #ffc107;
+        }
+
+        .footer {
+            background: #1e3c72;
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .disclaimer {
+            background: #fff3cd;
+            border: 1px solid #ffc107;
+            border-radius: 10px;
+            padding: 20px;
+            margin: 30px 40px;
+            color: #856404;
+        }
+
+        .disclaimer h3 {
+            color: #856404;
+            margin-bottom: 10px;
+        }
+
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 1.8em;
+            }
+
+            .stock-header {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+
+            .rating-badge {
+                margin-top: 15px;
+                width: 100%;
+            }
+
+            .score-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .stars {
+            color: #ffc107;
+            font-size: 1.5em;
+            margin-top: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📊 Post-Earnings Gap-Up Stock Analysis</h1>
+            <p>October 10, 2025 - Earnings Trading Opportunities</p>
+            <p style="font-size: 0.9em; margin-top: 10px;">Data-Driven Backtest Scoring System</p>
+        </div>
+
+        <div class="summary-box">
+            <h2 style="color: #1e3c72; margin-bottom: 15px;">Market Overview Summary</h2>
+            <div class="summary-stats">
+                <div class="stat-card">
+                    <h3>Stocks Analyzed</h3>
+                    <div class="value">1</div>
+                </div>
+                <div class="stat-card">
+                    <h3>Market Environment</h3>
+                    <div class="value" style="font-size: 1.3em;">Bullish</div>
+                </div>
+                <div class="stat-card">
+                    <h3>SPY Performance</h3>
+                    <div class="value positive">+0.14%</div>
+                </div>
+                <div class="stat-card">
+                    <h3>Analysis Date</h3>
+                    <div class="value" style="font-size: 1.3em;">10/10/2025</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="stock-section">
+            <h2 style="color: #1e3c72; margin-bottom: 30px; text-align: center; font-size: 2em;">
+                🏆 B-Grade Stock (55-69% Success Rate)
+            </h2>
+
+            <!-- APLD Stock Card -->
+            <div class="stock-card">
+                <div class="stock-header">
+                    <div class="stock-title">
+                        <h2>Applied Digital Corporation</h2>
+                        <span class="ticker">$APLD</span>
+                        <div style="margin-top: 10px; color: #6c757d;">
+                            Technology | Information Technology Services
+                        </div>
+                    </div>
+                    <div class="rating-badge grade-b">
+                        <div>B-Grade</div>
+                        <div style="font-size: 0.8em; margin-top: 5px;">74.0 Points</div>
+                        <div class="stars">⭐⭐⭐⭐</div>
+                    </div>
+                </div>
+
+                <div class="analysis-section">
+                    <h3>📈 Key Metrics</h3>
+                    <div class="technical-factors">
+                        <div class="factor-card">
+                            <h4>Current Price</h4>
+                            <div class="factor-value">$29.29</div>
+                        </div>
+                        <div class="factor-card">
+                            <h4>Gap Size</h4>
+                            <div class="factor-value positive">+7.30%</div>
+                        </div>
+                        <div class="factor-card">
+                            <h4>Pre-Earnings Trend</h4>
+                            <div class="factor-value positive">+70.49%</div>
+                        </div>
+                        <div class="factor-card">
+                            <h4>Market Cap</h4>
+                            <div class="factor-value">$7.65B</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="analysis-section">
+                    <h3>🎯 Backtest Score Breakdown</h3>
+                    <div class="score-grid">
+                        <div class="score-item">
+                            <h4>Gap Size (25%)</h4>
+                            <div class="score-value">3/5 ⭐</div>
+                            <div class="score-detail">+7.30% from previous close<br>Weighted: 0.75 pts</div>
+                        </div>
+                        <div class="score-item">
+                            <h4>Pre-Earnings Trend (30%)</h4>
+                            <div class="score-value">5/5 ⭐⭐</div>
+                            <div class="score-detail">+70.49% over 20 days<br>Weighted: 1.50 pts</div>
+                        </div>
+                        <div class="score-item">
+                            <h4>Volume Trend (20%)</h4>
+                            <div class="score-value">1/5</div>
+                            <div class="score-detail">153% (abnormal spike)<br>Weighted: 0.20 pts</div>
+                        </div>
+                        <div class="score-item">
+                            <h4>MA200 Position (15%)</h4>
+                            <div class="score-value">5/5 ⭐⭐</div>
+                            <div class="score-detail">+242.31% above MA200<br>Weighted: 0.75 pts</div>
+                        </div>
+                        <div class="score-item">
+                            <h4>MA50 Position (10%)</h4>
+                            <div class="score-value">5/5 ⭐⭐</div>
+                            <div class="score-detail">+94.80% above MA50<br>Weighted: 0.50 pts</div>
+                        </div>
+                    </div>
+                    <div style="text-align: center; margin-top: 20px; padding: 20px; background: #e7f3ff; border-radius: 10px;">
+                        <h3 style="color: #1e3c72; margin-bottom: 10px;">Total Weighted Score</h3>
+                        <div style="font-size: 3em; font-weight: bold; color: #667eea;">74.0 / 100</div>
+                        <div style="font-size: 1.2em; color: #495057; margin-top: 10px;">B-Grade: 55-69% Historical Success Rate</div>
+                    </div>
+                </div>
+
+                <div class="analysis-section">
+                    <h3>📰 Earnings Analysis Summary</h3>
+                    <div class="analysis-content">
+                        <h4 style="color: #1e3c72; margin-bottom: 15px;">Key Highlights:</h4>
+                        <ul>
+                            <li><strong>Revenue Beat:</strong> Applied Digital reported Q1 FY2026 results with revenues beating estimates (+28.51% surprise), driven by strong AI demand and data center expansion</li>
+                            <li><strong>Strategic Partnership:</strong> Executed first funding milestone in $5.0 billion AI infrastructure partnership with Macquarie Asset Management announced just before earnings</li>
+                            <li><strong>Business Expansion:</strong> New long-term contracts and data center expansion are fueling strong growth outlook despite Q1 loss</li>
+                            <li><strong>Market Sentiment:</strong> Multiple positive analyst notes highlighting bullish Q3 performance and AI infrastructure growth potential</li>
+                        </ul>
+
+                        <h4 style="color: #1e3c72; margin: 20px 0 15px 0;">Earnings Performance:</h4>
+                        <ul>
+                            <li><strong>EPS Surprise:</strong> +76.73% (beat expectations)</li>
+                            <li><strong>Revenue Surprise:</strong> +28.51% (significant beat)</li>
+                            <li><strong>Revenue Growth QoQ:</strong> +5.79%</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="analysis-section">
+                    <h3>🔮 Success Probability Prediction</h3>
+                    <div class="probability-meter">
+                        <div class="probability-bar">
+                            <div class="probability-fill" style="width: 65%;">
+                                65% Success Probability
+                            </div>
+                        </div>
+                        <p style="color: #495057; margin-top: 15px; font-size: 1.1em;">
+                            <strong>Prediction Basis:</strong> Strong revenue beat, strategic AI infrastructure partnership, exceptional pre-earnings momentum (+70%), but tempered by abnormal volume spike and already extended valuation (RSI: 88.16)
+                        </p>
+                    </div>
+                </div>
+
+                <div class="analysis-section">
+                    <h3>📊 Technical Factor Overview</h3>
+                    <div class="analysis-content">
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px;">
+                            <div>
+                                <h4 style="color: #667eea; margin-bottom: 10px;">Moving Averages</h4>
+                                <p><strong>MA20:</strong> <span class="positive">+51.00% above</span></p>
+                                <p><strong>MA50:</strong> <span class="positive">+94.80% above</span></p>
+                                <p><strong>MA200:</strong> <span class="positive">+242.31% above</span></p>
+                            </div>
+                            <div>
+                                <h4 style="color: #667eea; margin-bottom: 10px;">Volume Analysis</h4>
+                                <p><strong>Recent Volume:</strong> 43.6M shares</p>
+                                <p><strong>Avg Volume:</strong> ~30.6M shares</p>
+                                <p><strong>Relative Vol:</strong> <span class="negative">1.53x (abnormal)</span></p>
+                            </div>
+                            <div>
+                                <h4 style="color: #667eea; margin-bottom: 10px;">Momentum Indicators</h4>
+                                <p><strong>RSI:</strong> <span class="negative">88.16 (overbought)</span></p>
+                                <p><strong>Beta:</strong> 6.57 (high volatility)</p>
+                                <p><strong>3M Performance:</strong> <span class="positive">+287.50%</span></p>
+                            </div>
+                            <div>
+                                <h4 style="color: #667eea; margin-bottom: 10px;">Risk Factors</h4>
+                                <p><strong>Volatility:</strong> 8.69% (high)</p>
+                                <p><strong>52W Range:</strong> $3.31 - $29.98</p>
+                                <p><strong>Concern:</strong> <span class="negative">Extreme extension</span></p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="analysis-section">
+                    <h3>⚠️ Risk Assessment</h3>
+                    <div class="analysis-content" style="background: #fff3cd; border-left: 4px solid #ffc107;">
+                        <ul style="color: #856404;">
+                            <li><strong>Overbought Territory:</strong> RSI at 88.16 indicates severe overbought conditions; pullback risk is high</li>
+                            <li><strong>Extreme Extension:</strong> Stock is 242% above 200-day MA, suggesting unsustainable valuation levels</li>
+                            <li><strong>Abnormal Volume:</strong> 153% volume spike may indicate climax buying rather than sustainable accumulation</li>
+                            <li><strong>High Beta (6.57):</strong> Extreme volatility means this stock can reverse sharply and quickly</li>
+                            <li><strong>Position Sizing:</strong> Due to high risk profile, limit position size to 1-2% of portfolio maximum</li>
+                            <li><strong>Stop Loss:</strong> Recommend tight stop at $26.50 (-9% from current) to protect capital</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="analysis-section">
+                    <h3>💡 Trading Strategy Recommendation</h3>
+                    <div class="analysis-content" style="background: #d1ecf1; border-left: 4px solid #0dcaf0;">
+                        <p style="color: #055160; font-size: 1.1em; line-height: 1.8;">
+                            <strong>Entry Strategy:</strong> Wait for a consolidation or pullback to $26-27 range for better risk/reward. Current levels ($29.29) are too extended.<br><br>
+
+                            <strong>Alternative:</strong> If momentum continues, consider entering with very small position (0.5-1% portfolio) and use trailing stop.<br><br>
+
+                            <strong>Target Price:</strong> First target $32-33 (conservative), extended target $35-38 if momentum sustains<br><br>
+
+                            <strong>Stop Loss:</strong> Strict stop at $26.50 (key support level)<br><br>
+
+                            <strong>Time Horizon:</strong> 2-7 days swing trade; take profits quickly in this volatile stock<br><br>
+
+                            <strong>Risk/Reward:</strong> At current levels 2:1, but improves to 3:1 if entry on pullback to $26-27
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="disclaimer">
+            <h3>⚠️ Risk Disclaimer</h3>
+            <p><strong>This analysis is for educational and informational purposes only.</strong> It does not constitute financial advice, investment recommendations, or an offer to buy or sell securities. Earnings-based trading involves substantial risk of loss and is not suitable for all investors. Past performance and backtest results do not guarantee future results. The success rates mentioned are historical averages and individual trades may result in significant losses. Always conduct your own research, consider your financial situation and risk tolerance, and consult with a licensed financial advisor before making investment decisions. The author and analysts assume no responsibility for your trading decisions or losses.</p>
+        </div>
+
+        <div class="footer">
+            <h3>Analysis Methodology</h3>
+            <p style="margin: 15px 0;">This report uses a proprietary backtest scoring system based on 5 key factors:</p>
+            <p>Gap Size Performance (25%) • Pre-Earnings Trend (30%) • Volume Analysis (20%) • MA200 Position (15%) • MA50 Position (10%)</p>
+            <p style="margin-top: 20px; opacity: 0.8;">Data Sources: Finviz, Alpaca Markets, Financial Modeling Prep API</p>
+            <p style="margin-top: 10px; opacity: 0.8;">Report Generated: October 10, 2025 at 04:35 UTC</p>
+            <p style="margin-top: 20px; font-size: 0.9em;">© 2025 Earnings Trade Analysis System. All rights reserved.</p>
+        </div>
+    </div>
+</body>
+</html>
