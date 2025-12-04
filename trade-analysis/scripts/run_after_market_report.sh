@@ -3,6 +3,9 @@
 # Schedule: Daily at 1:10 PM US Pacific Time (after market close at 1:00 PM PT)
 # Cron entry: 10 13 * * 1-5 /path/to/run_after_market_report.sh
 
+# Set PATH for cron environment (node, npm, homebrew, etc.)
+export PATH="/opt/homebrew/bin:/opt/homebrew/sbin:/Users/takueisaotome/.npm-global/bin:/Users/takueisaotome/.local/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin"
+
 # Configuration
 PROJECT_DIR="/Users/takueisaotome/PycharmProjects/trade-analysis"
 LOG_DIR="${PROJECT_DIR}/logs"

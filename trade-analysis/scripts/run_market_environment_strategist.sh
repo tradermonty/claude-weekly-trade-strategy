@@ -3,6 +3,9 @@
 # Usage: ./run_market_environment_strategist.sh
 # Generates comprehensive market environment analysis report
 
+# Set PATH for cron environment (node, npm, homebrew, etc.)
+export PATH="/opt/homebrew/bin:/opt/homebrew/sbin:/Users/takueisaotome/.npm-global/bin:/Users/takueisaotome/.local/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin"
+
 # Configuration
 PROJECT_DIR="/Users/takueisaotome/PycharmProjects/trade-analysis"
 LOG_DIR="${PROJECT_DIR}/logs"

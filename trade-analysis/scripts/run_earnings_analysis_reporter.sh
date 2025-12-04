@@ -3,6 +3,9 @@
 # Usage: ./run_earnings_analysis_reporter.sh <TICKER>
 # Example: ./run_earnings_analysis_reporter.sh NVDA
 
+# Set PATH for cron environment (node, npm, homebrew, etc.)
+export PATH="/opt/homebrew/bin:/opt/homebrew/sbin:/Users/takueisaotome/.npm-global/bin:/Users/takueisaotome/.local/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin"
+
 # Configuration
 PROJECT_DIR="/Users/takueisaotome/PycharmProjects/trade-analysis"
 LOG_DIR="${PROJECT_DIR}/logs"
