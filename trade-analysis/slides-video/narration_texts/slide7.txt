@@ -1,1 +1,0 @@
-We've identified critical operational red flags. Several key items showed zero sales months, likely due to POS toggles or inventory lockouts. We're implementing weekly zero-sales alerts with mandatory twenty-four hour follow-up to prevent future revenue leakage.
