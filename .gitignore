@@ -37,3 +37,4 @@ reports/**
 
 # Keep folder structure with .gitkeep files
 !**/.gitkeep
+reviews/

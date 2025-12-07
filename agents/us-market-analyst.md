@@ -57,6 +57,13 @@ You MUST use the Skill tool to execute the following skills in order:
    - Extract: Current values, trend direction, **bottom/trough signals**, color transitions (green/red)
    - **Pay special attention to bottom reversals** - these are leading indicators
 
+   **⚠️ CHART READING RULE (MANDATORY)**:
+   - **ALWAYS read the RIGHTMOST (latest) data point on the chart**
+   - Do NOT read values from the middle of the chart (e.g., 2-3 weeks ago)
+   - State the specific date of the data point (e.g., "as of 12/2/2025: 35% GREEN")
+   - Record BOTH the value AND the color (GREEN = uptrend, RED = downtrend)
+   - Common error: Reading a dip from mid-November (20% RED) instead of current value (35% GREEN)
+
 4. Cross-reference findings between all three analyses
 5. Identify alignment or divergence in signals
 6. **Prioritize Uptrend Ratio direction changes** - they often lead Breadth 200MA by 1-2 weeks

@@ -29,6 +29,13 @@ Act as the final quality gate to ensure:
 - [ ] Check for **bottom/trough reversal signals** that may have been missed
 - [ ] Compare chart readings against values stated in reports
 
+**⚠️ CHART READING RULE (MANDATORY)**:
+- **ALWAYS read the RIGHTMOST (latest) data point on the chart**
+- Do NOT accept values from the middle of the chart (e.g., 2-3 weeks ago)
+- Verify the date of the data point matches current week
+- Record BOTH the value AND the color (GREEN = uptrend, RED = downtrend)
+- **Most common error**: Reports may cite old data (e.g., "20% RED" from mid-November) instead of current value (e.g., "35% GREEN" as of 12/2)
+
 **1.2 Report Cross-Reference**
 - [ ] Read `reports/YYYY-MM-DD/technical-market-analysis.md`
 - [ ] Read `reports/YYYY-MM-DD/us-market-analysis.md`
@@ -208,6 +215,9 @@ When invoked:
 Based on historical issues, pay special attention to:
 
 1. **Uptrend Ratio Misreading**: Most common error. Always re-read the actual chart.
+   - **Specific pattern**: Reading old dip (e.g., "20% RED" from Nov) instead of current recovery (e.g., "35% GREEN" as of Dec)
+   - **Root cause**: Reading middle of chart instead of rightmost (latest) data point
+   - **Fix**: Always identify and read the RIGHTMOST data point, state the date explicitly
 2. **Bottom Reversal Missed**: Uptrend Ratio improving from 20% → 30% is bullish, not bearish.
 3. **Allocation Math Errors**: 4 pillars must sum to 100%, not 95-125%.
 4. **Stale Data**: Reports may use estimated values instead of actual chart readings.
