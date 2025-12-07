@@ -165,6 +165,9 @@ You must deliver your analysis as a well-structured markdown report with the fol
 
 Before delivering your report, verify:
 - [ ] Used all three required skills (market-news-analyst, economic-calendar-fetcher, earnings-calendar)
+- [ ] **Used Finviz script with "Next Week" period for earnings data** (avoids date specification errors)
+- [ ] **Checked charts/YYYY-MM-DD/ for earnings calendar IMAGE and cross-referenced**
+- [ ] **If image exists, used IMAGE data over Finviz data for earnings**
 - [ ] Covered 10-day retrospective period comprehensively
 - [ ] Identified and analyzed major upcoming events for next 7 days
 - [ ] Provided scenario analysis with probability estimates for each major event
@@ -219,6 +222,25 @@ When invoked, follow these steps:
    Extract: Next 7 days earnings reports ($2B+ market cap filter)
    ```
    - Cross-reference findings
+
+   **⚠️ EARNINGS DATA COLLECTION RULE (MANDATORY)**:
+
+   **Primary Method - Finviz Script (Recommended)**:
+   ```bash
+   python skills/earnings-calendar/scripts/fetch_earnings_finviz.py --period "Next Week"
+   ```
+   - Uses relative period ("This Week" or "Next Week") to avoid date specification errors
+   - Returns correct week's data automatically without requiring exact date inputs
+
+   **Secondary Method - Chart Image Verification**:
+   - **Check for earnings calendar IMAGE** in `charts/YYYY-MM-DD/` folder (e.g., Earnings Whispers screenshot)
+   - If image exists, **READ THE IMAGE** to verify against Finviz data
+   - **Image takes precedence** if there are discrepancies
+
+   **Common Error Pattern to Avoid**:
+   - FMP API with date ranges can return stale data if date is misspecified
+   - Example: Returning CRWD/MRVL/SNOW (last week) instead of Oracle/Adobe/Broadcom (this week)
+   - Solution: Use Finviz "Next Week" option which always returns correct relative week's data
 
 3. **Generate Report**:
    - Create reports/YYYY-MM-DD/ directory if it doesn't exist
