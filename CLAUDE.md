@@ -625,10 +625,124 @@ reports/YYYY-MM-DD/
 
 ---
 
+## Breadthチャート自動検出ツール
+
+### 概要
+
+S&P 500 Breadth Indexチャートの200日MA・8日MAの値を、OpenCVを使用して自動検出するPythonスクリプトです。
+目視での読み取り誤りを防止し、高精度な数値を取得できます。
+
+### スクリプトの場所
+
+```
+.claude/skills/breadth-chart-analyst/scripts/detect_breadth_values.py
+```
+
+### 使用方法
+
+```bash
+# 基本的な実行（検出結果を表示）
+python3 .claude/skills/breadth-chart-analyst/scripts/detect_breadth_values.py charts/YYYY-MM-DD/IMG_XXXX.jpeg
+
+# デバッグモード（検出結果を画像で確認）
+python3 .claude/skills/breadth-chart-analyst/scripts/detect_breadth_values.py charts/YYYY-MM-DD/IMG_XXXX.jpeg --debug
+
+# JSON形式で出力
+python3 .claude/skills/breadth-chart-analyst/scripts/detect_breadth_values.py charts/YYYY-MM-DD/IMG_XXXX.jpeg --json
+```
+
+### 出力例
+
+```
+============================================================
+Breadth Chart Detection Results (OpenCV)
+============================================================
+
+Image: charts/2025-12-22/IMG_5499.jpeg
+Confidence: HIGH
+
+--- Detected Values ---
+200-Day MA: 59.8% (narrow_rally (50-60%))
+8-Day MA:   61.9% (healthy_bullish (60-73%))
+
+--- Calibration ---
+Red line (0.73) Y-pixel: 377
+Blue line (0.23) Y-pixel: 916
+Y-scale: -0.0009276437847866419
+Calibration successful: True
+============================================================
+```
+
+### 検出の仕組み
+
+1. **Y軸キャリブレーション**: 赤色点線（0.73）と青色点線（0.23）を検出し、ピクセル位置とパーセント値の変換式を計算
+2. **緑線（200日MA）検出**: HSV色空間で緑色ピクセルを抽出し、右端での位置を特定
+3. **オレンジ線（8日MA）検出**: HSV色空間でオレンジ色ピクセルを抽出し、右端での位置を特定
+4. **値の変換**: 検出されたピクセル位置をパーセント値に変換
+
+### 信頼度レベル
+
+- **HIGH**: 両方の参照線（赤・青）が検出され、両方のMA値が正常に検出された
+- **MEDIUM**: 参照線またはMA値の一部が検出できなかった
+- **LOW**: 推定値を使用（参照線が検出できなかった場合）
+- **FAILED**: 検出に失敗
+
+### 推奨ワークフロー
+
+1. **チャート分析前に実行**: LLMがチャートを分析する前に、このスクリプトで正確な値を取得
+2. **デバッグ画像で確認**: `--debug`オプションで生成される画像で、検出位置が正しいか視覚的に確認
+3. **レポートに反映**: 検出結果をus-market-analysis.mdやブログ記事に反映
+
+### Breadthチャート読み取りチェックリスト（必須）
+
+⚠️ **重要**: LLMによるチャート読み取りはエラーが発生しやすいため、以下のチェックリストを**必ず**実行してください。
+
+#### 1. 自動検出スクリプトの実行
+
+```bash
+python3 .claude/skills/breadth-chart-analyst/scripts/detect_breadth_values.py charts/YYYY-MM-DD/IMG_XXXX.jpeg --debug
+```
+
+#### 2. 検出結果の確認
+
+- [ ] **Confidence**: HIGHであることを確認
+- [ ] **200-Day MA**: 検出値を記録（例: 59.8%）
+- [ ] **8-Day MA**: 検出値を記録（例: 61.9%）
+- [ ] **デバッグ画像**: `*_debug_detection.jpeg`で検出位置が正しいか確認
+
+#### 3. 閾値との比較
+
+| 指標 | 閾値 | 評価 |
+|------|------|------|
+| **200日MA** | ≥60% | 健全 |
+| **200日MA** | 50-60% | 細いラリー/ボーダー |
+| **200日MA** | 40-50% | 注意 |
+| **200日MA** | <40% | 脆弱 |
+| **8日MA** | ≥73% | 買われすぎ |
+| **8日MA** | 60-73% | 健全/強気 |
+| **8日MA** | 40-60% | 中立 |
+| **8日MA** | 23-40% | 弱気 |
+| **8日MA** | <23% | 売られすぎ |
+
+#### 4. レポートへの反映
+
+検出された値を以下のファイルに正確に反映：
+
+- [ ] `reports/YYYY-MM-DD/us-market-analysis.md`
+- [ ] `blogs/YYYY-MM-DD-weekly-strategy.md`
+- [ ] `reports/YYYY-MM-DD/strategy-review.md`（レビュー時）
+
+#### 5. 整合性チェック
+
+- [ ] 3つのファイル間でBreadth値が一致しているか確認
+- [ ] 閾値に基づく解釈（健全/ボーダー/脆弱など）が正しいか確認
+
+---
+
 ## バージョン管理
 
-- **プロジェクトバージョン**: 1.0
-- **最終更新日**: 2025-11-02
+- **プロジェクトバージョン**: 1.1
+- **最終更新日**: 2025-12-20
 - **メンテナンス**: このドキュメントは定期的に更新してください
 
 ---
