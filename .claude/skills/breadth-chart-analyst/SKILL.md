@@ -67,9 +67,58 @@ When the user provides breadth chart images for analysis:
    - Chart 2 only (Uptrend Ratio)
    - Both charts
 3. Note any specific focus areas or questions from the user
-4. Proceed with systematic analysis
+4. **CRITICAL: Extract right edge of chart images before analysis** (Step 1.5)
 
 **Language Note**: All subsequent thinking, analysis, and output will be in English.
+
+### Step 1.5: Two-Stage Chart Analysis (MANDATORY)
+
+**CRITICAL**: Use a **two-stage analysis** approach to prevent misreading historical data as current values.
+
+#### Stage 1: Full Chart Analysis (Historical Context)
+
+First, analyze the FULL chart image to understand:
+- Overall historical trend and cycles
+- Key historical events (troughs, peaks, recoveries)
+- Long-term patterns and context
+
+#### Stage 2: Right Edge Focused Analysis (Current Values)
+
+Then, extract and analyze the **rightmost 25%** of the chart to accurately determine CURRENT values.
+
+**Execute the Python script to extract the right edge:**
+
+```bash
+python .claude/skills/breadth-chart-analyst/scripts/extract_chart_right_edge.py <image_path> --percent 25
+```
+
+**Example:**
+```bash
+# For Breadth Index chart
+python .claude/skills/breadth-chart-analyst/scripts/extract_chart_right_edge.py charts/2025-12-22/IMG_5499.jpeg --percent 25
+
+# For Uptrend Ratio chart
+python .claude/skills/breadth-chart-analyst/scripts/extract_chart_right_edge.py charts/2025-12-22/IMG_5500.jpeg --percent 25
+```
+
+#### Why Two-Stage Analysis is Mandatory
+
+| Stage | Purpose | What to Extract |
+|-------|---------|-----------------|
+| **Stage 1 (Full)** | Historical context, trend cycles | Overall patterns, past troughs/peaks |
+| **Stage 2 (Right Edge)** | **Current values (CRITICAL)** | 8MA value, 200MA value, current color, current slope |
+
+**Common Error This Prevents:**
+- LLM reads 2025 mid-year dip (8MA ~25-30%) instead of current value (8MA ~60-65%)
+- By isolating the right edge, the "current" data is unambiguous
+
+#### Analysis Protocol
+
+1. **Read full chart** → Document historical context
+2. **Run extraction script** → Generate right edge image
+3. **Read right edge image** → Document current values with HIGH CONFIDENCE
+4. **Cross-check**: If Stage 1 and Stage 2 values differ significantly, **Stage 2 (right edge) takes precedence**
+5. **Report both**: Include Stage 1 context AND Stage 2 current values in analysis
 
 ### Step 2: Load Breadth Chart Methodology
 
