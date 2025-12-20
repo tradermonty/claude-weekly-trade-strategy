@@ -262,7 +262,7 @@ weekly-trade-strategy/
 │   │   ├── strategy-reviewer.md     # Quality assurance (Step 5)
 │   │   └── druckenmiller-strategy-planner.md
 │   │
-│   └── skills/                      # Claude skill definitions (9 skills)
+│   └── skills/                      # Claude skill definitions (10 skills)
 │       ├── technical-analyst/
 │       ├── breadth-chart-analyst/
 │       ├── sector-analyst/
@@ -289,6 +289,23 @@ weekly-trade-strategy/
 | `weekly-trade-blog-writer` | Final blog post generation | `YYYY-MM-DD-weekly-strategy.md` |
 | `strategy-reviewer` | **Quality assurance** - verify chart readings before publication | `strategy-review.md` |
 | `druckenmiller-strategy-planner` (Optional) | Medium-term (18-month) strategy planning (4-scenario analysis) | `druckenmiller-strategy.md` |
+
+### Skills
+
+Skills are specialized knowledge modules that agents use to perform specific tasks.
+
+| Skill | Description | Used By |
+|-------|-------------|---------|
+| `technical-analyst` | Weekly chart technical analysis (trends, support/resistance, scenarios) | technical-market-analyst |
+| `sector-analyst` | Sector/industry performance and rotation pattern analysis | technical-market-analyst |
+| `breadth-chart-analyst` | S&P 500 Breadth Index & Uptrend Ratio analysis | us-market-analyst, strategy-reviewer |
+| `market-environment-analysis` | Global market risk-on/risk-off assessment | us-market-analyst |
+| `us-market-bubble-detector` | Quantitative bubble risk scoring (Minsky/Kindleberger framework) | us-market-analyst |
+| `market-news-analyst` | Past 10 days news impact analysis | market-news-analyzer |
+| `economic-calendar-fetcher` | Upcoming economic events via FMP API | market-news-analyzer |
+| `earnings-calendar` | Upcoming earnings announcements via FMP API | market-news-analyzer |
+| `stanley-druckenmiller-investment` | Druckenmiller's macro investment philosophy | druckenmiller-strategy-planner |
+| `us-stock-analysis` | Individual US stock fundamental & technical analysis | (standalone) |
 
 ### Troubleshooting
 
@@ -511,7 +528,7 @@ weekly-trade-strategy/
 ├── blogs/               # 最終ブログ記事格納フォルダ
 ├── .claude/
 │   ├── agents/          # Claudeエージェント定義（6エージェント）
-│   └── skills/          # Claudeスキル定義（9スキル）
+│   └── skills/          # Claudeスキル定義（10スキル）
 ├── CLAUDE.md            # 詳細なワークフローガイド
 ├── README.md            # このファイル
 ├── .env                 # 環境変数（要作成）
@@ -640,6 +657,23 @@ reports/2025-11-17/druckenmiller-strategy.mdに保存してください。
 | `weekly-trade-blog-writer` | 3つのレポートを統合してブログ記事を生成 | `YYYY-MM-DD-weekly-strategy.md` |
 | `strategy-reviewer` | **品質保証** - 公開前にチャート読み取り精度を検証 | `strategy-review.md` |
 | `druckenmiller-strategy-planner`（オプション） | 中長期（18ヶ月）戦略プランニング（4シナリオ分析） | `druckenmiller-strategy.md` |
+
+### スキル一覧
+
+スキルは、エージェントが特定のタスクを実行するために使用する専門知識モジュールです。
+
+| スキル | 説明 | 使用エージェント |
+|--------|------|-----------------|
+| `technical-analyst` | 週足チャートのテクニカル分析（トレンド、サポート/レジスタンス、シナリオ） | technical-market-analyst |
+| `sector-analyst` | セクター・インダストリーパフォーマンスとローテーション分析 | technical-market-analyst |
+| `breadth-chart-analyst` | S&P 500 Breadth Index & Uptrend Ratio分析 | us-market-analyst, strategy-reviewer |
+| `market-environment-analysis` | グローバル市場のリスクオン/リスクオフ評価 | us-market-analyst |
+| `us-market-bubble-detector` | バブルリスクの定量スコアリング（Minsky/Kindlebergerフレームワーク） | us-market-analyst |
+| `market-news-analyst` | 過去10日間のニュース影響分析 | market-news-analyzer |
+| `economic-calendar-fetcher` | FMP APIで今後の経済イベントを取得 | market-news-analyzer |
+| `earnings-calendar` | FMP APIで今後の決算発表を取得 | market-news-analyzer |
+| `stanley-druckenmiller-investment` | ドラッケンミラーのマクロ投資哲学 | druckenmiller-strategy-planner |
+| `us-stock-analysis` | 米国個別株のファンダメンタル・テクニカル分析 | （単独使用） |
 
 ### トラブルシューティング
 
