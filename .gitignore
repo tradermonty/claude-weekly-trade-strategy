@@ -18,6 +18,8 @@ ENV/
 # IDE
 .vscode/
 .idea/
+*.swp
+*.swo
 
 # Claude Code settings (user-specific)
 .claude/settings.json
