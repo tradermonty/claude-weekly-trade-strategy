@@ -1,520 +1,519 @@
-# Weekly Trade Strategy Blog - プロジェクトガイド
+# Weekly Trade Strategy Blog - Project Guide
 
-このプロジェクトは、米国株の週間トレード戦略ブログを自動生成するためのシステムです。
+This project is a system for automatically generating weekly trade strategy blog posts for US stock markets.
 
 ---
 
-## プロジェクト構造
+## Project Structure
 
 ```
 weekly-trade-strategy/
-├── charts/              # チャート画像格納フォルダ
-│   └── YYYY-MM-DD/     # 日付ごとのフォルダ
+├── charts/              # Chart image storage
+│   └── YYYY-MM-DD/     # Folders by date
 │       ├── chart1.jpeg
 │       └── chart2.jpeg
 │
-├── reports/            # 分析レポート格納フォルダ
-│   └── YYYY-MM-DD/    # 日付ごとのフォルダ
+├── reports/            # Analysis report storage
+│   └── YYYY-MM-DD/    # Folders by date
 │       ├── technical-market-analysis.md
 │       ├── us-market-analysis.md
 │       └── market-news-analysis.md
 │
-├── blogs/              # 最終ブログ記事格納フォルダ
+├── blogs/              # Final blog post storage
 │   └── YYYY-MM-DD-weekly-strategy.md
 │
 └── .claude/
-    ├── agents/         # エージェント定義
-    └── skills/         # スキル定義
+    ├── agents/         # Agent definitions
+    └── skills/         # Skill definitions
 ```
 
-## 週間ブログ作成の標準手順
+## Standard Workflow for Weekly Blog Creation
 
-### ステップ0: 準備
+### Step 0: Preparation
 
-1. **チャート画像の配置**
+1. **Place Chart Images**
    ```bash
-   # 今週の日付でフォルダ作成
+   # Create folder for this week's date
    mkdir -p charts/2025-11-03
 
-   # チャート画像を配置（16枚推奨、breadth 2枚は別途分析）
+   # Place chart images (16 recommended, breadth 2 analyzed separately)
    #
-   # Technical Market Analysis対象（14枚）:
-   # - VIX (週足)
-   # - 米10年債利回り (週足)
-   # - Nasdaq 100 (週足)
-   # - S&P 500 (週足)
-   # - Russell 2000 (週足)
-   # - Dow Jones (週足)
-   # - 金先物 (週足)
-   # - 銅先物 (週足)
-   # - 原油 (週足)
-   # - 天然ガス (週足)
-   # - ウランETF (URA, 週足)
-   # - セクターパフォーマンス (1週間)
-   # - セクターパフォーマンス (1ヶ月)
-   # - 主要銘柄ヒートマップ
+   # Technical Market Analysis targets (14 charts):
+   # - VIX (weekly)
+   # - US 10Y Treasury Yield (weekly)
+   # - Nasdaq 100 (weekly)
+   # - S&P 500 (weekly)
+   # - Russell 2000 (weekly)
+   # - Dow Jones (weekly)
+   # - Gold Futures (weekly)
+   # - Copper Futures (weekly)
+   # - Crude Oil (weekly)
+   # - Natural Gas (weekly)
+   # - Uranium ETF (URA, weekly)
+   # - Sector Performance (1 week)
+   # - Sector Performance (1 month)
+   # - Major Stock Heatmap
    #
-   # Market Breadth Analysis対象（2枚、別途分析）:
-   # - S&P 500 Breadth Index (200日MA + 8日MA) ← technical-market-analystはスキップ
-   # - Uptrend Stock Ratio (全市場) ← technical-market-analystはスキップ
+   # Market Breadth Analysis targets (2 charts, analyzed separately):
+   # - S&P 500 Breadth Index (200-day MA + 8-day MA) <- technical-market-analyst skips
+   # - Uptrend Stock Ratio (all markets) <- technical-market-analyst skips
    ```
 
-2. **レポート出力フォルダ作成**
+2. **Create Report Output Folder**
    ```bash
    mkdir -p reports/2025-11-03
    ```
 
-### ステップ1: Technical Market Analysis
+### Step 1: Technical Market Analysis
 
-**目的**: チャート画像を分析し、テクニカル指標から市場環境を評価
+**Purpose**: Analyze chart images and evaluate market environment from technical indicators
 
-**エージェント**: `technical-market-analyst`
+**Agent**: `technical-market-analyst`
 
-**⚠️ 重要な注記**: Market Breadth分析（S&P 500 Breadth Index, Uptrend Ratio）は**別途実施**されます。technical-market-analystエージェントはこれらのチャートを**スキップ**します。
+**Important Note**: Market Breadth analysis (S&P 500 Breadth Index, Uptrend Ratio) is performed **separately**. The technical-market-analyst agent **skips** these charts.
 
-**入力**:
-- `charts/YYYY-MM-DD/*.jpeg` (全チャート画像)
+**Input**:
+- `charts/YYYY-MM-DD/*.jpeg` (all chart images)
 
-**出力**:
+**Output**:
 - `reports/YYYY-MM-DD/technical-market-analysis.md`
 
-**実行コマンド例**:
+**Example Command**:
 ```
-今週（2025-11-03）のチャート分析をtechnical-market-analystエージェントで実行してください。
-charts/2025-11-03/にあるチャートを分析してください。
-ただし、以下のbreadthチャートは**スキップ**してください（別途分析されます）：
-- S&P 500 Breadth Index (200日MA + 8日MA)
-- Uptrend Stock Ratio (全市場)
+Please run chart analysis for this week (2025-11-03) using the technical-market-analyst agent.
+Analyze the charts in charts/2025-11-03/.
+However, **skip** the following breadth charts (analyzed separately):
+- S&P 500 Breadth Index (200-day MA + 8-day MA)
+- Uptrend Stock Ratio (all markets)
 
-レポートをreports/2025-11-03/technical-market-analysis.mdに保存してください。
+Save the report to reports/2025-11-03/technical-market-analysis.md.
 ```
 
-**分析内容**:
-- VIX、10年債利回りの現在値と評価
-- 主要指数（Nasdaq, S&P500, Russell2000, Dow）のテクニカル分析
-- コモディティ（金、銅、原油、ウラン）のトレンド分析
-- セクターローテーション分析
-- シナリオ別の確率評価
+**Analysis Content**:
+- VIX, 10Y yield current values and evaluation
+- Technical analysis of major indices (Nasdaq, S&P500, Russell2000, Dow)
+- Trend analysis of commodities (gold, copper, oil, uranium)
+- Sector rotation analysis
+- Probability evaluation by scenario
 
-**分析対象外**:
-- ❌ S&P 500 Breadth Index - 別途breadth-chart-analystスキルで分析
-- ❌ Uptrend Stock Ratio - 別途breadth-chart-analystスキルで分析
+**Not Analyzed**:
+- S&P 500 Breadth Index - analyzed separately by breadth-chart-analyst skill
+- Uptrend Stock Ratio - analyzed separately by breadth-chart-analyst skill
 
 ---
 
-### ステップ2: US Market Analysis
+### Step 2: US Market Analysis
 
-**目的**: 市場環境の総合評価とバブルリスク検出、**Breadthチャートの詳細分析**
+**Purpose**: Comprehensive market environment evaluation and bubble risk detection, **detailed Breadth chart analysis**
 
-**エージェント**: `us-market-analyst`
+**Agent**: `us-market-analyst`
 
-**入力**:
-- `reports/YYYY-MM-DD/technical-market-analysis.md` (ステップ1の結果)
-- `charts/YYYY-MM-DD/` 内のBreadthチャート画像（**必ず実際に読み取ること**）
-- 市場データ（VIX, Breadth, 金利等）
+**Input**:
+- `reports/YYYY-MM-DD/technical-market-analysis.md` (Step 1 result)
+- Breadth chart images in `charts/YYYY-MM-DD/` (**must actually read them**)
+- Market data (VIX, Breadth, interest rates, etc.)
 
-**出力**:
+**Output**:
 - `reports/YYYY-MM-DD/us-market-analysis.md`
 
-**実行コマンド例**:
+**Example Command**:
 ```
-us-market-analystエージェントで米国市場の総合分析を実行してください。
-reports/2025-11-03/technical-market-analysis.mdを参照し、
-charts/2025-11-03/内のBreadthチャート（S&P 500 Breadth Index, Uptrend Stock Ratio）を
-必ず実際に読み取って分析してください。
-市場環境とバブルリスクを評価してreports/2025-11-03/us-market-analysis.mdに保存してください。
+Please run comprehensive US market analysis using the us-market-analyst agent.
+Reference reports/2025-11-03/technical-market-analysis.md,
+and be sure to actually read and analyze the Breadth charts (S&P 500 Breadth Index, Uptrend Stock Ratio)
+in charts/2025-11-03/.
+Evaluate market environment and bubble risk and save to reports/2025-11-03/us-market-analysis.md.
 ```
 
-**分析内容**:
-- 現在の市場フェーズ（Risk-On / Base / Caution / Stress）
-- バブル検出スコア（0-16スケール）
-- **Breadth Index（200日MA）の現在値とトレンド**
-- **Uptrend Stock Ratioの現在値、色（緑/赤）、底打ち反転シグナル**
-- セクターローテーションパターン
-- ボラティリティレジーム
+**Analysis Content**:
+- Current market phase (Risk-On / Base / Caution / Stress)
+- Bubble detection score (0-16 scale)
+- **Breadth Index (200-day MA) current value and trend**
+- **Uptrend Stock Ratio current value, color (green/red), bottom reversal signal**
+- Sector rotation pattern
+- Volatility regime
 
-**⚠️ 重要**: Uptrend Stock Ratioは**先行指標**。底打ち反転（赤→緑転換、20%台からの反発）は
-Breadth 200MAより1-2週間早く改善を示すことが多い。**推測や過去データではなく、実際のチャート画像を読み取ること**。
+**Important**: Uptrend Stock Ratio is a **leading indicator**. Bottom reversals (red to green transition, rebound from 20% range) often show improvement 1-2 weeks before Breadth 200MA. **Read the actual chart image, not assumptions or past data**.
 
 ---
 
-### ステップ3: Market News Analysis
+### Step 3: Market News Analysis
 
-**目的**: 過去10日間のニュース影響分析と今後7日間のイベント予測
+**Purpose**: News impact analysis for past 10 days and event forecast for next 7 days
 
-**エージェント**: `market-news-analyzer`
+**Agent**: `market-news-analyzer`
 
-**入力**:
-- `reports/YYYY-MM-DD/technical-market-analysis.md` (ステップ1の結果)
-- `reports/YYYY-MM-DD/us-market-analysis.md` (ステップ2の結果)
-- 経済カレンダー、決算カレンダー
+**Input**:
+- `reports/YYYY-MM-DD/technical-market-analysis.md` (Step 1 result)
+- `reports/YYYY-MM-DD/us-market-analysis.md` (Step 2 result)
+- Economic calendar, earnings calendar
 
-**出力**:
+**Output**:
 - `reports/YYYY-MM-DD/market-news-analysis.md`
 
-**実行コマンド例**:
+**Example Command**:
 ```
-market-news-analyzerエージェントでニュースとイベント分析を実行してください。
-過去10日間のニュース影響と今後7日間の重要イベントを分析し、
-reports/2025-11-03/market-news-analysis.mdに保存してください。
+Please run news and event analysis using the market-news-analyzer agent.
+Analyze news impact for the past 10 days and important events for the next 7 days,
+and save to reports/2025-11-03/market-news-analysis.md.
 ```
 
-**分析内容**:
-- 過去10日間の主要ニュースと市場への影響
-- 今後7日間の経済指標スケジュール
-- 主要決算発表（時価総額$2B以上）
-- イベント別のシナリオ分析（確率付き）
-- リスクイベントの優先順位付け
+**Analysis Content**:
+- Major news and market impact for past 10 days
+- Economic indicator schedule for next 7 days
+- Major earnings releases (market cap $2B+)
+- Scenario analysis by event (with probabilities)
+- Risk event prioritization
 
 ---
 
-### ステップ4: Weekly Blog Generation
+### Step 4: Weekly Blog Generation
 
-**目的**: 3つのレポートを統合し、兼業トレーダー向けの週間戦略ブログを生成
+**Purpose**: Integrate three reports and generate weekly strategy blog for part-time traders
 
-**エージェント**: `weekly-trade-blog-writer`
+**Agent**: `weekly-trade-blog-writer`
 
-**入力**:
+**Input**:
 - `reports/YYYY-MM-DD/technical-market-analysis.md`
 - `reports/YYYY-MM-DD/us-market-analysis.md`
 - `reports/YYYY-MM-DD/market-news-analysis.md`
-- `blogs/` (前週のブログ記事、連続性チェック用)
+- `blogs/` (previous week's blog post, for continuity check)
 
-**出力**:
+**Output**:
 - `blogs/YYYY-MM-DD-weekly-strategy.md`
 
-**実行コマンド例**:
+**Example Command**:
 ```
-weekly-trade-blog-writerエージェントで2025年11月3日週のブログ記事を作成してください。
-reports/2025-11-03/配下の3つのレポートを統合し、
-前週のセクター配分との連続性を保ちながら、
-blogs/2025-11-03-weekly-strategy.mdに保存してください。
+Please create the blog post for the week of November 3, 2025 using the weekly-trade-blog-writer agent.
+Integrate the three reports under reports/2025-11-03/,
+maintain continuity with previous week's sector allocation,
+and save to blogs/2025-11-03-weekly-strategy.md.
 ```
 
-**記事構成** (200-300行):
-1. **3行まとめ** - 市場環境・焦点・戦略
-2. **今週のアクション** - ロット管理、売買レベル、セクター配分、重要イベント
-3. **シナリオ別プラン** - Base/Risk-On/Cautionの3シナリオ
-4. **マーケット状況** - 統一トリガー（10Y/VIX/Breadth）
-5. **コモディティ・セクター戦術** - 金/銅/ウラン/原油
-6. **兼業運用ガイド** - 朝/夜チェックリスト
-7. **リスク管理** - 今週特有のリスク
-8. **まとめ** - 3-5文
+**Article Structure** (200-300 lines):
+1. **3-Line Summary** - Market environment, focus, strategy
+2. **This Week's Action** - Position sizing, buy/sell levels, sector allocation, key events
+3. **Scenario Plans** - Base/Risk-On/Caution 3 scenarios
+4. **Market Conditions** - Unified triggers (10Y/VIX/Breadth)
+5. **Commodity/Sector Tactics** - Gold/Copper/Uranium/Oil
+6. **Part-Time Trading Guide** - Morning/Evening checklists
+7. **Risk Management** - This week's specific risks
+8. **Summary** - 3-5 sentences
 
-**重要な制約**:
-- 前週からのセクター配分変更は**±10-15%以内**（段階的調整）
-- 史上最高値更新中+Baseトリガーの場合、急激なポジション削減は避ける
-- 現金配分は段階的に増加（例: 10% → 20-25% → 30-35%）
+**Important Constraints**:
+- Sector allocation changes from previous week must be **within ±10-15%** (gradual adjustment)
+- During ATH + Base triggers, avoid sudden position reduction
+- Cash allocation increases gradually (e.g., 10% -> 20-25% -> 30-35%)
 
-**「モンティ節」スタイルガイド（必須遵守）**:
+**"Monty Style" Guide (Mandatory)**:
 
-これまでのブログ記事で確立された「モンティ節」スタイルを維持するため、以下の点を厳守してください。
+Follow these rules to maintain the established "Monty Style" in blog posts:
 
-1. **トリガーは価格リアクションベース**
-   - ❌ 悪い例: 「NVIDIA売上$55B+、Q4ガイダンス$58B+」
-   - ✅ 良い例: 「**NVIDIA決算後+8%以上ギャップアップ & 高値更新**」「**-8%以上ギャップダウン or 50日MA割れ**」
-   - 理由: 兼業トレーダーは決算短信を精読する時間がない。価格とテクニカルレベルで即座に判断できる形式にする。
+1. **Triggers are Price Reaction Based**
+   - Bad: "NVIDIA revenue $55B+, Q4 guidance $58B+"
+   - Good: "**Post-NVIDIA earnings +8% gap up & new high**" "**-8% gap down or 50-day MA break**"
+   - Reason: Part-time traders don't have time to read earnings reports. Use price and technical levels for immediate decisions.
 
-2. **指標水準は標準値に統一**
-   - **VIX**: **17**(リスクオン) / **20**(Caution) / **23**(Stress) / **26**(パニック)
-   - **米10年債利回り**: **4.11%**(下限) / **4.36%**(警戒) / **4.50%**(レッドライン) / **4.60%**(極端)
-   - **Breadth(200日MA上)**: **60%以上**(健全) / **50%**(ボーダー) / **40%以下**(脆弱)
-   - 理由: 過去記事との整合性を保ち、読者が混乱しないようにする。
+2. **Indicator Levels are Standardized**
+   - **VIX**: **17**(Risk-On) / **20**(Caution) / **23**(Stress) / **26**(Panic)
+   - **US 10Y Yield**: **4.11%**(lower) / **4.36%**(warning) / **4.50%**(red line) / **4.60%**(extreme)
+   - **Breadth (above 200-day MA)**: **60%+**(healthy) / **50%**(border) / **40% or less**(fragile)
+   - Reason: Maintain consistency with past articles, avoid reader confusion.
 
-3. **セクター配分は4本柱構造**
-   - **① コア指数**(SPY/QQQ/DIA): 40-50%
-   - **② 防御セクター**(Healthcare + Consumer Staples): 15-25%
-   - **③ テーマ/ヘッジ**(Energy + 金 + コモディティ): 15-25%
-   - **④ 現金・短期債**(BIL): 15-30%
-   - **重要**: Energyは「防御セクター」ではなく「**インフレヘッジ+オポチュニスティック枠**」として③に分類
-   - 理由: 合計100%の配分が一目で理解できる。読者が実務で使いやすい。
+3. **Sector Allocation is 4-Pillar Structure**
+   - **Core Index** (SPY/QQQ/DIA): 40-50%
+   - **Defensive Sector** (Healthcare + Consumer Staples): 15-25%
+   - **Theme/Hedge** (Energy + Gold + Commodities): 15-25%
+   - **Cash/Short-term Bonds** (BIL): 15-30%
+   - **Important**: Energy is classified as "**Inflation Hedge + Opportunistic**" in category 3, not "Defensive Sector"
+   - Reason: Total 100% allocation is clear at a glance. Practical for readers.
 
-4. **配分の読み方(例)を必ず記載**
+4. **Always Include Allocation Examples**
    ```
-   - ポートフォリオ$100Kの場合:
-     - コア指数: $45-50K
-     - 防御(Healthcare $12-15K + Staples $5-8K): $17-23K
-     - テーマ(Energy $10-12K + 金 $10-12K): $20-24K
-     - 現金: $20-25K
+   - For $100K portfolio:
+     - Core Index: $45-50K
+     - Defensive (Healthcare $12-15K + Staples $5-8K): $17-23K
+     - Theme (Energy $10-12K + Gold $10-12K): $20-24K
+     - Cash: $20-25K
    ```
-   - 理由: 抽象的なパーセントだけでなく、具体的な金額例で理解を助ける。
+   - Reason: Help understanding with concrete dollar examples, not just abstract percentages.
 
-5. **Breadth解釈は客観的に**
-   - ❌ 悪い例: 「Breadth 53%は史上最悪級」
-   - ✅ 良い例: 「Breadth 53%は**細いラリー再燃**。60%以上の健全水準は大きく下回るが、40%以下の脆弱ラインには達していない」
-   - 理由: 53%は中間的な水準。極端な表現は避け、過去の基準(0.6以上:強い、0.5:ボーダー、0.4未満:警戒)と整合させる。
+5. **Breadth Interpretation is Objective**
+   - Bad: "Breadth 53% is historically worst"
+   - Good: "Breadth 53% indicates a **narrow rally**. Well below 60%+ healthy level, but hasn't reached 40% fragile line"
+   - Reason: 53% is an intermediate level. Avoid extreme expressions, align with past standards (0.6+: strong, 0.5: border, 0.4-: warning).
 
-6. **ヘッジはETFベースがメイン、オプションは補足**
-   - **メイン戦略**: 金(GLD)、長期債(TLT)、逆指数(SH/SDS)、短期債(BIL)
-   - **上級者向け補足**: VIXコール、QQQプット、SPYプット
-   - 記載例:
+6. **ETF-Based Hedges are Main, Options are Supplementary**
+   - **Main Strategy**: Gold (GLD), Long-term Bonds (TLT), Inverse Index (SH/SDS), Short-term Bonds (BIL)
+   - **Advanced Supplement**: VIX calls, QQQ puts, SPY puts
+   - Example:
      ```markdown
-     ### 上級者向けオプション戦略(補足)
+     ### Advanced Options Strategy (Supplement)
 
-     **注意**: 以下はオプション取引経験者向け。兼業トレーダーは上記ETFヘッジで十分。
+     **Note**: The following is for experienced options traders. Part-time traders should use ETF hedges above.
 
-     - VIXコール: 11/20決算前に25ストライク購入(コスト1-2%)
-     - QQQプット: 24,000ストライク(NVIDIA下落ヘッジ、12/20満期)
+     - VIX call: Buy 25 strike before 11/20 earnings (cost 1-2%)
+     - QQQ put: 24,000 strike (NVIDIA downside hedge, 12/20 expiry)
      ```
-   - 理由: 兼業トレーダーの多くはオプション取引未経験。メインはETFで完結させる。
+   - Reason: Most part-time traders are inexperienced with options. Main strategy should be complete with ETFs.
 
-7. **兼業運用ガイドは価格トリガーベース**
-   - ❌ 悪い例: 「決算内容を確認して、EPS/売上が予想を上回ったら買い増し」
-   - ✅ 良い例:
+7. **Part-Time Trading Guide is Price Trigger Based**
+   - Bad: "Check earnings content, if EPS/revenue beats expectations, add to position"
+   - Good:
      ```markdown
-     1. **NVIDIA決算詳細精査(11/20水)**:
-        - ギャップの大きさ(**+8%超 or -8%超**)確認
-        - 20週MA($24,558)・50日MA($24,000近辺)との位置関係
-        - 引けで高値更新 or 陰線包み込みかの確認
+     1. **NVIDIA Earnings Deep Dive (Wed 11/20)**:
+        - Check gap size (**+8% or -8%**)
+        - Position relative to 20-week MA ($24,558) and 50-day MA (~$24,000)
+        - Confirm if closing at new high or engulfing bearish candle
      ```
-   - 理由: 朝の出勤前・夜の帰宅後にチャートを見るだけで判断できる形式。
+   - Reason: Format that allows decisions just by looking at charts before work in morning or after work at night.
 
-8. **シナリオ別プランの操作量を最小化**
-   - ❌ 悪い例: 「コア40-45%→30-35%、防御27-35%→35-40%、テーマ15-20%→10-15%、現金20-25%→30-35%」(4つ同時変更)
-   - ✅ 良い例: 「コア・防御・現金の**3本だけ**を変える」
-   - 理由: 兼業トレーダーは時間が限られている。実務上の操作量を最小化。
+8. **Minimize Operations in Scenario Plans**
+   - Bad: "Core 40-45%->30-35%, Defensive 27-35%->35-40%, Theme 15-20%->10-15%, Cash 20-25%->30-35%" (4 simultaneous changes)
+   - Good: "Change only **3 pillars**: Core, Defensive, Cash"
+   - Reason: Part-time traders have limited time. Minimize operational complexity.
 
-9. **配分パーセンテージは100%以内に収める**
-   - ❌ 悪い例: 「株式45-50% + 防御18-23% + テーマ15-20% = 78-93%投資、現金20-25%」(単純合計で98-118%に見える)
-   - ✅ 良い例:
+9. **Allocation Percentages Stay Within 100%**
+   - Bad: "Equity 45-50% + Defensive 18-23% + Theme 15-20% = 78-93% invested, Cash 20-25%" (simple sum appears 98-118%)
+   - Good:
      ```
-     推奨リスク配分: 株式・コモディティ合計 75-80%、現金・短期債 20-25%
-     - ① コア指数: 45-50%
-     - ② 防御セクター: 18-23%
-     - ③ テーマ/ヘッジ: 15-20%
-     - ④ 現金・短期債: 20-25%
+     Recommended Risk Allocation: Equity & Commodities total 75-80%, Cash & Short-term Bonds 20-25%
+     - Core Index: 45-50%
+     - Defensive Sector: 18-23%
+     - Theme/Hedge: 15-20%
+     - Cash/Short-term Bonds: 20-25%
 
-     ※注: ①〜③は一部重複を含む株式・コモディティ部分の配分。
-     ポートフォリオ全体ではリスク資産エクスポージャー上限を75-80%程度、
-     残りを現金・短期債20-25%と想定。
+     *Note: Categories 1-3 include some overlap in equity/commodity portion.
+     Overall portfolio assumes risk asset exposure cap of 75-80%,
+     with remaining 20-25% in cash/short-term bonds.
      ```
-   - 理由: 「78-93% + 20-25% = 98-118%?」という読者の混乱を防ぐ。4本柱は重複を含むため、実質合計は75-80%程度であることを明示。
+   - Reason: Prevent reader confusion from "78-93% + 20-25% = 98-118%?". 4 pillars include overlap, actual total is ~75-80%.
 
-10. **決算タイミング表記の統一**
-    - ❌ 悪い例: イベント表では「AMC(After Market Close)」なのに、朝チェックでは「寄付き前発表」
-    - ✅ 良い例: 「**前日引け後発表(AMC)**。翌朝の**寄付き前に±8-10%ギャップを確認**し、シナリオ判定」
-    - 理由: AMC決算は引け後発表なので、判断は翌朝寄付き前。タイミング表記を統一して混乱を防ぐ。
+10. **Unified Earnings Timing Notation**
+    - Bad: Event table says "AMC (After Market Close)" but morning check says "pre-market release"
+    - Good: "**Released after market close (AMC)**. Check **±8-10% gap before next morning's open** for scenario decision"
+    - Reason: AMC earnings are released after close, so decision is made before next morning's open. Unify timing notation to prevent confusion.
 
-11. **ATR参照は一か所に集約**
-    - ❌ 悪い例: 本文の複数箇所に「ATR 1.6倍」「NVDA週は1.2倍」と散在
-    - ✅ 良い例:
-      - 前半: 「個別銘柄: **ATRベース**(詳細はリスク管理セクション参照)」
-      - リスク管理セクション: 「**ATR 1.6倍**(-6-8%)で即座損切り。**NVIDIA決算週は1.2倍**(-5-6%)に縮小」
-    - 理由: 読み口が軽くなり、詳細はリスク管理セクションで確認できる構成に。
+11. **Consolidate ATR References in One Place**
+    - Bad: Multiple places in text mention "ATR 1.6x" "NVDA week 1.2x"
+    - Good:
+      - First half: "Individual stocks: **ATR-based** (see Risk Management section for details)"
+      - Risk Management section: "**ATR 1.6x** (-6-8%) immediate stop loss. **NVIDIA earnings week reduced to 1.2x** (-5-6%)"
+    - Reason: Lighter reading, details can be confirmed in Risk Management section.
 
 ---
 
-### ステップ5（必須）: Strategy Review - 品質保証レビュー
+### Step 5 (Required): Strategy Review - Quality Assurance
 
-**目的**: 第三者視点で戦略ブログの品質保証を実施し、データ誤読・論理矛盾・シグナル見落としを検出
+**Purpose**: Conduct quality assurance review from third-party perspective, detect data misreading, logical contradictions, signal omissions
 
-**エージェント**: `strategy-reviewer`
+**Agent**: `strategy-reviewer`
 
-**入力**:
-- `charts/YYYY-MM-DD/` 内の全チャート画像（**再読み取り必須**）
+**Input**:
+- All chart images in `charts/YYYY-MM-DD/` (**re-reading required**)
 - `reports/YYYY-MM-DD/technical-market-analysis.md`
 - `reports/YYYY-MM-DD/us-market-analysis.md`
 - `reports/YYYY-MM-DD/market-news-analysis.md`
-- `blogs/YYYY-MM-DD-weekly-strategy.md` (レビュー対象)
-- 前週のブログ記事（連続性チェック用）
+- `blogs/YYYY-MM-DD-weekly-strategy.md` (review target)
+- Previous week's blog post (for continuity check)
 
-**出力**:
+**Output**:
 - `reports/YYYY-MM-DD/strategy-review.md`
 
-**実行コマンド例**:
+**Example Command**:
 ```
-strategy-reviewerエージェントで2025-12-01週のブログ記事をレビューしてください。
-charts/2025-12-01/内のチャートを再読み取りし、
-blogs/2025-12-01-weekly-strategy.mdの品質を検証してください。
-レビュー結果をreports/2025-12-01/strategy-review.mdに保存してください。
+Please review the blog post for the week of 2025-12-01 using the strategy-reviewer agent.
+Re-read the charts in charts/2025-12-01/,
+verify the quality of blogs/2025-12-01-weekly-strategy.md.
+Save review results to reports/2025-12-01/strategy-review.md.
 ```
 
-**レビュー内容**:
-- **データ検証**: チャート画像を再読み取りし、ブログ記載値と照合
-- **Uptrend Ratio確認**: 底打ち反転シグナルの見落としがないか（最重要）
-- **配分計算チェック**: 4本柱が100%になっているか
-- **シナリオ整合性**: レポート間で確率・スタンスが一致しているか
-- **連続性チェック**: 前週から±10-15%以内の段階的調整か
+**Review Content**:
+- **Data Verification**: Re-read chart images, compare with blog values
+- **Uptrend Ratio Confirmation**: Check for missed bottom reversal signals (most important)
+- **Allocation Calculation Check**: Verify 4 pillars total 100%
+- **Scenario Consistency**: Check probabilities and stance match between reports
+- **Continuity Check**: Verify ±10-15% gradual adjustment from previous week
 
-**判定結果**:
-- **PASS**: 公開OK
-- **PASS WITH NOTES**: 軽微な問題あり、認識の上で公開可
-- **REVISION REQUIRED**: 修正必須、公開不可
+**Judgment Results**:
+- **PASS**: OK to publish
+- **PASS WITH NOTES**: Minor issues, OK to publish with awareness
+- **REVISION REQUIRED**: Corrections required, do not publish
 
-**⚠️ 重要**: このステップは**必須**です。ブログ記事を公開する前に必ず実行してください。
-今回のUptrend Ratio見落とし問題もこのレビューで検出できます。
+**Important**: This step is **required**. Always run before publishing blog post.
+The Uptrend Ratio oversight issue can be detected by this review.
 
 ---
 
-### ステップ6（オプション）: Druckenmiller Strategy Planning
+### Step 6 (Optional): Druckenmiller Strategy Planning
 
-**目的**: 3つの分析レポートを統合し、18ヶ月の中長期投資戦略を策定
+**Purpose**: Integrate three analysis reports and formulate 18-month medium-long term investment strategy
 
-**エージェント**: `druckenmiller-strategy-planner`
+**Agent**: `druckenmiller-strategy-planner`
 
-**入力**:
-- `reports/YYYY-MM-DD/technical-market-analysis.md` (ステップ1の結果)
-- `reports/YYYY-MM-DD/us-market-analysis.md` (ステップ2の結果)
-- `reports/YYYY-MM-DD/market-news-analysis.md` (ステップ3の結果)
-- 前回のDruckenmiller戦略レポート（存在する場合）
+**Input**:
+- `reports/YYYY-MM-DD/technical-market-analysis.md` (Step 1 result)
+- `reports/YYYY-MM-DD/us-market-analysis.md` (Step 2 result)
+- `reports/YYYY-MM-DD/market-news-analysis.md` (Step 3 result)
+- Previous Druckenmiller strategy report (if exists)
 
-**出力**:
+**Output**:
 - `reports/YYYY-MM-DD/druckenmiller-strategy.md`
 
-**実行コマンド例**:
+**Example Command**:
 ```
-druckenmiller-strategy-plannerエージェントで2025年11月3日時点の18ヶ月戦略を策定してください。
-reports/2025-11-03/配下の3つのレポートを総合的に分析し、
-Druckenmiller流の戦略フレームワークを適用して、
-reports/2025-11-03/druckenmiller-strategy.mdに保存してください。
+Please formulate the 18-month strategy as of November 3, 2025 using the druckenmiller-strategy-planner agent.
+Comprehensively analyze the three reports under reports/2025-11-03/,
+apply Druckenmiller's strategy framework,
+and save to reports/2025-11-03/druckenmiller-strategy.md.
 ```
 
-**分析フレームワーク**:
+**Analysis Framework**:
 
-1. **Druckenmillerの投資哲学**
-   - マクロ重視の18ヶ月先行分析
-   - 確信度に基づくポジションサイジング
-   - 複数要因が揃った時の集中投資
-   - 素早い損切りと柔軟性
+1. **Druckenmiller's Investment Philosophy**
+   - Macro-focused 18-month forward analysis
+   - Position sizing based on conviction
+   - Concentrated investment when multiple factors align
+   - Quick stop-losses and flexibility
 
-2. **4つのシナリオ分析**（確率付き）
-   - **Base Case** (最高確率シナリオ)
-   - **Bull Case** (楽観シナリオ)
-   - **Bear Case** (リスクシナリオ)
-   - **Tail Risk** (低確率の極端シナリオ)
+2. **4 Scenario Analysis** (with probabilities)
+   - **Base Case** (highest probability scenario)
+   - **Bull Case** (optimistic scenario)
+   - **Bear Case** (risk scenario)
+   - **Tail Risk** (low probability extreme scenario)
 
-3. **各シナリオの構成要素**
-   - 主要カタリスト（政策、景気、地政学）
-   - タイムライン（Q1-Q2、Q3-Q4の展開）
-   - 資産クラス別の影響
-   - 最適ポジショニング戦略
-   - 無効化シグナル（戦略転換のトリガー）
+3. **Components of Each Scenario**
+   - Key catalysts (policy, economy, geopolitics)
+   - Timeline (Q1-Q2, Q3-Q4 developments)
+   - Impact by asset class
+   - Optimal positioning strategy
+   - Invalidation signals (strategy change triggers)
 
-**レポート構成** (約150-200行):
+**Report Structure** (~150-200 lines):
 ```markdown
 # Strategic Investment Outlook - [Date]
 
 ## Executive Summary
-[2-3段落：支配的テーマと戦略的ポジショニングの要約]
+[2-3 paragraphs: Summary of dominant themes and strategic positioning]
 
 ## Market Context & Current Environment
 ### Macroeconomic Backdrop
-[金融政策、景気サイクル、マクロ指標の現状]
+[Monetary policy, business cycle, macro indicators current state]
 
 ### Technical Market Structure
-[主要テクニカルレベル、トレンド、パターン]
+[Key technical levels, trends, patterns]
 
 ### Sentiment & Positioning
-[市場センチメント、機関投資家ポジション、逆張り機会]
+[Market sentiment, institutional positioning, contrarian opportunities]
 
 ## 18-Month Scenario Analysis
 
 ### Base Case Scenario (XX% probability)
-**Narrative:** [最も可能性の高い市場の道筋]
+**Narrative:** [Most likely market path]
 **Key Catalysts:**
-- [カタリスト1]
-- [カタリスト2]
+- [Catalyst 1]
+- [Catalyst 2]
 **Timeline Markers:**
-- [Q1-Q2の予想展開]
-- [Q3-Q4の予想展開]
+- [Q1-Q2 expected development]
+- [Q3-Q4 expected development]
 **Strategic Positioning:**
-- [資産配分推奨]
-- [具体的なトレードアイデアと確信度]
+- [Asset allocation recommendation]
+- [Specific trade ideas with conviction levels]
 **Risk Management:**
-- [無効化シグナル]
-- [ストップロス/撤退基準]
+- [Invalidation signals]
+- [Stop-loss/exit criteria]
 
 ### Bull Case Scenario (XX% probability)
-[Base Caseと同様の構成]
+[Same structure as Base Case]
 
 ### Bear Case Scenario (XX% probability)
-[Base Caseと同様の構成]
+[Same structure as Base Case]
 
 ### Tail Risk Scenario (XX% probability)
-[Base Caseと同様の構成]
+[Same structure as Base Case]
 
 ## Recommended Strategic Actions
 
 ### High Conviction Trades
-[テクニカル、ファンダメンタル、センチメントが揃ったトレード]
+[Trades where technical, fundamental, and sentiment align]
 
 ### Medium Conviction Positions
-[良好なリスク/リワードだが要因の整合性が低いポジション]
+[Good risk/reward but lower factor alignment]
 
 ### Hedges & Protective Strategies
-[リスク管理ポジションとポートフォリオ保険]
+[Risk management positions and portfolio insurance]
 
 ### Watchlist & Contingent Trades
-[確認待ちまたは特定トリガー待ちのセットアップ]
+[Setups awaiting confirmation or specific triggers]
 
 ## Key Monitoring Indicators
-[シナリオ検証/無効化のための追跡指標]
+[Indicators to track for scenario validation/invalidation]
 
 ## Conclusion & Next Review Date
-[最終的な戦略推奨と次回見直し時期]
+[Final strategy recommendation and next review timing]
 ```
 
-**重要な特徴**:
-- 週間ブログ（短期戦術）とは異なり、**18ヶ月の中長期戦略**
-- マクロ経済の構造変化や政策転換点を重視
-- 確信度に応じたポジションサイジング（High/Medium/Low）
-- 各シナリオに明確な無効化条件を設定
-- stanley-druckenmiller-investmentスキルを活用
+**Key Features**:
+- Unlike weekly blog (short-term tactics), this is **18-month medium-long term strategy**
+- Focus on macro-economic structural changes and policy turning points
+- Position sizing by conviction level (High/Medium/Low)
+- Clear invalidation conditions for each scenario
+- Uses stanley-druckenmiller-investment skill
 
-**実行タイミング**:
-- 週間ブログと同時（四半期ごと推奨）
-- FOMCなど重大イベント後
-- 市場構造の大きな転換点
+**Execution Timing**:
+- Simultaneously with weekly blog (quarterly recommended)
+- After major events like FOMC
+- At major market structure turning points
 
-**不足レポートの自動生成**:
-上流レポート（ステップ1-3）が存在しない場合、druckenmiller-strategy-plannerは自動的に不足エージェントを呼び出します。
+**Auto-Generation of Missing Reports**:
+If upstream reports (Steps 1-3) don't exist, druckenmiller-strategy-planner automatically calls the missing agents.
 
 ---
 
-## 一括実行スクリプト（推奨）
+## Batch Execution Script (Recommended)
 
 ```bash
-# 日付設定
+# Set date
 DATE="2025-11-03"
 
-# ステップ0: フォルダ準備
+# Step 0: Prepare folders
 mkdir -p charts/$DATE reports/$DATE
 
-# ステップ1-5を一括実行するプロンプト例：
-「$DATE週のトレード戦略ブログを作成してください。
+# Example prompt for batch execution of Steps 1-5:
+"Please create the trade strategy blog for the week of $DATE.
 
-1. technical-market-analystでcharts/$DATE/の全チャートを分析
-   → reports/$DATE/technical-market-analysis.md
+1. Analyze all charts in charts/$DATE/ with technical-market-analyst
+   -> reports/$DATE/technical-market-analysis.md
 
-2. us-market-analystで市場環境を総合評価（Breadthチャート再読み取り含む）
-   → reports/$DATE/us-market-analysis.md
+2. Comprehensive market environment evaluation with us-market-analyst (including Breadth chart re-reading)
+   -> reports/$DATE/us-market-analysis.md
 
-3. market-news-analyzerでニュース/イベント分析
-   → reports/$DATE/market-news-analysis.md
+3. News/event analysis with market-news-analyzer
+   -> reports/$DATE/market-news-analysis.md
 
-4. weekly-trade-blog-writerで最終ブログ記事を生成
-   → blogs/$DATE-weekly-strategy.md
+4. Generate final blog post with weekly-trade-blog-writer
+   -> blogs/$DATE-weekly-strategy.md
 
-5. strategy-reviewerで品質レビュー（必須）
-   → reports/$DATE/strategy-review.md
-   → PASS/PASS WITH NOTES/REVISION REQUIREDを判定
+5. Quality review with strategy-reviewer (required)
+   -> reports/$DATE/strategy-review.md
+   -> Determine PASS/PASS WITH NOTES/REVISION REQUIRED
 
-各ステップを順次実行し、レポートを確認してから次に進んでください。
-ステップ5でREVISION REQUIREDの場合は、修正後に再レビューしてください。」
+Execute each step sequentially and confirm report before proceeding to next.
+If Step 5 returns REVISION REQUIRED, correct and re-review."
 ```
 
 ---
 
-## エージェント間のデータフロー
+## Data Flow Between Agents
 
-### 週間ブログ生成フロー
+### Weekly Blog Generation Flow
 
 ```
 charts/YYYY-MM-DD/
   ├─> [technical-market-analyst]
   │      └─> reports/YYYY-MM-DD/technical-market-analysis.md
   │            │
-  │            ├─> [us-market-analyst] ←── charts/も再読み取り（breadth-chart-analyst）
+  │            ├─> [us-market-analyst] <── also re-reads charts/ (breadth-chart-analyst)
   │            │      └─> reports/YYYY-MM-DD/us-market-analysis.md
   │            │            │
   │            │            ├─> [market-news-analyzer]
@@ -524,134 +523,134 @@ charts/YYYY-MM-DD/
   │                                                └─> blogs/YYYY-MM-DD-weekly-strategy.md
   │                                                      │
   │                                                      ▼
-  ├─────────────────────────────────────────────> [strategy-reviewer] ←── 必須レビュー
+  ├─────────────────────────────────────────────> [strategy-reviewer] <── Required review
   │                                                      │
   │                                                      └─> reports/YYYY-MM-DD/strategy-review.md
   │                                                           │
-  │                                                           ├─ PASS → 公開OK
-  │                                                           ├─ PASS WITH NOTES → 認識の上で公開
-  │                                                           └─ REVISION REQUIRED → 修正後再レビュー
+  │                                                           ├─ PASS -> OK to publish
+  │                                                           ├─ PASS WITH NOTES -> Publish with awareness
+  │                                                           └─ REVISION REQUIRED -> Correct and re-review
   │
-  └─> (前週のブログ記事も参照)
-       blogs/YYYY-MM-DD-weekly-strategy.md (先週)
+  └─> (Also references previous week's blog)
+       blogs/YYYY-MM-DD-weekly-strategy.md (last week)
 ```
 
-### 中長期戦略レポート生成フロー（オプション）
+### Medium-Long Term Strategy Report Generation Flow (Optional)
 
 ```
 reports/YYYY-MM-DD/
   ├─> technical-market-analysis.md ────┐
   ├─> us-market-analysis.md ───────────┼─> [druckenmiller-strategy-planner]
   └─> market-news-analysis.md ─────────┘      └─> reports/YYYY-MM-DD/druckenmiller-strategy.md
-                                                       (18ヶ月投資戦略)
+                                                       (18-month investment strategy)
 ```
 
 ---
 
-## トラブルシューティング
+## Troubleshooting
 
-### エージェントがチャートを見つけられない
-- `charts/YYYY-MM-DD/` フォルダが存在するか確認
-- チャート画像のファイル形式が`.jpeg`または`.png`か確認
+### Agent Can't Find Charts
+- Verify `charts/YYYY-MM-DD/` folder exists
+- Verify chart image file format is `.jpeg` or `.png`
 
-### レポートが生成されない
-- `reports/YYYY-MM-DD/` フォルダが存在するか確認
-- 前のステップのレポートが正常に生成されているか確認
+### Report Not Generated
+- Verify `reports/YYYY-MM-DD/` folder exists
+- Verify previous step's report was generated successfully
 
-### ブログ記事のセクター配分が急変している
-- 前週のブログ記事が`blogs/`に存在するか確認
-- weekly-trade-blog-writerエージェントの連続性チェック機能が有効か確認
+### Blog Post Sector Allocation Changed Drastically
+- Verify previous week's blog post exists in `blogs/`
+- Verify weekly-trade-blog-writer agent's continuity check function is enabled
 
-### ブログ記事が長すぎる（300行超過）
-- weekly-trade-blog-writerエージェント定義の長さ制限を確認
-- 記事生成後、行数を確認: `wc -l blogs/YYYY-MM-DD-weekly-strategy.md`
-
----
-
-## 推奨ワークフロー
-
-### 日曜夜（日本時間）または金曜夜（米国時間）
-1. 週末にチャートを準備
-2. technical-market-analystを実行
-3. 結果を確認してから次のステップへ
-
-### 月曜朝
-4. us-market-analyst、market-news-analyzerを実行
-5. 3つのレポートをレビュー
-6. weekly-trade-blog-writerでブログ生成
-7. **strategy-reviewerで品質レビュー（必須）**
-8. レビュー結果に応じて修正または公開
+### Blog Post Too Long (300+ lines)
+- Check length limit in weekly-trade-blog-writer agent definition
+- Check line count after generation: `wc -l blogs/YYYY-MM-DD-weekly-strategy.md`
 
 ---
 
-## 各エージェントの詳細仕様
+## Recommended Workflow
+
+### Sunday Night (JST) or Friday Night (US Time)
+1. Prepare charts on weekend
+2. Run technical-market-analyst
+3. Confirm results before next step
+
+### Monday Morning
+4. Run us-market-analyst, market-news-analyzer
+5. Review three reports
+6. Generate blog with weekly-trade-blog-writer
+7. **Quality review with strategy-reviewer (required)**
+8. Correct or publish based on review results
+
+---
+
+## Agent Specifications
 
 ### technical-market-analyst
-- **スキル**: technical-analyst, breadth-chart-analyst, sector-analyst
-- **分析対象**: 週足チャート、Breadth指標、セクターパフォーマンス
-- **出力形式**: Markdown、シナリオ別確率付き
+- **Skills**: technical-analyst, breadth-chart-analyst, sector-analyst
+- **Analysis Targets**: Weekly charts, Breadth indicators, Sector performance
+- **Output Format**: Markdown, scenario probabilities
 
 ### us-market-analyst
-- **スキル**: market-environment-analysis, us-market-bubble-detector, **breadth-chart-analyst**
-- **分析対象**: 市場フェーズ、バブルスコア、センチメント、**Breadthチャート（Uptrend Ratio含む）**
-- **出力形式**: Markdown、リスク評価
-- **重要**: Breadthチャート画像を**実際に読み取り**、Uptrend Ratioの底打ち反転など先行指標を識別すること
+- **Skills**: market-environment-analysis, us-market-bubble-detector, **breadth-chart-analyst**
+- **Analysis Targets**: Market phase, Bubble score, Sentiment, **Breadth charts (including Uptrend Ratio)**
+- **Output Format**: Markdown, Risk evaluation
+- **Important**: Must **actually read** Breadth chart images and identify leading indicators like Uptrend Ratio bottom reversals
 
 ### market-news-analyzer
-- **スキル**: market-news-analyst, economic-calendar-fetcher, earnings-calendar
-- **分析対象**: 過去10日ニュース、今後7日イベント
-- **出力形式**: Markdown、イベント別シナリオ
+- **Skills**: market-news-analyst, economic-calendar-fetcher, earnings-calendar
+- **Analysis Targets**: Past 10 days news, Next 7 days events
+- **Output Format**: Markdown, Event scenarios
 
 ### weekly-trade-blog-writer
-- **入力**: 上記3レポート + 前週ブログ
-- **制約**: 200-300行、段階的調整（±10-15%）
-- **出力形式**: 兼業トレーダー向けMarkdown（5-10分読了）
+- **Input**: Above 3 reports + Previous week's blog
+- **Constraints**: 200-300 lines, Gradual adjustment (±10-15%)
+- **Output Format**: Markdown for part-time traders (5-10 min read)
 
-### strategy-reviewer（必須）
-- **スキル**: breadth-chart-analyst
-- **役割**: 第三者視点での品質保証レビュー
-- **入力**: 全チャート画像（再読み取り）、全レポート、ブログ記事、前週ブログ
-- **出力形式**: Markdown、PASS/PASS WITH NOTES/REVISION REQUIREDの判定
-- **検証項目**: データ精度、Uptrend Ratio確認、配分計算、シナリオ整合性、連続性
-- **重要**: ブログ公開前に**必ず実行**。今回のUptrend Ratio見落としもこのレビューで検出可能
+### strategy-reviewer (Required)
+- **Skills**: breadth-chart-analyst
+- **Role**: Third-party quality assurance review
+- **Input**: All chart images (re-read), All reports, Blog post, Previous week's blog
+- **Output Format**: Markdown, PASS/PASS WITH NOTES/REVISION REQUIRED judgment
+- **Verification Items**: Data accuracy, Uptrend Ratio confirmation, Allocation calculation, Scenario consistency, Continuity
+- **Important**: **Must run** before publishing blog. Uptrend Ratio oversight can be detected by this review
 
-### druckenmiller-strategy-planner（オプション）
-- **スキル**: stanley-druckenmiller-investment
-- **分析対象**: 18ヶ月中長期マクロ戦略、シナリオ分析
-- **入力**: 上記3レポート（technical, us-market, market-news）
-- **出力形式**: Markdown、4シナリオ（Base/Bull/Bear/Tail Risk）、確率・確信度付き
-- **特徴**: Druckenmiller流の集中投資と素早い損切り、マクロ転換点の識別
-- **実行頻度**: 四半期ごと、またはFOMC等の重大イベント後
+### druckenmiller-strategy-planner (Optional)
+- **Skills**: stanley-druckenmiller-investment
+- **Analysis Targets**: 18-month medium-long term macro strategy, Scenario analysis
+- **Input**: Above 3 reports (technical, us-market, market-news)
+- **Output Format**: Markdown, 4 scenarios (Base/Bull/Bear/Tail Risk), Probabilities and conviction levels
+- **Features**: Druckenmiller-style concentrated investment and quick stop-losses, Macro turning point identification
+- **Execution Frequency**: Quarterly, or after major events like FOMC
 
 ---
 
-## Breadthチャート自動検出ツール
+## Breadth Chart Auto-Detection Tool
 
-### 概要
+### Overview
 
-S&P 500 Breadth Indexチャートの200日MA・8日MAの値を、OpenCVを使用して自動検出するPythonスクリプトです。
-目視での読み取り誤りを防止し、高精度な数値を取得できます。
+A Python script that uses OpenCV to automatically detect 200-day MA and 8-day MA values from S&P 500 Breadth Index charts.
+Prevents visual reading errors and obtains high-accuracy values.
 
-### スクリプトの場所
+### Script Location
 
 ```
 .claude/skills/breadth-chart-analyst/scripts/detect_breadth_values.py
 ```
 
-### 使用方法
+### Usage
 
 ```bash
-# 基本的な実行（検出結果を表示）
+# Basic execution (display detection results)
 python3 .claude/skills/breadth-chart-analyst/scripts/detect_breadth_values.py charts/YYYY-MM-DD/IMG_XXXX.jpeg
 
-# デバッグモード（検出結果を画像で確認）
+# Debug mode (visually confirm detection results)
 python3 .claude/skills/breadth-chart-analyst/scripts/detect_breadth_values.py charts/YYYY-MM-DD/IMG_XXXX.jpeg --debug
 
-# JSON形式で出力
+# Output in JSON format
 python3 .claude/skills/breadth-chart-analyst/scripts/detect_breadth_values.py charts/YYYY-MM-DD/IMG_XXXX.jpeg --json
 ```
 
-### 出力例
+### Example Output
 
 ```
 ============================================================
@@ -673,80 +672,80 @@ Calibration successful: True
 ============================================================
 ```
 
-### 検出の仕組み
+### How Detection Works
 
-1. **Y軸キャリブレーション**: 赤色点線（0.73）と青色点線（0.23）を検出し、ピクセル位置とパーセント値の変換式を計算
-2. **緑線（200日MA）検出**: HSV色空間で緑色ピクセルを抽出し、右端での位置を特定
-3. **オレンジ線（8日MA）検出**: HSV色空間でオレンジ色ピクセルを抽出し、右端での位置を特定
-4. **値の変換**: 検出されたピクセル位置をパーセント値に変換
+1. **Y-axis Calibration**: Detect red dotted line (0.73) and blue dotted line (0.23), calculate conversion formula between pixel position and percentage
+2. **Green Line (200-day MA) Detection**: Extract green pixels in HSV color space, identify position at right edge
+3. **Orange Line (8-day MA) Detection**: Extract orange pixels in HSV color space, identify position at right edge
+4. **Value Conversion**: Convert detected pixel positions to percentage values
 
-### 信頼度レベル
+### Confidence Levels
 
-- **HIGH**: 両方の参照線（赤・青）が検出され、両方のMA値が正常に検出された
-- **MEDIUM**: 参照線またはMA値の一部が検出できなかった
-- **LOW**: 推定値を使用（参照線が検出できなかった場合）
-- **FAILED**: 検出に失敗
+- **HIGH**: Both reference lines (red/blue) detected, both MA values successfully detected
+- **MEDIUM**: Some reference lines or MA values could not be detected
+- **LOW**: Using estimated values (when reference lines not detected)
+- **FAILED**: Detection failed
 
-### 推奨ワークフロー
+### Recommended Workflow
 
-1. **チャート分析前に実行**: LLMがチャートを分析する前に、このスクリプトで正確な値を取得
-2. **デバッグ画像で確認**: `--debug`オプションで生成される画像で、検出位置が正しいか視覚的に確認
-3. **レポートに反映**: 検出結果をus-market-analysis.mdやブログ記事に反映
+1. **Run Before Chart Analysis**: Get accurate values with this script before LLM analyzes charts
+2. **Confirm with Debug Image**: Visually verify detection positions are correct using `--debug` generated image
+3. **Reflect in Reports**: Incorporate detection results into us-market-analysis.md and blog posts
 
-### Breadthチャート読み取りチェックリスト（必須）
+### Breadth Chart Reading Checklist (Required)
 
-⚠️ **重要**: LLMによるチャート読み取りはエラーが発生しやすいため、以下のチェックリストを**必ず**実行してください。
+**Important**: LLM chart reading is error-prone, so the following checklist **must** be executed.
 
-#### 1. 自動検出スクリプトの実行
+#### 1. Run Auto-Detection Script
 
 ```bash
 python3 .claude/skills/breadth-chart-analyst/scripts/detect_breadth_values.py charts/YYYY-MM-DD/IMG_XXXX.jpeg --debug
 ```
 
-#### 2. 検出結果の確認
+#### 2. Confirm Detection Results
 
-- [ ] **Confidence**: HIGHであることを確認
-- [ ] **200-Day MA**: 検出値を記録（例: 59.8%）
-- [ ] **8-Day MA**: 検出値を記録（例: 61.9%）
-- [ ] **デバッグ画像**: `*_debug_detection.jpeg`で検出位置が正しいか確認
+- [ ] **Confidence**: Verify it's HIGH
+- [ ] **200-Day MA**: Record detected value (e.g., 59.8%)
+- [ ] **8-Day MA**: Record detected value (e.g., 61.9%)
+- [ ] **Debug Image**: Confirm detection positions are correct in `*_debug_detection.jpeg`
 
-#### 3. 閾値との比較
+#### 3. Compare with Thresholds
 
-| 指標 | 閾値 | 評価 |
-|------|------|------|
-| **200日MA** | ≥60% | 健全 |
-| **200日MA** | 50-60% | 細いラリー/ボーダー |
-| **200日MA** | 40-50% | 注意 |
-| **200日MA** | <40% | 脆弱 |
-| **8日MA** | ≥73% | 買われすぎ |
-| **8日MA** | 60-73% | 健全/強気 |
-| **8日MA** | 40-60% | 中立 |
-| **8日MA** | 23-40% | 弱気 |
-| **8日MA** | <23% | 売られすぎ |
+| Indicator | Threshold | Evaluation |
+|-----------|-----------|------------|
+| **200-day MA** | >=60% | Healthy |
+| **200-day MA** | 50-60% | Narrow Rally/Border |
+| **200-day MA** | 40-50% | Caution |
+| **200-day MA** | <40% | Fragile |
+| **8-day MA** | >=73% | Overbought |
+| **8-day MA** | 60-73% | Healthy/Bullish |
+| **8-day MA** | 40-60% | Neutral |
+| **8-day MA** | 23-40% | Bearish |
+| **8-day MA** | <23% | Oversold |
 
-#### 4. レポートへの反映
+#### 4. Reflect in Reports
 
-検出された値を以下のファイルに正確に反映：
+Accurately reflect detected values in the following files:
 
 - [ ] `reports/YYYY-MM-DD/us-market-analysis.md`
 - [ ] `blogs/YYYY-MM-DD-weekly-strategy.md`
-- [ ] `reports/YYYY-MM-DD/strategy-review.md`（レビュー時）
+- [ ] `reports/YYYY-MM-DD/strategy-review.md` (during review)
 
-#### 5. 整合性チェック
+#### 5. Consistency Check
 
-- [ ] 3つのファイル間でBreadth値が一致しているか確認
-- [ ] 閾値に基づく解釈（健全/ボーダー/脆弱など）が正しいか確認
-
----
-
-## バージョン管理
-
-- **プロジェクトバージョン**: 1.1
-- **最終更新日**: 2025-12-20
-- **メンテナンス**: このドキュメントは定期的に更新してください
+- [ ] Verify Breadth values match across all 3 files
+- [ ] Verify interpretation based on thresholds (Healthy/Border/Fragile etc.) is correct
 
 ---
 
-## 連絡先・フィードバック
+## Version Control
 
-このワークフローに関する改善提案や問題報告は、プロジェクトのIssueトラッカーに報告してください。
+- **Project Version**: 1.1
+- **Last Updated**: 2025-12-20
+- **Maintenance**: Update this document regularly
+
+---
+
+## Contact & Feedback
+
+Report improvement suggestions or issues related to this workflow to the project's Issue tracker.
