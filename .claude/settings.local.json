@@ -19,7 +19,8 @@
       "Bash(git add:*)",
       "Bash(git commit:*)",
       "Bash(git log:*)",
-      "Bash(echo $FMP_API_KEY)"
+      "Bash(echo $FMP_API_KEY)",
+      "WebFetch(domain:pypi.org)"
     ],
     "deny": [],
     "ask": []
