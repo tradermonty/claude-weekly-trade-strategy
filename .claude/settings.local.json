@@ -20,7 +20,9 @@
       "Bash(git commit:*)",
       "Bash(git log:*)",
       "Bash(echo $FMP_API_KEY)",
-      "WebFetch(domain:pypi.org)"
+      "WebFetch(domain:pypi.org)",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:eu-central-1-1.aws.cloud2.influxdata.com)"
     ],
     "deny": [],
     "ask": []
