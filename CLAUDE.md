@@ -600,6 +600,7 @@ reports/YYYY-MM-DD/
 - **Skills**: market-news-analyst, economic-calendar-fetcher, earnings-calendar
 - **Analysis Targets**: Past 10 days news, Next 7 days events
 - **Output Format**: Markdown, Event scenarios
+- **Critical**: FOMC/CPI/PCE dates MUST be WebSearch verified (see Known Issues #1)
 
 ### weekly-trade-blog-writer
 - **Input**: Above 3 reports + Previous week's blog
@@ -611,8 +612,9 @@ reports/YYYY-MM-DD/
 - **Role**: Third-party quality assurance review
 - **Input**: All chart images (re-read), All reports, Blog post, Previous week's blog
 - **Output Format**: Markdown, PASS/PASS WITH NOTES/REVISION REQUIRED judgment
-- **Verification Items**: Data accuracy, Uptrend Ratio confirmation, Allocation calculation, Scenario consistency, Continuity
+- **Verification Items**: Data accuracy, Uptrend Ratio confirmation, Allocation calculation, Scenario consistency, Continuity, **Economic event dates (see Known Issues #1)**
 - **Important**: **Must run** before publishing blog. Uptrend Ratio oversight can be detected by this review
+- **Critical**: MUST cross-check FOMC dates with previous week's blog AND Fed official calendar
 
 ### druckenmiller-strategy-planner (Optional)
 - **Skills**: stanley-druckenmiller-investment
@@ -738,10 +740,46 @@ Accurately reflect detected values in the following files:
 
 ---
 
+## Known Issues & Lessons Learned
+
+### Issue #1: FOMC Date Error (2025-12-22)
+
+**Incident Summary**:
+- `market-news-analyzer` wrote "12月18日FOMC" (wrong)
+- `strategy-reviewer` validated it as "OK" (detection failure)
+- Actual FOMC was 12/9-10 (correctly stated in previous week's blog as "12/10 FOMC終了")
+
+**Root Causes**:
+1. **Date confusion**: Micron earnings (12/18) was confused with FOMC (12/10)
+2. **Source mismatch ignored**: CNBC URL contained `/2025/12/10/` but body text said "12/18"
+3. **Previous blog not cross-checked**: Previous week clearly stated "12/10 FOMC終了"
+4. **Reviewer assumed correctness**: Did not verify against Fed official calendar
+
+**Countermeasures Implemented**:
+1. **market-news-analyzer.md**: Added "Critical Date Verification" section with WebSearch requirement
+2. **strategy-reviewer.md**: Added "4.4 Economic Event Date Verification" checklist item
+3. **Both agents**: Added "Known Error Pattern" documentation to prevent recurrence
+
+**Prevention Rule**:
+```
+IF previous_blog says "12/10 FOMC終了"
+AND current_blog says different FOMC date
+THEN → REVISION REQUIRED (automatic)
+```
+
+**Verification Method**:
+```bash
+# Always verify FOMC dates with:
+WebSearch("FOMC [month] [year] meeting date result")
+# Cross-check with: federalreserve.gov/monetarypolicy/fomccalendars.htm
+```
+
+---
+
 ## Version Control
 
-- **Project Version**: 1.1
-- **Last Updated**: 2025-12-20
+- **Project Version**: 1.2
+- **Last Updated**: 2025-12-22
 - **Maintenance**: Update this document regularly
 
 ---

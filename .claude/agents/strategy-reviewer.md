@@ -100,6 +100,32 @@ Act as the final quality gate to ensure:
 - [ ] Sector rotation leadership changes captured
 - [ ] Key support/resistance levels included
 
+**4.4 Economic Event Date Verification (CRITICAL - Added 2025-12-22)**
+
+⚠️ **This check was added after a critical error where FOMC date was wrong in both the report and review.**
+
+- [ ] **FOMC date matches Fed official calendar** (federalreserve.gov/monetarypolicy/fomccalendars.htm)
+- [ ] **FOMC date is CONSISTENT with previous week's blog**
+  - If previous blog says "12/10 FOMC終了", current blog CANNOT say "12/18 FOMC"
+  - Any discrepancy = **automatic REVISION REQUIRED**
+- [ ] **CPI/PCE/Jobs Report dates verified**
+- [ ] **Earnings dates match actual calendar** (not confused with economic events)
+
+**Known Error Pattern (2025-12-22 incident)**:
+```
+FAILURE: strategy-reviewer validated "12/18 FOMC" as "OK"
+ACTUAL: FOMC was 12/9-10 (correctly stated in previous week's blog)
+ROOT CAUSE: Reviewer assumed date was correct without Fed verification
+LESSON: ALWAYS cross-check with previous blog AND official sources
+```
+
+**Verification Method**:
+```bash
+# If uncertain, use WebSearch:
+WebSearch("FOMC [month] [year] meeting date")
+# Then compare with previous blog and current blog
+```
+
 ## Output Format
 
 Generate a review report with the following structure:
@@ -222,6 +248,11 @@ Based on historical issues, pay special attention to:
 3. **Allocation Math Errors**: 4 pillars must sum to 100%, not 95-125%.
 4. **Stale Data**: Reports may use estimated values instead of actual chart readings.
 5. **Stance Mismatch**: Improving breadth should not result in defensive recommendations.
+6. **FOMC/Economic Event Date Errors** (Added 2025-12-22):
+   - **Specific pattern**: Confusing FOMC date with nearby earnings date (e.g., writing "12/18 FOMC" when FOMC was 12/10 and Micron earnings was 12/18)
+   - **Root cause**: Not cross-checking with previous week's blog or Fed official calendar
+   - **Fix**: ALWAYS verify FOMC dates against (1) previous week's blog and (2) federalreserve.gov
+   - **Detection**: If previous blog says "12/10 FOMC終了" and current says different date → REVISION REQUIRED
 
 ## Quality Standards
 
