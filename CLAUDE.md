@@ -776,10 +776,49 @@ WebSearch("FOMC [month] [year] meeting date result")
 
 ---
 
+### Issue #2: NFP/ISM PMI Date Error (2025-12-27)
+
+**Incident Summary**:
+- `market-news-analyzer` wrote "1/2 NFP" and "1/2 ISM PMI" (wrong)
+- `strategy-reviewer` did not catch the error
+- Actual: NFP is **1/9**, ISM PMI is **1/5** (holiday-adjusted schedules)
+
+**Root Causes**:
+1. **API limitation**: FMP API does not accurately reflect BLS/ISM release schedules around holidays
+2. **Assumption error**: Assumed "first Friday" (NFP) and "first business day" (ISM) without checking holiday adjustments
+3. **No official source verification**: Did not verify with BLS (bls.gov) or ISM (ismworld.org) official calendars
+4. **Reviewer checklist gap**: Section 4.4 only covered FOMC/CPI/PCE, not NFP/ISM PMI
+
+**Countermeasures Implemented**:
+1. **market-news-analyzer.md**: Added "Official Source Verification Table" with mandatory URLs for NFP, ISM PMI, FOMC, CPI, PCE
+2. **strategy-reviewer.md**: Expanded Section 4.4 to include NFP and ISM PMI verification
+3. **economic-calendar-fetcher SKILL.md**: Added "API Limitation Warning" about FMP inaccuracies
+4. **Report format requirement**: All major economic events must include official source URL
+
+**Prevention Rule**:
+```
+FOR major economic events (NFP, ISM PMI, FOMC, CPI, PCE):
+  1. WebSearch/WebFetch official source (BLS, ISM, Fed, BEA)
+  2. Include official source URL in report
+  3. Reviewer must verify URL matches stated date
+  4. Do NOT assume "first Friday" or "first business day" during holidays
+```
+
+**Official Sources**:
+| Event | Official Source |
+|-------|-----------------|
+| NFP | https://www.bls.gov/schedule/news_release/empsit.htm |
+| ISM PMI | https://www.ismworld.org/supply-management-news-and-reports/reports/rob-report-calendar/ |
+| FOMC | https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm |
+| CPI | https://www.bls.gov/schedule/news_release/cpi.htm |
+| PCE | https://www.bea.gov/news/schedule |
+
+---
+
 ## Version Control
 
-- **Project Version**: 1.2
-- **Last Updated**: 2025-12-22
+- **Project Version**: 1.3
+- **Last Updated**: 2025-12-27
 - **Maintenance**: Update this document regularly
 
 ---

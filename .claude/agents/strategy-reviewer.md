@@ -100,30 +100,61 @@ Act as the final quality gate to ensure:
 - [ ] Sector rotation leadership changes captured
 - [ ] Key support/resistance levels included
 
-**4.4 Economic Event Date Verification (CRITICAL - Added 2025-12-22)**
+**4.4 Economic Event Date Verification (CRITICAL - Updated 2025-12-27)**
 
-⚠️ **This check was added after a critical error where FOMC date was wrong in both the report and review.**
+⚠️ **This check was expanded after multiple date errors. ALL major events must be verified.**
 
-- [ ] **FOMC date matches Fed official calendar** (federalreserve.gov/monetarypolicy/fomccalendars.htm)
-- [ ] **FOMC date is CONSISTENT with previous week's blog**
-  - If previous blog says "12/10 FOMC終了", current blog CANNOT say "12/18 FOMC"
-  - Any discrepancy = **automatic REVISION REQUIRED**
-- [ ] **CPI/PCE/Jobs Report dates verified**
-- [ ] **Earnings dates match actual calendar** (not confused with economic events)
+### Mandatory Verification Checklist
 
-**Known Error Pattern (2025-12-22 incident)**:
+| Event | Official Source | Verify URL | Check |
+|-------|-----------------|------------|-------|
+| **FOMC** | Federal Reserve | federalreserve.gov/monetarypolicy/fomccalendars.htm | [ ] |
+| **NFP (Jobs Report)** | BLS | bls.gov/schedule/news_release/empsit.htm | [ ] |
+| **ISM Manufacturing PMI** | ISM | ismworld.org/reports/rob-report-calendar | [ ] |
+| **CPI** | BLS | bls.gov/schedule/news_release/cpi.htm | [ ] |
+| **PCE** | BEA | bea.gov/news/schedule | [ ] |
+
+### Verification Steps (MANDATORY)
+
+1. **Check report includes source URL** for each major event
+2. **WebFetch or WebSearch** to verify the URL/date is correct
+3. **Compare with previous week's blog** - dates must be consistent
+4. **Check for holiday adjustments** - especially around New Year, Thanksgiving
+5. **If ANY discrepancy → REVISION REQUIRED**
+
+### Known Error Patterns
+
+**Error #1 (2025-12-22): FOMC Date Confusion**
 ```
-FAILURE: strategy-reviewer validated "12/18 FOMC" as "OK"
-ACTUAL: FOMC was 12/9-10 (correctly stated in previous week's blog)
-ROOT CAUSE: Reviewer assumed date was correct without Fed verification
-LESSON: ALWAYS cross-check with previous blog AND official sources
+FAILURE: Validated "12/18 FOMC" as "OK"
+ACTUAL: FOMC was 12/9-10
+ROOT CAUSE: Confused with Micron earnings date
 ```
+
+**Error #2 (2025-12-27): NFP/ISM PMI Holiday Shift**
+```
+FAILURE: Did not catch "1/2 NFP" and "1/2 ISM PMI"
+ACTUAL: NFP is 1/9, ISM PMI is 1/5
+ROOT CAUSE: Assumed "first Friday/first business day" without checking holiday adjustments
+LESSON: Year-end holidays ALWAYS shift these dates - verify from official sources
+```
+
+### Critical Review Mindset
+
+**Be SKEPTICAL, not trusting.** Ask:
+- "Is this date actually correct, or did the author assume?"
+- "Did the author verify from official sources or just use FMP API?"
+- "Is there a source URL I can click to verify?"
 
 **Verification Method**:
 ```bash
-# If uncertain, use WebSearch:
-WebSearch("FOMC [month] [year] meeting date")
-# Then compare with previous blog and current blog
+# For NFP:
+WebSearch("BLS employment situation January 2026 release date")
+
+# For ISM PMI:
+WebSearch("ISM manufacturing PMI January 2026 release date")
+
+# Then compare with blog dates - any mismatch = REVISION REQUIRED
 ```
 
 ## Output Format

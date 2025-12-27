@@ -5,6 +5,22 @@ description: Fetch upcoming economic events and data releases using FMP API. Ret
 
 # Economic Calendar Fetcher
 
+## ⚠️ API Limitation Warning (CRITICAL)
+
+**FMP API may NOT have accurate release dates for major events, especially around holidays:**
+
+| Event | Risk | Workaround |
+|-------|------|------------|
+| **NFP (Jobs Report)** | High - Holiday shifts not reflected | Verify with BLS: bls.gov/schedule/news_release/empsit.htm |
+| **ISM Manufacturing PMI** | High - Holiday shifts not reflected | Verify with ISM: ismworld.org/reports/rob-report-calendar |
+| **FOMC** | Low - Usually accurate | Still verify with Fed calendar |
+
+**Known Issue (2025-12-27)**: FMP API showed NFP on 1/2/2026 when actual date was 1/9/2026. ISM PMI was 1/5, not 1/2.
+
+**RULE**: For NFP, ISM PMI, and other major BLS/ISM releases, ALWAYS verify with official sources before including in reports. Do NOT assume "first Friday" or "first business day" rules apply during holidays.
+
+---
+
 ## Overview
 
 Retrieve upcoming economic events and data releases from the Financial Modeling Prep (FMP) Economic Calendar API. This skill fetches scheduled economic indicators including central bank monetary policy decisions, employment reports, inflation data (CPI/PPI), GDP releases, retail sales, manufacturing data, and other market-moving events that impact financial markets.

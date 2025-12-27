@@ -164,26 +164,59 @@ You must deliver your analysis as a well-structured markdown report with the fol
 
 ## Critical Date Verification (MANDATORY)
 
-**WARNING**: Date errors are the most common and damaging mistakes. Before including ANY major economic event, you MUST verify dates.
+**WARNING**: Date errors are the most common and damaging mistakes. Before including ANY major economic event, you MUST verify dates from OFFICIAL SOURCES and include the source URL.
 
-### FOMC Meetings (CRITICAL)
-1. **WebSearch verification**: Search "FOMC [month] [year] meeting date result"
-2. **Cross-check sources**: Verify Fed official calendar (federalreserve.gov) matches news articles
-3. **URL vs Body check**: If source URL contains `/2025/12/10/` but you write "12/18", something is WRONG
-4. **Previous blog consistency**: Read previous week's blog - if it says "12/10 FOMC終了", do NOT write a different date
+### Official Source Verification Table (MUST USE)
 
-### CPI/PCE/Jobs Reports
-1. **WebSearch verification**: Search "[indicator] [month] [year] release date result"
-2. **Distinguish release date vs data period**: "November CPI released December 11" ≠ "December CPI"
+| Event | Official Source | URL | Check |
+|-------|-----------------|-----|-------|
+| **NFP (Jobs Report)** | BLS | https://www.bls.gov/schedule/news_release/empsit.htm | [ ] |
+| **ISM Manufacturing PMI** | ISM | https://www.ismworld.org/supply-management-news-and-reports/reports/rob-report-calendar/ | [ ] |
+| **FOMC** | Federal Reserve | https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm | [ ] |
+| **CPI** | BLS | https://www.bls.gov/schedule/news_release/cpi.htm | [ ] |
+| **PCE** | BEA | https://www.bea.gov/news/schedule | [ ] |
 
-### Known Error Pattern (2025-12-22 incident)
+**⚠️ PROHIBITION**:
+- Do NOT rely solely on FMP API for these events
+- Do NOT assume "first Friday" or "first business day" - holidays cause shifts
+- Do NOT copy dates from memory - ALWAYS verify
+
+### Verification Steps (MANDATORY for each major event)
+
+1. **WebSearch** the official source (e.g., "BLS NFP release schedule January 2026")
+2. **WebFetch** the official URL if needed
+3. **Record the exact date** from the official source
+4. **Include the source URL** in your report next to the date
+5. **Cross-check with previous week's blog** for consistency
+
+### Report Format Requirement
+
+When listing economic events, ALWAYS include source URL:
+
+```markdown
+| 日付 | イベント | 公式ソース |
+|------|----------|-----------|
+| 1/9(金) | NFP | [BLS](https://www.bls.gov/schedule/news_release/empsit.htm) |
+| 1/5(月) | ISM PMI | [ISM](https://www.ismworld.org/.../rob-report-calendar/) |
+```
+
+### Known Error Patterns
+
+**Error #1 (2025-12-22): FOMC Date Confusion**
 ```
 ERROR: Wrote "12月18日FOMC" when actual FOMC was 12/9-10
 CAUSE: Confused Micron earnings date (12/18) with FOMC date
-DETECTION FAILURE: Source URL had correct date (/2025/12/10/) but was ignored
 ```
 
-**RULE**: If unsure about ANY date, WebSearch to verify BEFORE writing.
+**Error #2 (2025-12-27): NFP/ISM PMI Date Error**
+```
+ERROR: Wrote "1/2 NFP" and "1/2 ISM PMI"
+ACTUAL: NFP is 1/9, ISM PMI is 1/5
+CAUSE: Assumed "first Friday" without checking holiday adjustments
+FIX: Always verify from BLS/ISM official calendars
+```
+
+**RULE**: If unsure about ANY date, WebSearch to verify BEFORE writing. Include official source URL.
 
 ---
 
