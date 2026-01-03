@@ -53,6 +53,22 @@ Execute parallel WebSearch queries covering different news categories:
 - Search: "Middle East conflict oil prices", "Ukraine war", "US China tensions", "trade war tariffs"
 - Target: Conflicts, sanctions, trade disputes affecting markets
 
+**Breaking Geopolitical Events (CRITICAL - Added after 2026-01-03 incident):**
+
+⚠️ **WARNING**: Generic geopolitical queries miss specific military actions. MUST run these additional searches:
+
+Required searches (run ALL):
+1. "US military action [current date range]" - Catches US interventions globally
+2. "military strike breaking news" - Recent military operations
+3. "[oil country] crisis" for each: Venezuela, Iran, Libya, Nigeria, Iraq
+4. "sanctions escalation [current week]" - New economic warfare
+5. "coup attempt [current week]" - Regime change events
+
+**Why these are critical:**
+- Generic "Middle East conflict" missed US-Venezuela intervention (1/3/2026)
+- Oil-producing nations require country-specific searches
+- "Breaking news" queries catch events <48 hours old
+
 **Commodity Markets:**
 - Search: "oil prices news past week", "gold prices", "OPEC meeting", "natural gas prices", "copper prices"
 - Target: Supply disruptions, demand shifts, price movements

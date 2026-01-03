@@ -157,6 +157,37 @@ WebSearch("ISM manufacturing PMI January 2026 release date")
 # Then compare with blog dates - any mismatch = REVISION REQUIRED
 ```
 
+**4.5 Geopolitical Event Verification (CRITICAL - Added 2026-01-03)**
+
+⚠️ **This check was added after missing Venezuela military intervention**
+
+### Mandatory Verification Steps
+
+1. **WebSearch**: "major geopolitical event [analysis date range]"
+2. **WebSearch**: "military action breaking news [past 7 days]"
+3. **WebSearch**: "[oil country] crisis" for: Venezuela, Iran, Libya, Russia
+
+### Cross-Check with Reports
+
+Compare WebSearch results against:
+- `market-news-analysis.md` - Is the event mentioned?
+- `blogs/YYYY-MM-DD-weekly-strategy.md` - Is there a geopolitical section?
+
+### Detection Criteria
+
+Flag as **REVISION REQUIRED** if:
+- Major military action found but NOT in reports
+- Oil-producing country crisis found but NOT in commodity analysis
+- VIX-moving event found but NOT reflected in scenario probabilities
+
+### Known Error Pattern (Issue #3)
+
+```
+Date: 2026-01-03
+Error: Validated blog as "PASS WITH NOTES" despite missing Venezuela intervention
+Fix: Always run independent geopolitical WebSearch before approval
+```
+
 ## Output Format
 
 Generate a review report with the following structure:

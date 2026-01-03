@@ -815,10 +815,46 @@ FOR major economic events (NFP, ISM PMI, FOMC, CPI, PCE):
 
 ---
 
+### Issue #3: Geopolitical Event Detection Gap (2026-01-03)
+
+**Incident Summary**:
+- US military intervention in Venezuela (1/3/2026) NOT detected by market-news-analyzer
+- Blog published without geopolitical risk section for this major event
+- strategy-reviewer validated as "PASS WITH NOTES" despite missing critical information
+
+**Root Causes**:
+1. **Generic WebSearch queries**: "Middle East conflict" doesn't cover Latin America
+2. **No country-specific searches**: Venezuela, Iran, Libya not explicitly searched
+3. **No breaking news check**: Only analyzed "past 10 days" summary, not recent 48-hour events
+4. **Reviewer lacked geopolitical verification**: Only checked economic event dates, not geopolitical events
+
+**Market Impact (Potential)**:
+- Oil: HIGH (Venezuela = world's largest oil reserves)
+- Gold: HIGH (safe-haven demand)
+- VIX: MEDIUM-HIGH (geopolitical uncertainty)
+- Equities: MEDIUM (risk-off sentiment)
+
+**Countermeasures Implemented**:
+1. **market-news-analyst SKILL.md**: Added country-specific searches for Tier 1 oil producers
+2. **market-news-analyzer.md**: Added "Breaking Geopolitical News Check" mandatory step
+3. **strategy-reviewer.md**: Added "4.5 Geopolitical Event Verification" section
+4. **This documentation**: Record for future reference
+
+**Prevention Rule**:
+```
+FOR weekly analysis:
+  1. Run country-specific searches for: Venezuela, Iran, Libya, Russia, Saudi Arabia
+  2. Run "military action breaking news" search
+  3. Reviewer must independently verify geopolitical events
+  4. If major event found but not in reports → REVISION REQUIRED
+```
+
+---
+
 ## Version Control
 
-- **Project Version**: 1.3
-- **Last Updated**: 2025-12-27
+- **Project Version**: 1.4
+- **Last Updated**: 2026-01-03
 - **Maintenance**: Update this document regularly
 
 ---

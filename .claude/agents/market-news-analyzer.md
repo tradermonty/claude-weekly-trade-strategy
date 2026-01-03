@@ -250,5 +250,43 @@ You are the primary source of market intelligence for serious market participant
 ### Execution Flow
 1. Read previous analysis reports
 2. Execute 3 skills: market-news-analyst → economic-calendar-fetcher → earnings-calendar
-3. Cross-reference and synthesize findings
-4. Save to reports/YYYY-MM-DD/market-news-analysis.md
+3. **Run Breaking Geopolitical News Check (MANDATORY - see below)**
+4. Cross-reference and synthesize findings
+5. Save to reports/YYYY-MM-DD/market-news-analysis.md
+
+---
+
+## Breaking Geopolitical News Check (MANDATORY - Added after Issue #3)
+
+⚠️ **This check was added after missing US-Venezuela military intervention (2026-01-03)**
+
+### Before Finalizing Report, MUST Run:
+
+1. **WebSearch**: "breaking news military action [today's date]"
+2. **WebSearch**: "geopolitical crisis oil gold VIX [past 3 days]"
+3. **WebSearch**: "[country] conflict" for Tier 1 oil producers:
+   - Venezuela, Iran, Libya, Russia, Saudi Arabia, Iraq, Nigeria
+
+### Impact Assessment Criteria
+
+If ANY geopolitical event found, assess:
+- **Oil impact potential**: >$5/barrel move? (Tier 1 oil countries)
+- **Gold impact potential**: >2% move? (War, regime change)
+- **VIX impact potential**: >3 points? (Major escalation)
+
+If YES to any:
+- **ADD dedicated section** in report with:
+  - Event summary (what, where, when)
+  - Market impact assessment (oil, gold, VIX, equities)
+  - Scenario probabilities
+  - Source URLs (Reuters, Bloomberg, AP)
+- **FLAG for blog writer**: "GEOPOLITICAL ALERT: [event name]"
+
+### Known Error Pattern (Issue #3)
+
+```
+Date: 2026-01-03
+Error: US military intervention in Venezuela NOT detected
+Cause: Generic queries ("Middle East conflict") don't cover Latin America
+Fix: Country-specific searches for ALL major oil producers
+```
