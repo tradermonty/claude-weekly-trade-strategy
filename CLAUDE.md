@@ -851,10 +851,51 @@ FOR weekly analysis:
 
 ---
 
+### Issue #4: Uptrend Ratio Detection Gap (2026-01-04)
+
+**Incident Summary**:
+- Uptrend Ratio reported as "28-32% GREEN, 回復継続中" (wrong)
+- Actual value: **~23% RED, declining trend**
+- Error propagated to blog without detection by strategy-reviewer
+
+**Root Causes**:
+1. **No OpenCV script for Uptrend Ratio**: `detect_breadth_values.py` only handles S&P 500 Breadth Index (200MA/8MA)
+2. **LLM visual analysis unreliable**: Used previous week's data instead of reading new chart
+3. **No previous week comparison**: 8% drop (31%→23%) not flagged as unusual
+4. **Reviewer didn't verify independently**: Trusted report values without running detection script
+
+**Market Impact**:
+- Uptrend Ratio is a **LEADING indicator** (precedes Breadth 200MA by 1-2 weeks)
+- Misreading caused incorrect "bullish recovery" assessment when market was warning
+- Correct reading: 23% RED = approaching 15% crisis line, requires defensive posture
+
+**Countermeasures Implemented**:
+1. **detect_uptrend_ratio.py**: New OpenCV script for Uptrend Ratio detection (TDD-developed)
+2. **breadth-chart-analyst SKILL.md**: Added "5.0 MANDATORY: Run Uptrend Ratio Detection Script"
+3. **strategy-reviewer.md**: Added "4.6 Uptrend Ratio Independent Verification" section
+4. **Previous week comparison**: Change detection (>7% triggers manual verification alert)
+
+**Prevention Rule**:
+```
+FOR Uptrend Ratio analysis:
+  1. MUST run detect_uptrend_ratio.py before LLM analysis
+  2. Compare script output vs LLM reading (>5% diff = investigate)
+  3. Compare vs previous week (>7% change = manual verify)
+  4. Reviewer must independently run detection script
+  5. If script color differs from report → REVISION REQUIRED
+```
+
+**TDD Implementation**:
+- 30 test cases implemented and passing
+- Tests cover: class structure, HSV color ranges, Y-axis calibration, current value detection, color detection, trend direction, confidence assessment, error handling
+- Test file: `.claude/skills/breadth-chart-analyst/tests/test_detect_uptrend_ratio.py`
+
+---
+
 ## Version Control
 
-- **Project Version**: 1.4
-- **Last Updated**: 2026-01-03
+- **Project Version**: 1.5
+- **Last Updated**: 2026-01-04
 - **Maintenance**: Update this document regularly
 
 ---

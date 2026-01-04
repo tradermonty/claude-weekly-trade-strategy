@@ -305,6 +305,63 @@ Create 2-3 scenarios with probability estimates:
 
 If Chart 2 is provided, conduct systematic analysis:
 
+#### 5.0 MANDATORY: Run Uptrend Ratio Detection Script (Added after Issue #4)
+
+**CRITICAL**: Before visual analysis, MUST run the OpenCV detection script to get accurate current values.
+
+```bash
+python .claude/skills/breadth-chart-analyst/scripts/detect_uptrend_ratio.py <image_path> [--debug]
+```
+
+**Example:**
+```bash
+python .claude/skills/breadth-chart-analyst/scripts/detect_uptrend_ratio.py charts/2026-01-05/uptrend_ratio.jpeg --debug
+```
+
+**Expected Output:**
+```
+============================================================
+Uptrend Ratio Detection Results (OpenCV)
+============================================================
+
+Image: charts/2026-01-05/uptrend_ratio.jpeg
+Confidence: HIGH
+
+--- Detected Values ---
+Current Value: 23.1% (neutral_bearish)
+Current Color: RED
+Trend Direction: FALLING
+
+--- Calibration ---
+Upper reference (0.40) Y-pixel: 245
+Lower reference (0.10) Y-pixel: 812
+Calibration successful: True
+============================================================
+```
+
+**Why This Step is Mandatory:**
+| Issue | Cause | Prevention |
+|-------|-------|------------|
+| Issue #4 (2026-01-04) | LLM reported "28-32% GREEN" when actual was "23% RED" | Script provides objective detection |
+| Data staleness | LLM used previous week's data | Script reads current chart image |
+| Color confusion | Visual analysis error | Script uses HSV color detection |
+
+**If Script Confidence is LOW or FAILED:**
+1. Run the right-edge extraction script:
+   ```bash
+   python .claude/skills/breadth-chart-analyst/scripts/extract_chart_right_edge.py <image_path> --percent 25
+   ```
+2. Analyze the extracted right-edge image for current values
+3. Mark confidence as MEDIUM in your analysis
+4. Document any discrepancies between script and visual analysis
+
+**Validation Checklist:**
+- [ ] Script ran successfully with HIGH confidence
+- [ ] Current value recorded from script output
+- [ ] Current color (GREEN/RED) recorded from script output
+- [ ] Trend direction (RISING/FALLING/FLAT) recorded
+- [ ] If visual analysis differs from script by >5%, investigate discrepancy
+
 #### 5.1 Extract Current Readings
 
 From the chart image, identify:

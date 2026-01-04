@@ -188,6 +188,57 @@ Error: Validated blog as "PASS WITH NOTES" despite missing Venezuela interventio
 Fix: Always run independent geopolitical WebSearch before approval
 ```
 
+**4.6 Uptrend Ratio Independent Verification (MANDATORY - Added Issue #4, 2026-01-04)**
+
+⚠️ **This check was added after Uptrend Ratio was misread as 28-32% GREEN when actual was 23% RED**
+
+### Verification Steps
+
+1. **Run detection script independently**:
+   ```bash
+   python .claude/skills/breadth-chart-analyst/scripts/detect_uptrend_ratio.py charts/YYYY-MM-DD/<uptrend_chart>.jpeg
+   ```
+
+2. **Compare with report values**:
+   | Source | Value | Color | Trend |
+   |--------|-------|-------|-------|
+   | Script | X% | GREEN/RED | RISING/FALLING |
+   | Report | Y% | GREEN/RED | RISING/FALLING |
+
+3. **Mismatch threshold**: If difference > 5% OR color differs → **REVISION REQUIRED**
+
+4. **Previous week comparison**:
+   | Week | Value | Change |
+   |------|-------|--------|
+   | Previous | X% | - |
+   | Current | Y% | ±Z% |
+
+   If change > ±7% → **FLAG FOR MANUAL VERIFICATION** (large week-over-week moves are unusual)
+
+### Detection Criteria
+
+Flag as **REVISION REQUIRED** if:
+- Script value differs from blog by >5%
+- Script color (GREEN/RED) differs from blog
+- Previous week comparison shows >10% change without explanation in blog
+- Leading indicator warning (Uptrend Ratio declining while Breadth 200MA stable) not mentioned
+
+### Known Error Pattern (Issue #4)
+
+```
+Date: 2026-01-04
+Error: Validated "28-32% GREEN, 回復継続" when actual was "~23% RED, 下落トレンド"
+Cause: LLM used previous week's data instead of reading new chart
+Fix: Always run detect_uptrend_ratio.py independently before approval
+```
+
+### Uptrend Ratio Significance
+
+Uptrend Ratio is a **LEADING indicator** that precedes Breadth 200MA by 1-2 weeks:
+- If Uptrend Ratio declining but Breadth 200MA stable → **WARNING signal** (not bullish!)
+- If Uptrend Ratio at 23% (near 15% crisis line) → **CAUTION required**
+- Color transition (GREEN→RED) is more significant than absolute value
+
 ## Output Format
 
 Generate a review report with the following structure:
