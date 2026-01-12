@@ -374,17 +374,26 @@ class UptrendRatioDetector:
         # Find the rightmost column that has colored pixels
         combined_mask = cv2.bitwise_or(green_mask, red_mask)
 
-        # Scan from right to left to find the first column with significant color data
-        rightmost_col = None
+        # FIX (Issue #5): Collect ALL colored columns, then select the TRUE rightmost
+        # Previous bug: Early break selected FIRST column with >10 pixels, not the actual rightmost
+        # This caused GREEN (4-8px) to be skipped and RED (29px) in an earlier column to be selected
+        # FIX (Issue #5b): Lower threshold from 10 to 3 pixels to detect thin lines
+        # Real case: 6px GREEN (true rightmost) was excluded, 29px RED (older data) was selected
+        colored_cols = []
         for col in range(self.width - 1, max(0, self.width - 150), -1):
             col_pixels = np.sum(combined_mask[:, col] > 0)
-            if col_pixels > 10:  # At least 10 pixels of colored data
-                rightmost_col = col
-                break
+            if col_pixels >= 3:  # At least 3 pixels of colored data (lowered from 10)
+                colored_cols.append(col)
 
-        if rightmost_col is None:
+        # Select the absolute rightmost column (maximum index)
+        if colored_cols:
+            rightmost_col = max(colored_cols)
+            self.debug_info['colored_cols_found'] = len(colored_cols)
+            self.debug_info['colored_cols_range'] = (min(colored_cols), max(colored_cols))
+        else:
             # Fallback: use last 5% of width
             rightmost_col = int(self.width * 0.95)
+            self.debug_info['colored_cols_found'] = 0
 
         self.debug_info['rightmost_col'] = rightmost_col
 
@@ -638,7 +647,8 @@ class UptrendRatioDetector:
                 'path': self.image_path,
                 'width': self.width,
                 'height': self.height
-            }
+            },
+            'debug_info': self.debug_info  # Include debug info for testing and troubleshooting
         }
 
         return result

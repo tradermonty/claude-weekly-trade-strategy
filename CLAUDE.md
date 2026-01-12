@@ -892,10 +892,85 @@ FOR Uptrend Ratio analysis:
 
 ---
 
+### Issue #5: Uptrend Ratio Early-Break Bug & Threshold Issue (2026-01-11)
+
+**Incident Summary**:
+- Uptrend Ratio script reported as "23.0% RED" (wrong)
+- Actual value: **~34.1% GREEN** (confirmed by user inspection)
+- Error due to algorithmic bug + inappropriate threshold value
+
+**Root Causes**:
+1. **Early-break logic bug**: Line 379-383 stopped at FIRST column with >10 pixels, not the TRUE rightmost column
+2. **Threshold too high**: 10-pixel threshold excluded thin GREEN line (6 pixels) at true rightmost position
+3. **Column selection order**: RED column (29px, col 1306) was selected before GREEN column (6px, col 1314)
+
+**Detailed Failure Mechanism**:
+```
+Right-to-left scan (column numbers decreasing):
+  Column 1314: GREEN 6px (<10px threshold → skipped)
+  Column 1313: GREEN 8px (<10px threshold → skipped)
+  Column 1312: GREEN 6px (<10px threshold → skipped)
+  ↓
+  Column 1306: RED 29px (>10px threshold → SELECTED & BREAK)
+  → Result: 23% RED detected (WRONG)
+  → Missed: 34.1% GREEN at column 1314 (CORRECT)
+```
+
+**Impact**:
+- 11.1% underestimation of Uptrend Ratio
+- Color inversion (RED instead of GREEN)
+- Incorrect bottom reversal signal assessment
+- Blog propagated wrong market analysis (bearish instead of bullish recovery)
+
+**Countermeasures Implemented**:
+1. **Algorithm Fix**: Replaced early-break with full-scan approach
+   - Changed from: `if col_pixels > 10: rightmost_col = col; break`
+   - Changed to: Collect all qualified columns, then `rightmost_col = max(colored_cols)`
+
+2. **Threshold Adjustment**: Lowered from 10 pixels to 3 pixels
+   - Reasoning: Real charts can have thin lines (4-8px) at rightmost edge
+   - 3-pixel minimum still filters out noise while detecting thin lines
+
+3. **New Test Cases**: Added `TestMultiColorRightmostDetection` class
+   - `test_rightmost_col_is_maximum_not_first`: Verifies true rightmost selection
+   - `test_debug_info_contains_colored_cols_metadata`: Validates new debug fields
+   - `test_color_at_true_rightmost_prevails`: Ensures color at rightmost column is detected
+
+4. **Debug Info Enhancement**: Added metadata for troubleshooting
+   - `colored_cols_found`: Number of columns with ≥3 pixels
+   - `colored_cols_range`: (min, max) of colored column indices
+
+**Modified Files**:
+- `.claude/skills/breadth-chart-analyst/scripts/detect_uptrend_ratio.py` (Lines 377-396, 649)
+- `.claude/skills/breadth-chart-analyst/tests/test_detect_uptrend_ratio.py` (Added Lines 338-431)
+
+**Test Results**:
+- All 33 tests passing (30 existing + 3 new)
+- 2026-01-12 chart now correctly detects: **34.1% GREEN** (previously 23.0% RED)
+- Confidence: MEDIUM (appropriate for 6-pixel thin line)
+
+**Prevention Rule**:
+```
+FOR rightmost column detection:
+  1. Scan ENTIRE search range (no early break)
+  2. Collect ALL columns meeting threshold (≥3 pixels)
+  3. Select absolute rightmost: max(colored_cols)
+  4. Use low threshold (3px) to detect thin lines
+  5. Verify detection with debug image (green circle at rightmost position)
+```
+
+**Lessons Learned**:
+- Early optimization (early break) caused correctness bug
+- Pixel count thresholds must accommodate real chart characteristics
+- User visual inspection can be more accurate than automated detection
+- Debug visualization (marked images) is critical for validation
+
+---
+
 ## Version Control
 
-- **Project Version**: 1.5
-- **Last Updated**: 2026-01-04
+- **Project Version**: 1.6
+- **Last Updated**: 2026-01-11
 - **Maintenance**: Update this document regularly
 
 ---

@@ -333,3 +333,98 @@ class TestIntegration:
 
         # Should have some confidence (not failed on valid chart)
         assert result['confidence'] in ['HIGH', 'MEDIUM', 'LOW']
+
+
+# =============================================================================
+# Test 11: Multi-Color Rightmost Detection (Issue #5 Fix)
+# =============================================================================
+
+class TestMultiColorRightmostDetection:
+    """Tests for handling multiple colors at chart's right edge.
+
+    This addresses the bug where early-break logic caused the detector to
+    select the FIRST column with >10 pixels instead of the TRUE rightmost column.
+
+    Example scenario (2026-01-12):
+    - Column 1314: GREEN 6px (<10, skipped)
+    - Column 1313: GREEN 8px (<10, skipped)
+    - Column 1306: RED 29px (>10, selected → WRONG)
+
+    Expected: Should select column 1314 (GREEN, actual rightmost)
+    Actual (before fix): Selected column 1306 (RED, first >10px)
+    """
+
+    def test_rightmost_col_is_maximum_not_first(self, sample_uptrend_chart):
+        """Rightmost column should be max(colored_cols), not first match.
+
+        This is a regression test for the core bug: the early-break logic
+        that stopped at the FIRST column with >10 pixels instead of finding
+        the TRUE rightmost column.
+        """
+        from detect_uptrend_ratio import UptrendRatioDetector
+        detector = UptrendRatioDetector(sample_uptrend_chart)
+        result = detector.detect()
+
+        # After fix, debug_info should contain colored_cols information
+        assert 'debug_info' in result
+        debug_info = result['debug_info']
+
+        # Should have colored_cols_found field (added by fix)
+        assert 'colored_cols_found' in debug_info
+
+        # Should have found at least one colored column
+        assert debug_info['colored_cols_found'] >= 1
+
+        # rightmost_col should be the MAXIMUM, not just any valid column
+        assert 'rightmost_col' in debug_info
+
+        # If multiple colored columns exist, verify rightmost is the max
+        if debug_info['colored_cols_found'] > 1:
+            assert 'colored_cols_range' in debug_info
+            col_min, col_max = debug_info['colored_cols_range']
+            assert debug_info['rightmost_col'] == col_max
+
+    def test_debug_info_contains_colored_cols_metadata(self, sample_uptrend_chart):
+        """Debug info should include metadata about colored column detection.
+
+        The fix adds:
+        - colored_cols_found: number of columns with >10 pixels
+        - colored_cols_range: (min, max) of colored column indices
+        """
+        from detect_uptrend_ratio import UptrendRatioDetector
+        detector = UptrendRatioDetector(sample_uptrend_chart)
+        result = detector.detect()
+
+        debug_info = result['debug_info']
+
+        # Should have colored_cols_found
+        assert 'colored_cols_found' in debug_info
+        assert isinstance(debug_info['colored_cols_found'], int)
+        assert debug_info['colored_cols_found'] >= 0
+
+        # If colored columns were found, should have range
+        if debug_info['colored_cols_found'] > 1:
+            assert 'colored_cols_range' in debug_info
+            col_min, col_max = debug_info['colored_cols_range']
+            assert isinstance(col_min, (int, np.integer))
+            assert isinstance(col_max, (int, np.integer))
+            assert col_min <= col_max
+
+    def test_color_at_true_rightmost_prevails(self, sample_uptrend_chart):
+        """The color at the TRUE rightmost column should be detected.
+
+        This test ensures that when multiple colors coexist at the right edge,
+        the detector selects the color at the absolute rightmost column,
+        not the color with the most pixels in an earlier column.
+        """
+        from detect_uptrend_ratio import UptrendRatioDetector
+        detector = UptrendRatioDetector(sample_uptrend_chart)
+        result = detector.detect()
+
+        # The detected color should correspond to the rightmost column
+        assert 'current_color' in result
+        assert result['current_color'] in ['GREEN', 'RED']
+
+        # Value should be reasonable (not the erroneous 23% from wrong column)
+        assert 'current_value' in result
+        assert 0.05 <= result['current_value'] <= 0.70
