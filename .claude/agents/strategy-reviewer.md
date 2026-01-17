@@ -239,6 +239,65 @@ Uptrend Ratio is a **LEADING indicator** that precedes Breadth 200MA by 1-2 week
 - If Uptrend Ratio at 23% (near 15% crisis line) → **CAUTION required**
 - Color transition (GREEN→RED) is more significant than absolute value
 
+**4.7 US Holiday and Day-of-Week Verification (MANDATORY - Added Issue #6, 2026-01-19)**
+
+⚠️ **This check was added after MLK Day was incorrectly dated as 1/20（月）instead of 1/19（月）**
+
+### Verification Steps (MANDATORY)
+
+1. **Run calendar verification for each month in analysis period**:
+   ```bash
+   python3 -c "import calendar; print(calendar.month(YYYY, MM))"
+   ```
+
+2. **Check all dates with day-of-week in the blog**:
+   | Date in Blog | Stated Day | Actual Day | Match? |
+   |--------------|------------|------------|--------|
+   | 1/19 | (月) | ? | [ ] |
+   | 1/20 | (火) | ? | [ ] |
+
+3. **Verify US Federal Holidays**:
+   | Holiday | Rule | Calculated Date | Blog Date | Match? |
+   |---------|------|-----------------|-----------|--------|
+   | MLK Day | January 3rd Monday | ? | ? | [ ] |
+   | Presidents Day | February 3rd Monday | ? | ? | [ ] |
+   | etc. | | | | |
+
+### US Holiday Rules Reference
+
+| Holiday | Rule |
+|---------|------|
+| MLK Day | January 3rd Monday |
+| Presidents Day | February 3rd Monday |
+| Memorial Day | May last Monday |
+| Independence Day | July 4 (observed if weekend) |
+| Labor Day | September 1st Monday |
+| Thanksgiving | November 4th Thursday |
+
+### Detection Criteria
+
+Flag as **REVISION REQUIRED** if:
+- Same date has different day-of-week in the document
+- US holiday date is incorrect (e.g., MLK Day on 1/20 instead of 1/19)
+- Day-of-week does not match calendar verification
+- Event sequence is illogical (e.g., Monday event → Tuesday event both on same date)
+
+### Known Error Pattern (Issue #6)
+
+```
+Date: 2026-01-19
+Error: Blog wrote "1/20（月）MLK Day" and "1/20(火) Netflix決算後"
+Actual: MLK Day is 1/19（月）, 1/20 is Tuesday
+Cause: Day-of-week written by inference without calendar verification
+Fix: Always run calendar.month() BEFORE writing dates with day-of-week
+```
+
+### Contradiction Detection
+
+If the blog contains:
+- "1/XX（月）" and "1/XX（火）" for the same XX → **REVISION REQUIRED**
+- Holiday date that doesn't match rule calculation → **REVISION REQUIRED**
+
 ## Output Format
 
 Generate a review report with the following structure:

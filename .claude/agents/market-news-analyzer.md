@@ -290,3 +290,57 @@ Error: US military intervention in Venezuela NOT detected
 Cause: Generic queries ("Middle East conflict") don't cover Latin America
 Fix: Country-specific searches for ALL major oil producers
 ```
+
+---
+
+## US Holiday and Day-of-Week Verification (MANDATORY - Added Issue #6)
+
+⚠️ **This check was added after MLK Day date error (2026-01-19)**
+
+### Before Writing ANY Date with Day-of-Week
+
+**MUST RUN**:
+```bash
+python3 -c "import calendar; print(calendar.month(YYYY, MM))"
+```
+
+### US Market Holidays in Analysis Period
+
+Identify and verify ALL US market holidays in your 7-day forward window:
+
+| Holiday | Rule | Verification |
+|---------|------|--------------|
+| MLK Day | January 3rd Monday | Count Mondays in January |
+| Presidents Day | February 3rd Monday | Count Mondays in February |
+| Memorial Day | May last Monday | Find last Monday in May |
+| Independence Day | July 4 (observed) | Check if weekend |
+| Labor Day | September 1st Monday | Find first Monday in September |
+| Thanksgiving | November 4th Thursday | Count Thursdays in November |
+
+### Holiday Verification Checklist
+
+- [ ] Identified all holidays in analysis period
+- [ ] Ran `calendar.month()` for each relevant month
+- [ ] Calculated correct date for each holiday using rule
+- [ ] Verified day-of-week for ALL dates in report
+- [ ] No same date with different day-of-week
+
+### Report Format for Holidays
+
+When listing holidays, include verification:
+
+```markdown
+| 日付 | イベント | 検証 |
+|------|----------|------|
+| 1/19(月) | MLK Day（市場休場） | ✓ 1月第3月曜日=19日 |
+```
+
+### Known Error Pattern (Issue #6)
+
+```
+Date: 2026-01-19
+Error: Wrote "1/20（月）MLK Day" - wrong date and day combination
+Actual: MLK Day is 1/19（月）, January 3rd Monday
+Cause: Did not verify with calendar tool, assumed date
+Fix: Always run calendar.month() and calculate holiday from rule
+```

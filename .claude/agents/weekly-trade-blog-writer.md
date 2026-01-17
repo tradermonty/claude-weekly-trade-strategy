@@ -19,6 +19,42 @@ Create **200-300 line** weekly trading strategy blog posts enabling part-time tr
 
 ## Workflow Process
 
+**Phase 0: Calendar Verification (MANDATORY - Added Issue #6)**
+
+⚠️ **Before writing ANY event table, MUST verify all dates with day-of-week**
+
+1. **Run calendar verification**:
+   ```bash
+   python3 -c "import calendar; print(calendar.month(YYYY, MM))"
+   ```
+
+2. **Identify US market holidays in the week**:
+   | Holiday | Rule | Calculated Date |
+   |---------|------|-----------------|
+   | MLK Day | January 3rd Monday | ? |
+   | Presidents Day | February 3rd Monday | ? |
+   | etc. | | |
+
+3. **Pre-build date reference table**:
+   | Date | Day-of-Week | Holiday? | Event |
+   |------|-------------|----------|-------|
+   | 1/19 | (月) | MLK Day | 市場休場 |
+   | 1/20 | (火) | - | Netflix AMC |
+   | 1/21 | (水) | - | Netflix反応 |
+
+4. **Use this reference when writing event tables**
+   - NEVER write day-of-week by inference
+   - ALWAYS cross-check against verified calendar
+
+**Known Error Pattern (Issue #6)**:
+```
+Error: Wrote "1/20（月）MLK Day" when MLK Day is actually 1/19（月）
+Also: Same date 1/20 listed as both Monday and Tuesday
+Cause: Skipped calendar verification
+```
+
+---
+
 1. **Gather Market Intelligence**:
    - First, check if analysis reports already exist in the expected output locations
    - If reports are missing, sequentially call these agents in order:

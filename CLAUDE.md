@@ -967,10 +967,80 @@ FOR rightmost column detection:
 
 ---
 
+### Issue #6: US Holiday Day-of-Week Error (2026-01-19)
+
+**Incident Summary**:
+- Blog wrote "1/20（月）MLK Day" when actual MLK Day is 1/19（月）
+- Same date 1/20 listed as both Monday and Tuesday in the event table
+- strategy-reviewer did not detect the contradiction
+
+**Root Causes**:
+1. **Day-of-week written by inference**: Did not run `calendar.month(YYYY, MM)` before writing
+2. **MLK Day rule miscalculated**: MLK Day = "January 3rd Monday" was not properly computed
+3. **No holiday verification step**: No agent definition included US holiday verification
+4. **Reviewer blind spot**: strategy-reviewer checked economic dates but not holiday dates
+
+**Affected Lines in Blog**:
+```
+Line 14: "1/20（月）MLK Day休場" → should be "1/19（月）MLK Day休場"
+Line 71: "1/20(月) MLK Day" → should be "1/19(月) MLK Day"
+Line 72: "1/20(火) Netflix決算後の反応" → should be "1/21(水) Netflix決算反応"
+Line 170: "1/20（月）MLK Day休場" → should be "1/19（月）MLK Day休場"
+```
+
+**Countermeasures Implemented**:
+1. **strategy-reviewer.md**: Added "4.7 US Holiday and Day-of-Week Verification" section
+2. **market-news-analyzer.md**: Added "Holiday Verification" mandatory step
+3. **weekly-trade-blog-writer.md**: Added "Phase 0: Calendar Verification" preprocessing
+4. **CLAUDE.md**: This documentation for future reference
+
+**US Holiday Rules (Federal Holidays Affecting Market)**:
+| Holiday | Rule | Example (2026) |
+|---------|------|----------------|
+| MLK Day | January 3rd Monday | 1/19（月） |
+| Presidents Day | February 3rd Monday | 2/16（月） |
+| Memorial Day | May last Monday | 5/25（月） |
+| Independence Day | July 4th (observed) | 7/3（金）observed |
+| Labor Day | September 1st Monday | 9/7（月） |
+| Thanksgiving | November 4th Thursday | 11/26（木） |
+| Christmas | December 25 (observed) | 12/25（金） |
+| New Year | January 1 (observed) | 1/1（木） |
+
+**Prevention Rule**:
+```
+BEFORE writing ANY date with day-of-week:
+  1. Run: python3 -c "import calendar; print(calendar.month(YYYY, MM))"
+  2. Verify day-of-week from the output
+  3. For US holidays, calculate from rule (3rd Monday, etc.)
+  4. strategy-reviewer MUST independently verify holiday dates
+  5. If same date has different day-of-week in document → REVISION REQUIRED
+```
+
+**Verification Method**:
+```bash
+# Verify any month's calendar
+python3 -c "import calendar; print(calendar.month(2026, 1))"
+
+# Calculate 3rd Monday (MLK Day) - January 2026
+# Mo Tu We Th Fr Sa Su
+#           1  2  3  4
+#  5  6  7  8  9 10 11
+# 12 13 14 15 16 17 18
+# 19 20 21 22 23 24 25   ← 19 is 3rd Monday
+```
+
+**Lessons Learned**:
+- LLM date/day-of-week inference is unreliable
+- US holiday rules must be explicitly calculated, not assumed
+- Same date with different day-of-week is an obvious contradiction that reviewers must catch
+- Calendar tool verification should be mandatory, not optional
+
+---
+
 ## Version Control
 
-- **Project Version**: 1.6
-- **Last Updated**: 2026-01-11
+- **Project Version**: 1.7
+- **Last Updated**: 2026-01-17
 - **Maintenance**: Update this document regularly
 
 ---
