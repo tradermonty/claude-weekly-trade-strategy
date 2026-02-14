@@ -389,69 +389,7 @@ and save to reports/2025-11-03/druckenmiller-strategy.md.
    - Optimal positioning strategy
    - Invalidation signals (strategy change triggers)
 
-**Report Structure** (~150-200 lines):
-```markdown
-# Strategic Investment Outlook - [Date]
-
-## Executive Summary
-[2-3 paragraphs: Summary of dominant themes and strategic positioning]
-
-## Market Context & Current Environment
-### Macroeconomic Backdrop
-[Monetary policy, business cycle, macro indicators current state]
-
-### Technical Market Structure
-[Key technical levels, trends, patterns]
-
-### Sentiment & Positioning
-[Market sentiment, institutional positioning, contrarian opportunities]
-
-## 18-Month Scenario Analysis
-
-### Base Case Scenario (XX% probability)
-**Narrative:** [Most likely market path]
-**Key Catalysts:**
-- [Catalyst 1]
-- [Catalyst 2]
-**Timeline Markers:**
-- [Q1-Q2 expected development]
-- [Q3-Q4 expected development]
-**Strategic Positioning:**
-- [Asset allocation recommendation]
-- [Specific trade ideas with conviction levels]
-**Risk Management:**
-- [Invalidation signals]
-- [Stop-loss/exit criteria]
-
-### Bull Case Scenario (XX% probability)
-[Same structure as Base Case]
-
-### Bear Case Scenario (XX% probability)
-[Same structure as Base Case]
-
-### Tail Risk Scenario (XX% probability)
-[Same structure as Base Case]
-
-## Recommended Strategic Actions
-
-### High Conviction Trades
-[Trades where technical, fundamental, and sentiment align]
-
-### Medium Conviction Positions
-[Good risk/reward but lower factor alignment]
-
-### Hedges & Protective Strategies
-[Risk management positions and portfolio insurance]
-
-### Watchlist & Contingent Trades
-[Setups awaiting confirmation or specific triggers]
-
-## Key Monitoring Indicators
-[Indicators to track for scenario validation/invalidation]
-
-## Conclusion & Next Review Date
-[Final strategy recommendation and next review timing]
-```
+**Report Template**: See `.claude/agents/druckenmiller-strategy-planner.md` for full template (~60 lines).
 
 **Key Features**:
 - Unlike weekly blog (short-term tactics), this is **18-month medium-long term strategy**
@@ -1039,8 +977,8 @@ python3 -c "import calendar; print(calendar.month(2026, 1))"
 
 ## Version Control
 
-- **Project Version**: 1.7
-- **Last Updated**: 2026-01-17
+- **Project Version**: 1.8
+- **Last Updated**: 2026-01-25
 - **Maintenance**: Update this document regularly
 
 ---

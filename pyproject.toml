@@ -1,0 +1,29 @@
+[project]
+name = "weekly-trade-strategy-bot"
+version = "0.1.0"
+description = "Automated trading system based on weekly strategy blog posts"
+requires-python = ">=3.11"
+dependencies = [
+    "alpaca-py>=0.30",
+    "apscheduler>=3.10,<4.0",
+    "aiosqlite>=0.20",
+    "pytz",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+    "pytest-asyncio>=0.23",
+    "pytest-mock>=3.12",
+]
+
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+include = ["trading*"]
+
+[tool.pytest.ini_options]
+testpaths = ["trading/tests"]
+asyncio_mode = "auto"

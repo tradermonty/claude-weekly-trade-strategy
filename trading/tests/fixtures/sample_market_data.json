@@ -1,0 +1,29 @@
+{
+  "fmp_quotes": {
+    "^VIX": {"symbol": "^VIX", "price": 20.59, "changesPercentage": 5.2},
+    "^GSPC": {"symbol": "^GSPC", "price": 6828.3, "changesPercentage": -0.12},
+    "^NDX": {"symbol": "^NDX", "price": 24700.9, "changesPercentage": -0.34},
+    "^DJI": {"symbol": "^DJI", "price": 49438.0, "changesPercentage": 0.05},
+    "GCUSD": {"symbol": "GCUSD", "price": 5046.3, "changesPercentage": 1.2},
+    "CLUSD": {"symbol": "CLUSD", "price": 62.80, "changesPercentage": -0.8},
+    "HGUSD": {"symbol": "HGUSD", "price": 5.80, "changesPercentage": -1.1}
+  },
+  "fmp_treasury": {
+    "date": "2026-02-13",
+    "year10": 4.050
+  },
+  "alpaca_quotes": {
+    "SPY": 683.10,
+    "QQQ": 531.20,
+    "DIA": 441.30,
+    "XLV": 152.40,
+    "XLP": 82.15,
+    "GLD": 468.50,
+    "XLE": 89.20,
+    "BIL": 91.80,
+    "TLT": 88.90,
+    "URA": 51.91,
+    "SH": 13.20,
+    "SDS": 8.90
+  }
+}

@@ -1,0 +1,30 @@
+{
+  "quote_response": [
+    {"symbol": "^VIX", "price": 20.59, "changesPercentage": 5.2, "change": 1.02, "name": "CBOE Volatility Index"},
+    {"symbol": "^GSPC", "price": 6828.3, "changesPercentage": -0.12, "change": -8.19, "name": "S&P 500"},
+    {"symbol": "^NDX", "price": 24700.9, "changesPercentage": -0.34, "change": -84.25, "name": "Nasdaq 100"},
+    {"symbol": "^DJI", "price": 49438.0, "changesPercentage": 0.05, "change": 24.71, "name": "Dow Jones Industrial Average"},
+    {"symbol": "GCUSD", "price": 5046.3, "changesPercentage": 1.2, "change": 59.8, "name": "Gold Futures"},
+    {"symbol": "CLUSD", "price": 62.80, "changesPercentage": -0.8, "change": -0.51, "name": "Crude Oil WTI"},
+    {"symbol": "HGUSD", "price": 5.80, "changesPercentage": -1.1, "change": -0.065, "name": "Copper Futures"}
+  ],
+  "treasury_response": [
+    {
+      "date": "2026-02-13",
+      "month1": 5.27,
+      "month2": 5.24,
+      "month3": 5.19,
+      "month6": 4.97,
+      "year1": 4.51,
+      "year2": 4.29,
+      "year5": 4.21,
+      "year10": 4.050,
+      "year20": 4.42,
+      "year30": 4.45
+    }
+  ],
+  "quote_error_response": {
+    "Error Message": "Invalid API KEY. Please retry or visit our documentation."
+  },
+  "treasury_empty_response": []
+}

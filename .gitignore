@@ -12,8 +12,14 @@ __pycache__/
 *.so
 .Python
 venv/
+.venv/
 env/
 ENV/
+*.egg-info/
+uv.lock
+
+# Runtime data (top-level only)
+/data/
 
 # IDE
 .vscode/

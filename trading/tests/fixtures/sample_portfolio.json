@@ -1,0 +1,55 @@
+{
+  "account_value": 100000.0,
+  "cash": 28000.0,
+  "positions": {
+    "SPY": {
+      "symbol": "SPY",
+      "shares": 32.21,
+      "market_value": 22000.0,
+      "cost_basis": 21500.0,
+      "current_price": 683.10
+    },
+    "QQQ": {
+      "symbol": "QQQ",
+      "shares": 7.53,
+      "market_value": 4000.0,
+      "cost_basis": 3900.0,
+      "current_price": 531.20
+    },
+    "DIA": {
+      "symbol": "DIA",
+      "shares": 18.13,
+      "market_value": 8000.0,
+      "cost_basis": 7800.0,
+      "current_price": 441.30
+    },
+    "XLV": {
+      "symbol": "XLV",
+      "shares": 78.74,
+      "market_value": 12000.0,
+      "cost_basis": 11800.0,
+      "current_price": 152.40
+    },
+    "XLP": {
+      "symbol": "XLP",
+      "shares": 146.07,
+      "market_value": 12000.0,
+      "cost_basis": 11700.0,
+      "current_price": 82.15
+    },
+    "GLD": {
+      "symbol": "GLD",
+      "shares": 19.21,
+      "market_value": 9000.0,
+      "cost_basis": 8500.0,
+      "current_price": 468.50
+    },
+    "XLE": {
+      "symbol": "XLE",
+      "shares": 56.05,
+      "market_value": 5000.0,
+      "cost_basis": 4800.0,
+      "current_price": 89.20
+    }
+  }
+}
