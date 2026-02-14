@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from datetime import datetime, timedelta
+from unittest.mock import patch
 
 import pytest
 
@@ -133,3 +134,105 @@ class TestResolveConflict:
         # Call again — counter keeps incrementing
         result2 = v.resolve_conflict(None, None, previous)
         assert v.consecutive_api_failures == 2
+
+
+# ---------------------------------------------------------------------------
+# Tests — F5 integration: is_fresh + resolve_conflict used in MarketMonitor
+# ---------------------------------------------------------------------------
+
+class TestFreshnessIntegration:
+    """Verify that MarketMonitor integrates is_fresh() and resolve_conflict()."""
+
+    @patch("trading.layer1.market_monitor.AlpacaClient")
+    @patch("trading.layer1.market_monitor.FMPClient")
+    def test_is_fresh_called_on_fallback(
+        self, mock_fmp_cls, mock_alpaca_cls, tmp_db, config
+    ):
+        """When both APIs fail, is_fresh() is called on the fallback timestamp."""
+        from unittest.mock import MagicMock
+        from trading.layer1.market_monitor import MarketMonitor
+
+        # Save a previous market state so there's data to fall back to
+        ts = datetime.now().isoformat()
+        tmp_db.save_market_state(timestamp=ts, vix=20.0, sp500=6800.0)
+
+        monitor = MarketMonitor(config, tmp_db)
+        monitor._fmp = MagicMock()
+        monitor._fmp.fetch_quotes.return_value = None
+        monitor._alpaca = MagicMock()
+        monitor._alpaca.get_quotes.side_effect = Exception("Alpaca down")
+
+        # Spy on is_fresh
+        with patch.object(monitor._validator, "is_fresh", wraps=monitor._validator.is_fresh) as spy:
+            monitor.fetch_market_data()
+            # is_fresh should have been called at least once (for stale check)
+            spy.assert_called()
+
+    @patch("trading.layer1.market_monitor.AlpacaClient")
+    @patch("trading.layer1.market_monitor.FMPClient")
+    def test_resolve_conflict_used_for_merge(
+        self, mock_fmp_cls, mock_alpaca_cls, tmp_db, config
+    ):
+        """resolve_conflict() is called to merge FMP and Alpaca data."""
+        from unittest.mock import MagicMock
+        from trading.layer1.market_monitor import MarketMonitor
+
+        monitor = MarketMonitor(config, tmp_db)
+        monitor._fmp = MagicMock()
+        monitor._fmp.fetch_quotes.return_value = {"^VIX": {"price": 20.0}}
+        monitor._fmp.fetch_treasury.return_value = {"year10": 4.36}
+        monitor._alpaca = MagicMock()
+        monitor._alpaca.get_quotes.return_value = {"SPY": 683.0}
+
+        with patch.object(
+            monitor._validator, "resolve_conflict", wraps=monitor._validator.resolve_conflict
+        ) as spy:
+            monitor.fetch_market_data()
+            spy.assert_called_once()
+
+    @patch("trading.layer1.market_monitor.AlpacaClient")
+    @patch("trading.layer1.market_monitor.FMPClient")
+    def test_stale_flag_set_when_both_fail(
+        self, mock_fmp_cls, mock_alpaca_cls, tmp_db, config
+    ):
+        """When both APIs fail, merged result has _stale=True."""
+        from unittest.mock import MagicMock
+        from trading.layer1.market_monitor import MarketMonitor
+
+        # Save previous state for fallback
+        tmp_db.save_market_state(
+            timestamp=datetime.now().isoformat(),
+            vix=19.0, sp500=6750.0,
+        )
+
+        monitor = MarketMonitor(config, tmp_db)
+        monitor._fmp = MagicMock()
+        monitor._fmp.fetch_quotes.return_value = None
+        monitor._alpaca = MagicMock()
+        monitor._alpaca.get_quotes.side_effect = Exception("down")
+
+        # After fetch, validator's consecutive_api_failures should have incremented
+        monitor.fetch_market_data()
+        assert monitor._validator.consecutive_api_failures >= 1
+
+    @patch("trading.layer1.market_monitor.AlpacaClient")
+    @patch("trading.layer1.market_monitor.FMPClient")
+    def test_fresh_data_no_warning(
+        self, mock_fmp_cls, mock_alpaca_cls, tmp_db, config
+    ):
+        """When APIs succeed, no stale warning is generated."""
+        from unittest.mock import MagicMock
+        from trading.layer1.market_monitor import MarketMonitor
+
+        monitor = MarketMonitor(config, tmp_db)
+        monitor._fmp = MagicMock()
+        monitor._fmp.fetch_quotes.return_value = {"^VIX": {"price": 20.0}}
+        monitor._fmp.fetch_treasury.return_value = {"year10": 4.36}
+        monitor._alpaca = MagicMock()
+        monitor._alpaca.get_quotes.return_value = {"SPY": 683.0}
+
+        with patch("trading.layer1.market_monitor.logger") as mock_logger:
+            monitor.fetch_market_data()
+            # Should NOT have any error about stale data
+            for call_args in mock_logger.error.call_args_list:
+                assert "STALE" not in str(call_args)

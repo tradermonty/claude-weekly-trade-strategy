@@ -90,37 +90,81 @@ class StopLossManager:
     def _place_or_replace_stop(
         self, symbol: str, qty: float, stop_price: float, blog_date: str
     ) -> None:
-        """Place a new stop or replace an existing one."""
+        """Place a new stop or atomically replace an existing one.
+
+        Uses Alpaca replace_order() to avoid a window where no stop exists
+        (the "no-guard" gap between cancel and submit).
+
+        Fallback: if replace_order() fails, falls back to cancel+submit.
+        """
         try:
             existing = self._alpaca.list_open_stop_orders(symbol)
         except Exception:
             logger.exception("Failed to list existing stops for %s", symbol)
             existing = []
 
-        # Cancel all existing stops for this symbol
-        if len(existing) >= 1:
-            for order in existing:
-                try:
-                    self._alpaca.cancel_order(order["id"])
-                    logger.info("Cancelled old stop %s for %s", order["id"], symbol)
-                except Exception:
-                    # Order may have been filled or already cancelled
-                    logger.warning(
-                        "Could not cancel stop %s for %s (may be filled/cancelled)",
-                        order["id"], symbol,
-                    )
-
-        # Place new stop
-        seq = self._next_seq(symbol, blog_date)
-        client_order_id = f"stop-{symbol}-{blog_date}-{seq}"
-
         if self._config.dry_run:
             logger.info(
-                "[DRY RUN] Would place stop: %s qty=%.4f stop=%.2f",
-                symbol, qty, stop_price,
+                "[DRY RUN] Would %s stop: %s qty=%.4f stop=%.2f",
+                "replace" if existing else "place", symbol, qty, stop_price,
             )
             return
 
+        if len(existing) == 1:
+            # Idempotency: skip if stop_price unchanged
+            order = existing[0]
+            if float(order.get("stop_price", 0)) == stop_price:
+                return
+            # Atomic replace
+            result = self._alpaca.replace_order(
+                order_id=order["id"],
+                qty=qty,
+                stop_price=stop_price,
+            )
+            if result is not None:
+                logger.info(
+                    "Replaced stop %s for %s: new stop=%.2f",
+                    order["id"], symbol, stop_price,
+                )
+                return
+            # Fallback: replace failed, cancel+submit
+            logger.warning(
+                "replace_order failed for %s, falling back to cancel+submit",
+                symbol,
+            )
+            self._alpaca.cancel_order(order["id"])
+
+        elif len(existing) > 1:
+            # Anomaly: multiple stops — cancel extras, replace the first
+            for extra in existing[1:]:
+                try:
+                    self._alpaca.cancel_order(extra["id"])
+                    logger.info(
+                        "Cancelled extra stop %s for %s", extra["id"], symbol,
+                    )
+                except Exception:
+                    logger.warning(
+                        "Could not cancel extra stop %s for %s",
+                        extra["id"], symbol,
+                    )
+            # Try to replace the first
+            result = self._alpaca.replace_order(
+                order_id=existing[0]["id"],
+                qty=qty,
+                stop_price=stop_price,
+            )
+            if result is not None:
+                logger.info(
+                    "Replaced stop %s for %s: new stop=%.2f",
+                    existing[0]["id"], symbol, stop_price,
+                )
+                return
+            # Replace failed, cancel and fall through to new placement
+            self._alpaca.cancel_order(existing[0]["id"])
+
+        # Place new stop (no existing or all cancelled)
+        seq = self._next_seq(symbol, blog_date)
+        client_order_id = f"stop-{symbol}-{blog_date}-{seq}"
         try:
             order = Order(
                 client_order_id=client_order_id,

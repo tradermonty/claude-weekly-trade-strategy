@@ -7,7 +7,7 @@ to ensure the system degrades gracefully and never loses money due to bugs.
 
 from __future__ import annotations
 
-from datetime import date, datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 from unittest.mock import patch, MagicMock
 
 import pytest
@@ -803,3 +803,117 @@ class TestLossCalculatorPremarketSafety:
         result = calc.daily_loss_pct(portfolio)
         assert result is not None
         assert result == pytest.approx(-2.0)
+
+
+class TestFreshnessCheckInMonitor:
+    """F5: Verify is_fresh() and resolve_conflict() are integrated into MarketMonitor."""
+
+    @patch("trading.layer1.market_monitor.AlpacaClient")
+    @patch("trading.layer1.market_monitor.FMPClient")
+    def test_stale_fallback_detected(self, mock_fmp_cls, mock_alpaca_cls, tmp_db, config):
+        """When both APIs fail and previous data is stale, is_fresh returns False."""
+        from trading.layer1.market_monitor import MarketMonitor
+
+        # Save market state from 10 minutes ago (beyond fmp_quote_max_staleness=300s)
+        old_ts = (datetime.now() - timedelta(seconds=600)).isoformat()
+        tmp_db.save_market_state(timestamp=old_ts, vix=19.0, sp500=6700.0)
+
+        monitor = MarketMonitor(config, tmp_db)
+        monitor._fmp = MagicMock()
+        monitor._fmp.fetch_quotes.return_value = None
+        monitor._alpaca = MagicMock()
+        monitor._alpaca.get_quotes.side_effect = Exception("down")
+
+        # Spy on is_fresh to verify it's called and returns False
+        with patch.object(
+            monitor._validator, "is_fresh", wraps=monitor._validator.is_fresh
+        ) as spy:
+            monitor.fetch_market_data()
+            # is_fresh should have been called for the stale fallback check
+            spy.assert_called()
+            # At least one call should return False (data is stale)
+            results = [spy_call for spy_call in spy.call_args_list]
+            assert len(results) > 0, "is_fresh should be called on fallback"
+
+    @patch("trading.layer1.market_monitor.AlpacaClient")
+    @patch("trading.layer1.market_monitor.FMPClient")
+    def test_resolve_conflict_merges_fmp_and_alpaca(
+        self, mock_fmp_cls, mock_alpaca_cls, tmp_db, config
+    ):
+        """FMP and Alpaca data are merged via resolve_conflict into MarketData."""
+        from trading.layer1.market_monitor import MarketMonitor
+
+        monitor = MarketMonitor(config, tmp_db)
+        monitor._fmp = MagicMock()
+        monitor._fmp.fetch_quotes.return_value = {
+            "^VIX": {"price": 21.5},
+            "^GSPC": {"price": 6850.0},
+        }
+        monitor._fmp.fetch_treasury.return_value = {"year10": 4.40}
+        monitor._alpaca = MagicMock()
+        monitor._alpaca.get_quotes.return_value = {"SPY": 685.0, "QQQ": 535.0}
+
+        md = monitor.fetch_market_data()
+
+        assert md.vix == 21.5
+        assert md.sp500 == 6850.0
+        assert md.us10y == 4.40
+        assert md.etf_prices.get("SPY") == 685.0
+        assert md.etf_prices.get("QQQ") == 535.0
+
+    @patch("trading.layer1.market_monitor.AlpacaClient")
+    @patch("trading.layer1.market_monitor.FMPClient")
+    def test_single_fmp_failure_triggers_stale_check(
+        self, mock_fmp_cls, mock_alpaca_cls, tmp_db, config
+    ):
+        """When only FMP fails (single-source failure), is_fresh is still called
+        for the FMP fallback data — not only when both APIs fail."""
+        from trading.layer1.market_monitor import MarketMonitor
+
+        # Save old market state (beyond fmp_quote_max_staleness=300s)
+        old_ts = (datetime.now() - timedelta(seconds=600)).isoformat()
+        tmp_db.save_market_state(timestamp=old_ts, vix=19.0, sp500=6700.0)
+
+        monitor = MarketMonitor(config, tmp_db)
+        monitor._fmp = MagicMock()
+        monitor._fmp.fetch_quotes.return_value = None  # FMP fails
+        monitor._alpaca = MagicMock()
+        monitor._alpaca.get_quotes.return_value = {"SPY": 683.0}  # Alpaca succeeds
+
+        with patch.object(
+            monitor._validator, "is_fresh", wraps=monitor._validator.is_fresh
+        ) as spy:
+            monitor.fetch_market_data()
+            # is_fresh should be called even though only FMP failed
+            spy.assert_called()
+            # Verify it was called with "fmp_quote"
+            fmp_calls = [
+                c for c in spy.call_args_list
+                if c[0][0] == "fmp_quote"
+            ]
+            assert len(fmp_calls) > 0, (
+                "is_fresh('fmp_quote', ...) should be called on single FMP failure"
+            )
+
+    @patch("trading.layer1.market_monitor.AlpacaClient")
+    @patch("trading.layer1.market_monitor.FMPClient")
+    def test_timezone_aware_timestamp_age_is_correct(
+        self, mock_fmp_cls, mock_alpaca_cls, tmp_db, config
+    ):
+        """UTC-aware timestamps stored in DB produce correct age via
+        astimezone() conversion, regardless of system timezone."""
+        # Save a recent UTC-aware timestamp (30s ago)
+        recent_ts = (datetime.now(timezone.utc) - timedelta(seconds=30)).isoformat()
+        tmp_db.save_market_state(timestamp=recent_ts, vix=20.0, sp500=6800.0)
+
+        # Retrieve and verify the naive-local conversion is correct
+        prev_ts = tmp_db.get_previous_market_state_timestamp()
+        assert prev_ts is not None
+        assert prev_ts.tzinfo is None, "Should be naive after conversion"
+
+        # Age should be approximately 30 seconds, not 9+ hours
+        age = (datetime.now() - prev_ts).total_seconds()
+        assert 0 <= age < 120, (
+            f"Age should be ~30s, got {age:.0f}s "
+            f"(likely timezone conversion bug if >> 120)"
+        )

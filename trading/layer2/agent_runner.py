@@ -146,18 +146,26 @@ class AgentRunner:
     def _invoke_claude(self, user_message: str) -> list[dict]:
         """Invoke Claude SDK and return tool call results.
 
-        NOTE: This is a placeholder implementation. The actual SDK call
-        would go here once the claude-agent-sdk is installed and configured.
-
-        The real implementation would look like:
-
+        Uses the Anthropic Messages API with tool use. Gracefully degrades
+        to empty tool calls when the SDK is not installed or the API key
+        is not configured.
+        """
+        try:
             import anthropic
-            client = anthropic.Anthropic()
+        except ImportError:
+            logger.warning(
+                "anthropic SDK not installed — returning empty tool calls. "
+                "Run: pip install 'anthropic>=0.40'"
+            )
+            return []
+
+        try:
+            client = anthropic.Anthropic()  # reads ANTHROPIC_API_KEY from env
             response = client.messages.create(
                 model="claude-sonnet-4-5-20250929",
                 max_tokens=4096,
                 system=SYSTEM_PROMPT,
-                tools=TOOL_DEFINITIONS,
+                tools=self._convert_tools(TOOL_DEFINITIONS),
                 messages=[{"role": "user", "content": user_message}],
             )
             tool_calls = []
@@ -168,12 +176,28 @@ class AgentRunner:
                         "input": block.input,
                     })
             return tool_calls
+        except anthropic.AuthenticationError:
+            logger.warning(
+                "ANTHROPIC_API_KEY not set or invalid — returning empty tool calls."
+            )
+            return []
+
+    @staticmethod
+    def _convert_tools(tool_defs: list[dict]) -> list[dict]:
+        """Convert internal tool definitions to Anthropic API format.
+
+        The Anthropic API expects each tool to have 'name', 'description',
+        and 'input_schema' keys. Our internal format already matches this,
+        but this method ensures compatibility and filters out any extra keys.
         """
-        logger.warning(
-            "Claude SDK not configured — returning empty tool calls. "
-            "Install anthropic SDK and set ANTHROPIC_API_KEY to enable."
-        )
-        return []
+        converted = []
+        for tool in tool_defs:
+            converted.append({
+                "name": tool["name"],
+                "description": tool["description"],
+                "input_schema": tool["input_schema"],
+            })
+        return converted
 
     def _extract_intent(self, tool_calls: list[dict]) -> Optional[StrategyIntent]:
         """Extract StrategyIntent from Claude's tool calls.

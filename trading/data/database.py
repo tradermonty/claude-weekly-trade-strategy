@@ -236,6 +236,32 @@ class Database:
         )
         self.conn.commit()
 
+    def get_previous_market_state_timestamp(self) -> Optional[datetime]:
+        """Get the timestamp of the most recent market_states row.
+
+        Returns a naive datetime in **local** time for compatibility with
+        MarketDataValidator.is_fresh() which uses datetime.now() (local naive).
+
+        Stored timestamps are UTC-aware ISO strings (e.g. ``...+00:00``).
+        We convert UTC → local → strip tzinfo so that
+        ``(datetime.now() - result).total_seconds()`` gives the correct age
+        regardless of the system timezone.
+        """
+        row = self.conn.execute(
+            "SELECT timestamp FROM market_states ORDER BY id DESC LIMIT 1"
+        ).fetchone()
+        if row is None or row["timestamp"] is None:
+            return None
+        ts_str = row["timestamp"]
+        try:
+            dt = datetime.fromisoformat(ts_str)
+            if dt.tzinfo is not None:
+                # Convert UTC-aware → system-local → strip tzinfo
+                dt = dt.astimezone().replace(tzinfo=None)
+            return dt
+        except (ValueError, TypeError):
+            return None
+
     def get_previous_market_state(self, key: str) -> Optional[float]:
         col_map = {
             "vix": "vix", "us10y": "us10y", "sp500": "sp500",

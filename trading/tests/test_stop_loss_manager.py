@@ -11,6 +11,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
+from trading.config import TradingConfig
 from trading.data.models import Order, Portfolio, Position, StrategySpec, ScenarioSpec
 
 
@@ -259,3 +260,84 @@ class TestResyncDelegation:
         mgr.resync_after_fill_or_rebalance(portfolio, strategy)
 
         mgr.sync_stop_orders.assert_called_once_with(strategy, portfolio)
+
+
+class TestAtomicReplace:
+    """Tests for the atomic replace_order logic in _place_or_replace_stop (F3)."""
+
+    def test_replace_order_called_for_single_existing(self, tmp_db, config):
+        """When one existing stop exists, replace_order() is used (not cancel+submit)."""
+        config = TradingConfig(dry_run=False)
+        mgr = _make_manager(config, tmp_db)
+
+        mgr._alpaca.list_open_stop_orders.return_value = [
+            {"id": "stop-1", "symbol": "SPY", "stop_price": "620.0"},
+        ]
+        mgr._alpaca.replace_order.return_value = {"id": "stop-1-replaced"}
+
+        mgr._place_or_replace_stop("SPY", 73.0, 630.0, "2026-02-16")
+
+        mgr._alpaca.replace_order.assert_called_once_with(
+            order_id="stop-1",
+            qty=73.0,
+            stop_price=630.0,
+        )
+        mgr._alpaca.cancel_order.assert_not_called()
+        mgr._alpaca.submit_order.assert_not_called()
+
+    def test_replace_fallback_on_failure(self, tmp_db, config):
+        """When replace_order() fails (returns None), fall back to cancel+submit."""
+        config = TradingConfig(dry_run=False)
+        mgr = _make_manager(config, tmp_db)
+
+        mgr._alpaca.list_open_stop_orders.return_value = [
+            {"id": "stop-1", "symbol": "SPY", "stop_price": "620.0"},
+        ]
+        mgr._alpaca.replace_order.return_value = None  # Replace failed
+
+        mgr._place_or_replace_stop("SPY", 73.0, 630.0, "2026-02-16")
+
+        # Should have called replace first
+        mgr._alpaca.replace_order.assert_called_once()
+        # Then cancel (fallback)
+        mgr._alpaca.cancel_order.assert_called_once_with("stop-1")
+        # Then submit new order
+        mgr._alpaca.submit_order.assert_called_once()
+
+    def test_skip_when_stop_price_unchanged(self, tmp_db, config):
+        """When stop_price is the same, no action is taken (idempotent)."""
+        config = TradingConfig(dry_run=False)
+        mgr = _make_manager(config, tmp_db)
+
+        mgr._alpaca.list_open_stop_orders.return_value = [
+            {"id": "stop-1", "symbol": "SPY", "stop_price": "630.0"},
+        ]
+
+        mgr._place_or_replace_stop("SPY", 73.0, 630.0, "2026-02-16")
+
+        mgr._alpaca.replace_order.assert_not_called()
+        mgr._alpaca.cancel_order.assert_not_called()
+        mgr._alpaca.submit_order.assert_not_called()
+
+    def test_multiple_existing_cancels_extras(self, tmp_db, config):
+        """When 2+ stops exist, extras are cancelled before replace on the first."""
+        config = TradingConfig(dry_run=False)
+        mgr = _make_manager(config, tmp_db)
+
+        mgr._alpaca.list_open_stop_orders.return_value = [
+            {"id": "stop-1", "symbol": "SPY", "stop_price": "620.0"},
+            {"id": "stop-2", "symbol": "SPY", "stop_price": "615.0"},
+        ]
+        mgr._alpaca.replace_order.return_value = {"id": "stop-1-replaced"}
+
+        mgr._place_or_replace_stop("SPY", 73.0, 630.0, "2026-02-16")
+
+        # Extra stop-2 should be cancelled
+        mgr._alpaca.cancel_order.assert_called_once_with("stop-2")
+        # First stop should be replaced
+        mgr._alpaca.replace_order.assert_called_once_with(
+            order_id="stop-1",
+            qty=73.0,
+            stop_price=630.0,
+        )
+        mgr._alpaca.submit_order.assert_not_called()
