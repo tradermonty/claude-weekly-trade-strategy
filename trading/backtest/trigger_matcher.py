@@ -102,9 +102,13 @@ class TriggerMatcher:
     def resolve_scenario(
         self, trigger: str, strategy: StrategySpec,
     ) -> Optional[str]:
-        """Resolve trigger to a scenario name with explicit fallback chain."""
+        """Resolve trigger to a scenario name with explicit fallback chain.
+
+        Returns scenario name if found in candidates, or None to signal
+        the engine should fall back to current_allocation (with warning).
+        Drift triggers always return None (re-rebalance to current scenario).
+        """
         if trigger == "drift":
-            # Drift: no scenario change, just re-rebalance
             return None
 
         candidates = TRIGGER_SCENARIO_MAP.get(trigger, [])
@@ -113,15 +117,10 @@ class TriggerMatcher:
             if name in strategy.scenarios:
                 return name
 
-        # Fallback to base
+        # No candidate matched → engine will use current_allocation
         logger.warning(
             "No matching scenario for trigger=%s, candidates=%s, "
-            "falling back to 'base'",
+            "falling back to current_allocation",
             trigger, candidates,
         )
-        if "base" in strategy.scenarios:
-            return "base"
-
-        raise ValueError(
-            f"No usable scenario for trigger={trigger} in blog {strategy.blog_date}"
-        )
+        return None

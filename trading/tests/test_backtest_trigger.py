@@ -215,25 +215,25 @@ class TestResolveScenario:
         strat = _strategy()
         assert tm.resolve_scenario("vix_caution", strat) == "bear"
 
-    def test_fallback_to_base(self):
-        """When all candidates missing, fall back to base."""
+    def test_no_candidates_returns_none(self):
+        """When all candidates missing, return None (engine uses current_allocation)."""
         scenarios = {
             "base": ScenarioSpec("base", 100, [], {"SPY": 50, "BIL": 50}),
         }
         tm = TriggerMatcher()
         strat = _strategy(scenarios=scenarios)
         result = tm.resolve_scenario("vix_stress", strat)
-        assert result == "base"
+        assert result is None
 
-    def test_no_base_raises(self):
-        """When even base is missing, raise ValueError."""
+    def test_no_scenarios_returns_none(self):
+        """When no scenarios at all, return None (engine uses current_allocation)."""
         scenarios = {
             "custom": ScenarioSpec("custom", 100, [], {"SPY": 50, "BIL": 50}),
         }
         tm = TriggerMatcher()
         strat = _strategy(scenarios=scenarios)
-        with pytest.raises(ValueError, match="No usable scenario"):
-            tm.resolve_scenario("vix_stress", strat)
+        result = tm.resolve_scenario("vix_stress", strat)
+        assert result is None
 
     def test_drift_returns_none(self):
         """Drift trigger returns None (no scenario change)."""

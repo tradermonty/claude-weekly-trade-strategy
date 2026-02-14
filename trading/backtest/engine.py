@@ -103,6 +103,7 @@ class PhaseAEngine:
                 (s.blog_date, s.reason) for s in self._timeline.skipped
             ],
             transition_days=transition_days,
+            trade_records=portfolio.trades,
         )
 
 
@@ -180,18 +181,38 @@ class PhaseBEngine:
 
             # 2. Execute pending trigger from previous day (D+1 open)
             if pending_trigger and not executed_today and strategy:
-                scenario_name = self._trigger_matcher.resolve_scenario(
-                    pending_trigger, strategy,
-                )
-                if scenario_name and scenario_name in strategy.scenarios:
-                    alloc = strategy.scenarios[scenario_name].allocation
+                # Use open prices for D+1 execution; fall back to close
+                open_prices = self._data.get_etf_open_prices(day)
+                exec_prices = {**prices, **open_prices}
+
+                if pending_trigger == "drift":
+                    # Drift: re-rebalance to current scenario allocation
+                    if current_scenario in strategy.scenarios:
+                        alloc = strategy.scenarios[current_scenario].allocation
+                    else:
+                        alloc = strategy.current_allocation
                     trades = portfolio.rebalance_to(
-                        alloc, prices,
+                        alloc, exec_prices,
+                        trade_date=day,
+                        reason="trigger:drift",
+                    )
+                    trades_today = len(trades)
+                else:
+                    scenario_name = self._trigger_matcher.resolve_scenario(
+                        pending_trigger, strategy,
+                    )
+                    if scenario_name and scenario_name in strategy.scenarios:
+                        alloc = strategy.scenarios[scenario_name].allocation
+                        current_scenario = scenario_name
+                    else:
+                        # No candidate matched → fall back to current_allocation
+                        alloc = strategy.current_allocation
+                    trades = portfolio.rebalance_to(
+                        alloc, exec_prices,
                         trade_date=day,
                         reason=f"trigger:{pending_trigger}",
                     )
                     trades_today = len(trades)
-                    current_scenario = scenario_name
                 executed_today = True
                 pending_trigger = None
 
@@ -236,4 +257,5 @@ class PhaseBEngine:
                 (s.blog_date, s.reason) for s in self._timeline.skipped
             ],
             transition_days=transition_days,
+            trade_records=portfolio.trades,
         )

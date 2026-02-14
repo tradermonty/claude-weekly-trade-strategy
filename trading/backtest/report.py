@@ -87,17 +87,16 @@ def write_csv_reports(result: BacktestResult, output_dir: Path) -> None:
                 snap.scenario, snap.trades_today,
             ])
 
-    # trades.csv (from weekly performance summary)
+    # trades.csv (all individual trade records)
     trades_path = output_dir / "trades.csv"
     with open(trades_path, "w", newline="") as f:
         writer = csv.writer(f)
         writer.writerow([
-            "blog_week", "start_value", "end_value",
-            "return_pct", "trades", "scenario",
+            "date", "symbol", "side", "shares", "price", "value", "reason",
         ])
-        for wp in result.weekly_performance:
+        for tr in result.trade_records:
             writer.writerow([
-                wp.blog_date, round(wp.start_value, 2),
-                round(wp.end_value, 2), round(wp.return_pct, 4),
-                wp.trades, wp.scenario,
+                tr.date, tr.symbol, tr.side,
+                round(tr.shares, 6), round(tr.price, 4),
+                round(tr.value, 2), tr.reason,
             ])

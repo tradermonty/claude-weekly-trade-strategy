@@ -52,6 +52,7 @@ class BacktestResult:
     daily_snapshots: list[DailySnapshot] = field(default_factory=list)
     weekly_performance: list[WeeklyPerformance] = field(default_factory=list)
     skipped_reasons: list[tuple[str, str]] = field(default_factory=list)
+    trade_records: list = field(default_factory=list)  # list[TradeRecord]
 
 
 class BacktestMetrics:
@@ -163,6 +164,7 @@ class BacktestMetrics:
         blogs_skipped: int,
         skipped_reasons: list[tuple[str, str]],
         transition_days: list[date],
+        trade_records: list | None = None,
     ) -> BacktestResult:
         """Build a complete BacktestResult."""
         return BacktestResult(
@@ -181,6 +183,7 @@ class BacktestMetrics:
             daily_snapshots=list(self._snapshots),
             weekly_performance=self.weekly_performance(transition_days),
             skipped_reasons=skipped_reasons,
+            trade_records=trade_records or [],
         )
 
     def _daily_returns(self) -> list[float]:

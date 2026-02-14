@@ -81,7 +81,7 @@ def _make_data_provider(
     end: date,
     base_prices: dict[str, float] | None = None,
 ) -> DataProvider:
-    """Create a data provider with synthetic daily data."""
+    """Create a data provider with synthetic daily close and open data."""
     dp = DataProvider(AlpacaConfig())
     if base_prices is None:
         base_prices = {"SPY": 500.0, "QQQ": 400.0, "XLV": 150.0, "XLP": 80.0, "GLD": 250.0, "BIL": 100.0}
@@ -96,10 +96,14 @@ def _make_data_provider(
                     continue
                 if sym not in dp._etf_cache:
                     dp._etf_cache[sym] = {}
+                if sym not in dp._etf_open_cache:
+                    dp._etf_open_cache[sym] = {}
                 # Slight daily variation
                 day_offset = (d - start).days
-                price = base_prices[sym] * (1 + day_offset * 0.001)
-                dp._etf_cache[sym][d] = round(price, 2)
+                close_price = base_prices[sym] * (1 + day_offset * 0.001)
+                open_price = close_price * 0.999  # open slightly below close
+                dp._etf_cache[sym][d] = round(close_price, 2)
+                dp._etf_open_cache[sym][d] = round(open_price, 2)
         d += timedelta(days=1)
 
     return dp
@@ -335,3 +339,123 @@ class TestPhaseBEngine:
         )
         assert jan12_snap is not None
         assert jan12_snap.trades_today > 0  # transition rebalance happened
+
+    def test_drift_trigger_causes_rebalance(self, tmp_path):
+        """Drift trigger should cause re-rebalance to current scenario allocation."""
+        _write_blog(tmp_path, "2026-01-05", {"SPY": 60, "QQQ": 10, "BIL": 30})
+
+        timeline = StrategyTimeline()
+        timeline.build(tmp_path)
+
+        start = date(2026, 1, 5)
+        end = date(2026, 1, 9)
+
+        # Create provider with prices that cause drift
+        dp = DataProvider(AlpacaConfig())
+        from datetime import timedelta
+        for sym, price in [("SPY", 500.0), ("QQQ", 400.0), ("XLV", 150.0),
+                           ("XLP", 80.0), ("GLD", 250.0), ("BIL", 100.0)]:
+            close_data = {
+                date(2026, 1, 5): price,
+                date(2026, 1, 6): price * (1.08 if sym == "SPY" else 0.95),  # big SPY drift
+                date(2026, 1, 7): price * (1.08 if sym == "SPY" else 0.95),
+                date(2026, 1, 8): price * (1.08 if sym == "SPY" else 0.95),
+                date(2026, 1, 9): price * (1.08 if sym == "SPY" else 0.95),
+            }
+            open_data = {d: v * 0.999 for d, v in close_data.items()}
+            dp.inject_etf_data(sym, close_data)
+            dp.inject_etf_open_data(sym, open_data)
+        dp.inject_fmp_data("vix", {d: 18.0 for d in [
+            date(2026, 1, 5), date(2026, 1, 6), date(2026, 1, 7),
+            date(2026, 1, 8), date(2026, 1, 9),
+        ]})
+
+        # Use low drift threshold to ensure trigger fires
+        from trading.backtest.trigger_matcher import TriggerMatcher
+        matcher = TriggerMatcher(drift_threshold_pct=2.0)
+
+        config = BacktestConfig(start=start, end=end, phase="B")
+        engine = PhaseBEngine(config, timeline, dp)
+        engine.set_trigger_matcher(matcher)
+        result = engine.run()
+
+        # Should have transition trade on Jan 5, and drift rebalance on a subsequent day
+        trade_days = [s for s in result.daily_snapshots if s.trades_today > 0]
+        assert len(trade_days) >= 2
+
+    def test_trade_records_populated(self, tmp_path):
+        """BacktestResult.trade_records should contain all individual trades."""
+        _write_blog(tmp_path, "2026-01-05", {"SPY": 60, "QQQ": 10, "BIL": 30})
+
+        timeline = StrategyTimeline()
+        timeline.build(tmp_path)
+
+        start = date(2026, 1, 5)
+        end = date(2026, 1, 9)
+        dp = _make_data_provider(["SPY", "QQQ", "XLV", "XLP", "GLD", "BIL"], start, end)
+        from datetime import timedelta
+        dp.inject_fmp_data("vix", {d: 18.0 for d in dp.get_trading_days(start, end)})
+
+        config = BacktestConfig(start=start, end=end, phase="B")
+        result = PhaseBEngine(config, timeline, dp).run()
+
+        assert len(result.trade_records) > 0
+        assert result.trade_records[0].symbol in {"SPY", "QQQ", "BIL", "XLV", "XLP", "GLD"}
+        assert result.trade_records[0].side in {"buy", "sell"}
+
+    def test_d_plus_1_uses_open_prices(self, tmp_path):
+        """D+1 trigger execution should use open prices, not close."""
+        _write_blog(tmp_path, "2026-01-05", {"SPY": 60, "QQQ": 10, "BIL": 30})
+
+        timeline = StrategyTimeline()
+        timeline.build(tmp_path)
+
+        start = date(2026, 1, 5)
+        end = date(2026, 1, 9)
+
+        dp = DataProvider(AlpacaConfig())
+        for sym, price in [("SPY", 500.0), ("QQQ", 400.0), ("XLV", 150.0),
+                           ("XLP", 80.0), ("GLD", 250.0), ("BIL", 100.0)]:
+            dp.inject_etf_data(sym, {
+                date(2026, 1, 5): price,
+                date(2026, 1, 6): price,
+                date(2026, 1, 7): price,
+                date(2026, 1, 8): price,
+                date(2026, 1, 9): price,
+            })
+            # Open prices are distinctly different from close
+            dp.inject_etf_open_data(sym, {
+                date(2026, 1, 5): price * 0.98,
+                date(2026, 1, 6): price * 0.98,
+                date(2026, 1, 7): price * 0.98,
+                date(2026, 1, 8): price * 0.98,
+                date(2026, 1, 9): price * 0.98,
+            })
+        # VIX spike on Jan 6 → D+1 execution on Jan 7
+        dp.inject_fmp_data("vix", {
+            date(2026, 1, 5): 18.0,
+            date(2026, 1, 6): 22.0,
+            date(2026, 1, 7): 22.0,
+            date(2026, 1, 8): 22.0,
+            date(2026, 1, 9): 22.0,
+        })
+
+        config = BacktestConfig(start=start, end=end, phase="B")
+        result = PhaseBEngine(config, timeline, dp).run()
+
+        # Find trades executed on Jan 7 (D+1 of Jan 6 trigger)
+        jan7_trades = [t for t in result.trade_records
+                       if t.date == date(2026, 1, 7)]
+        assert jan7_trades, "Expected trades on Jan 7 (D+1 of Jan 6 trigger)"
+        if jan7_trades:
+            for trade in jan7_trades:
+                # Trade price should be close to open (98% of base)
+                # not close (100% of base)
+                base = {"SPY": 500.0, "QQQ": 400.0, "XLV": 150.0,
+                        "XLP": 80.0, "GLD": 250.0, "BIL": 100.0}
+                if trade.symbol in base:
+                    expected_open = base[trade.symbol] * 0.98
+                    assert abs(trade.price - expected_open) < 1.0, (
+                        f"{trade.symbol}: price {trade.price} should be near "
+                        f"open {expected_open}, not close {base[trade.symbol]}"
+                    )

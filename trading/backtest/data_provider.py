@@ -43,6 +43,7 @@ class DataProvider:
 
         # In-memory caches
         self._etf_cache: dict[str, dict[date, float]] = {}  # symbol -> {date: close}
+        self._etf_open_cache: dict[str, dict[date, float]] = {}  # symbol -> {date: open}
         self._fmp_cache: dict[str, dict[date, float]] = {}  # indicator -> {date: value}
 
     def load_etf_data(
@@ -51,34 +52,42 @@ class DataProvider:
         start: date,
         end: date,
     ) -> None:
-        """Load ETF daily close prices into cache.
+        """Load ETF daily close and open prices into cache.
 
         Tries Alpaca first, falls back to FMP if Alpaca is unavailable.
         """
         for symbol in symbols:
             if symbol in self._etf_cache:
                 continue
-            cached = self._load_disk_cache(f"etf_{symbol}")
-            if cached:
-                self._etf_cache[symbol] = cached
-                dates = sorted(cached.keys())
+            cached_close = self._load_disk_cache(f"etf_{symbol}")
+            cached_open = self._load_disk_cache(f"etf_{symbol}_open")
+            if cached_close:
+                self._etf_cache[symbol] = cached_close
+                if cached_open:
+                    self._etf_open_cache[symbol] = cached_open
+                dates = sorted(cached_close.keys())
                 if dates and dates[0] <= start and dates[-1] >= end:
-                    logger.info("Using cached ETF data for %s", symbol)
-                    continue
+                    if symbol in self._etf_open_cache:
+                        logger.info("Using cached ETF data for %s", symbol)
+                        continue
 
             # Try Alpaca first
-            data = {}
+            close_data: dict[date, float] = {}
+            open_data: dict[date, float] = {}
             if self._alpaca.api_key and self._alpaca.secret_key:
-                data = self._fetch_alpaca_bars(symbol, start, end)
+                close_data, open_data = self._fetch_alpaca_bars(symbol, start, end)
 
             # Fallback to FMP for ETFs
-            if not data and self._fmp and self._fmp.api_key:
+            if not close_data and self._fmp and self._fmp.api_key:
                 logger.info("Falling back to FMP for %s", symbol)
-                data = self._fetch_fmp_historical(symbol, start, end)
+                close_data, open_data = self._fetch_fmp_historical(symbol, start, end)
 
-            if data:
-                self._etf_cache[symbol] = data
-                self._save_disk_cache(f"etf_{symbol}", data)
+            if close_data:
+                self._etf_cache[symbol] = close_data
+                self._save_disk_cache(f"etf_{symbol}", close_data)
+            if open_data:
+                self._etf_open_cache[symbol] = open_data
+                self._save_disk_cache(f"etf_{symbol}_open", open_data)
 
     def load_fmp_data(
         self,
@@ -107,10 +116,10 @@ class DataProvider:
                     logger.info("Using cached FMP data for %s", key)
                     continue
 
-            data = self._fetch_fmp_historical(symbol, start, end)
-            if data:
-                self._fmp_cache[key] = data
-                self._save_disk_cache(f"fmp_{key}", data)
+            close_data, _open_data = self._fetch_fmp_historical(symbol, start, end)
+            if close_data:
+                self._fmp_cache[key] = close_data
+                self._save_disk_cache(f"fmp_{key}", close_data)
 
     def get_etf_prices(self, d: date) -> dict[str, float]:
         """Get ETF close prices for a given date.
@@ -119,6 +128,19 @@ class DataProvider:
         """
         prices: dict[str, float] = {}
         for symbol, data in self._etf_cache.items():
+            price = self._get_with_ffill(data, d)
+            if price is not None:
+                prices[symbol] = price
+        return prices
+
+    def get_etf_open_prices(self, d: date) -> dict[str, float]:
+        """Get ETF open prices for a given date.
+
+        Uses forward-fill for missing dates (up to 3 days).
+        Returns empty dict if no open price data is available.
+        """
+        prices: dict[str, float] = {}
+        for symbol, data in self._etf_open_cache.items():
             price = self._get_with_ffill(data, d)
             if price is not None:
                 prices[symbol] = price
@@ -181,8 +203,8 @@ class DataProvider:
 
     def _fetch_alpaca_bars(
         self, symbol: str, start: date, end: date,
-    ) -> dict[date, float]:
-        """Fetch daily bars from Alpaca."""
+    ) -> tuple[dict[date, float], dict[date, float]]:
+        """Fetch daily bars from Alpaca. Returns (close_prices, open_prices)."""
         try:
             from alpaca.data.historical import StockHistoricalDataClient
             from alpaca.data.requests import StockBarsRequest
@@ -199,26 +221,28 @@ class DataProvider:
                 end=datetime.combine(end, datetime.min.time()),
             )
             bars = client.get_stock_bars(request)
-            result: dict[date, float] = {}
+            close_data: dict[date, float] = {}
+            open_data: dict[date, float] = {}
             for bar in bars[symbol]:
                 bar_date = bar.timestamp.date()
-                result[bar_date] = bar.close
+                close_data[bar_date] = bar.close
+                open_data[bar_date] = bar.open
 
-            logger.info("Fetched %d bars for %s from Alpaca", len(result), symbol)
-            return result
+            logger.info("Fetched %d bars for %s from Alpaca", len(close_data), symbol)
+            return close_data, open_data
 
         except Exception as e:
             logger.error("Failed to fetch Alpaca bars for %s: %s", symbol, e)
-            return {}
+            return {}, {}
 
     # --- Private: FMP ---
 
     def _fetch_fmp_historical(
         self, symbol: str, start: date, end: date,
-    ) -> dict[date, float]:
-        """Fetch historical daily data from FMP."""
+    ) -> tuple[dict[date, float], dict[date, float]]:
+        """Fetch historical daily data from FMP. Returns (close_prices, open_prices)."""
         if not self._fmp:
-            return {}
+            return {}, {}
 
         try:
             encoded = urllib.parse.quote(symbol, safe="")
@@ -232,17 +256,20 @@ class DataProvider:
                 data = json.loads(resp.read().decode())
 
             historical = data.get("historical", [])
-            result: dict[date, float] = {}
+            close_data: dict[date, float] = {}
+            open_data: dict[date, float] = {}
             for item in historical:
                 d = date.fromisoformat(item["date"])
-                result[d] = item["close"]
+                close_data[d] = item["close"]
+                if "open" in item:
+                    open_data[d] = item["open"]
 
-            logger.info("Fetched %d data points for %s from FMP", len(result), symbol)
-            return result
+            logger.info("Fetched %d data points for %s from FMP", len(close_data), symbol)
+            return close_data, open_data
 
         except Exception as e:
             logger.error("Failed to fetch FMP data for %s: %s", symbol, e)
-            return {}
+            return {}, {}
 
     # --- Private: Cache ---
 
@@ -295,8 +322,12 @@ class DataProvider:
     # --- Injection for testing ---
 
     def inject_etf_data(self, symbol: str, data: dict[date, float]) -> None:
-        """Inject ETF data directly (for testing)."""
+        """Inject ETF close data directly (for testing)."""
         self._etf_cache[symbol] = data
+
+    def inject_etf_open_data(self, symbol: str, data: dict[date, float]) -> None:
+        """Inject ETF open data directly (for testing)."""
+        self._etf_open_cache[symbol] = data
 
     def inject_fmp_data(self, key: str, data: dict[date, float]) -> None:
         """Inject FMP data directly (for testing)."""
