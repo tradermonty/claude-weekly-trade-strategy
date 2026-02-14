@@ -133,13 +133,19 @@ class TradingSystem:
         # Cached strategy (reloaded when blog changes)
         self._strategy: Optional[StrategySpec] = None
         self._strategy_blog_date: Optional[str] = None
+        self._blog_just_updated: bool = False
 
     # ------------------------------------------------------------------
     # Strategy helpers
     # ------------------------------------------------------------------
 
     def _ensure_strategy(self) -> Optional[StrategySpec]:
-        """Return the current StrategySpec, reloading if a newer blog exists."""
+        """Return the current StrategySpec, reloading if a newer blog exists.
+
+        Sets ``_blog_just_updated`` flag when a new blog is detected, so
+        callers can trigger stop-order sync only on blog changes.
+        """
+        self._blog_just_updated = False
         latest = find_latest_blog(self._config.blogs_dir)
         if latest is None:
             if self._strategy is not None:
@@ -153,6 +159,7 @@ class TradingSystem:
             if spec is not None:
                 self._strategy = spec
                 self._strategy_blog_date = spec.blog_date
+                self._blog_just_updated = True
                 logger.info("Strategy updated to blog_date=%s", spec.blog_date)
 
         return self._strategy
@@ -166,13 +173,13 @@ class TradingSystem:
 
         Daily snapshot: first 9:30 check of each trading day.
         Weekly snapshot: Monday 9:30 check.
+        HWM is updated every tick in _market_tick_inner (not here).
         """
         today = now_et.date()
 
         # Daily snapshot (idempotent via INSERT OR IGNORE in DB)
         if now_et.hour == 9 and now_et.minute < 45:
             self._loss_calc.create_daily_snapshot(portfolio)
-            self._loss_calc.update_hwm_if_needed(portfolio)
 
             # Weekly snapshot on Monday
             if today.weekday() == 0:  # Monday
@@ -326,6 +333,18 @@ class TradingSystem:
             logger.info("Market holiday (%s) — skipping", today)
             return
 
+        # Skip ticks after early close time (M3 fix: half-day trading)
+        if self._calendar.is_early_close(today):
+            close_time = self._calendar.get_market_close_time(today)
+            if now_et.hour > close_time.hour or (
+                now_et.hour == close_time.hour and now_et.minute > 0
+            ):
+                logger.info(
+                    "Early close day (%s) — market closed at %s, skipping",
+                    today, close_time.strftime("%H:%M"),
+                )
+                return
+
         logger.info(
             "Market tick at %s ET", now_et.strftime("%Y-%m-%d %H:%M:%S"),
         )
@@ -348,6 +367,9 @@ class TradingSystem:
         # Calibrate index-to-ETF ratios
         self._monitor.calibrate_index_etf_ratios(market_data)
 
+        # Update high-water mark every tick (H2 fix)
+        self._loss_calc.update_hwm_if_needed(portfolio)
+
         # Handle snapshots (daily at 9:30, weekly on Monday 9:30)
         self._handle_snapshots(portfolio, now_et)
 
@@ -359,8 +381,9 @@ class TradingSystem:
             )
             self._mark_daily_check_done(now_et)
 
-        # Sync stop orders
-        self._stop_mgr.sync_stop_orders(strategy, portfolio)
+        # Sync stop orders only when strategy blog changes (H1 fix)
+        if self._blog_just_updated:
+            self._stop_mgr.sync_stop_orders(strategy, portfolio)
 
         # Layer 1: Rule engine check
         result = self._rule_engine.check(market_data, portfolio, strategy)
@@ -575,6 +598,7 @@ def main() -> None:
         )
         sys.exit(1)
 
+    system = None
     try:
         # Initialize trading system
         system = TradingSystem(config)
@@ -628,7 +652,8 @@ def main() -> None:
     except (KeyboardInterrupt, SystemExit):
         logger.info("Scheduler stopped by user")
     finally:
-        system.shutdown()
+        if system is not None:
+            system.shutdown()
         guard.release()
         logger.info("Trading system stopped")
 

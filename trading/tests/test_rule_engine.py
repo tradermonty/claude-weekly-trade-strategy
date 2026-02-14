@@ -320,7 +320,7 @@ class TestDriftExceeded:
 
 
 class TestApiFailureAlert:
-    """Tests for API failure alert threshold."""
+    """Tests for API failure alert threshold and deduplication."""
 
     def test_api_failure_alert_at_3(self, config, tmp_db):
         """consecutive_api_failures=3 => True (>= warn threshold of 3)."""
@@ -335,3 +335,37 @@ class TestApiFailureAlert:
         tmp_db.set_state("consecutive_api_failures", "2")
 
         assert engine.api_failure_alert_needed() is False
+
+    def test_api_failure_dedup_same_count(self, config, tmp_db):
+        """Calling api_failure_alert_needed twice at the same failure count
+        should only return True the first time (dedup)."""
+        engine = _make_engine(config, tmp_db)
+        tmp_db.set_state("consecutive_api_failures", "3")
+
+        assert engine.api_failure_alert_needed() is True
+        # Second call at same count: already notified
+        assert engine.api_failure_alert_needed() is False
+
+    def test_api_failure_dedup_fires_on_increase(self, config, tmp_db):
+        """When failure count increases, the alert fires again."""
+        engine = _make_engine(config, tmp_db)
+        tmp_db.set_state("consecutive_api_failures", "3")
+        assert engine.api_failure_alert_needed() is True
+
+        # Failures increase to 4
+        tmp_db.set_state("consecutive_api_failures", "4")
+        assert engine.api_failure_alert_needed() is True
+
+    def test_api_failure_dedup_resets_on_recovery(self, config, tmp_db):
+        """After recovery (failures=0) and re-occurrence, alert fires again."""
+        engine = _make_engine(config, tmp_db)
+        tmp_db.set_state("consecutive_api_failures", "3")
+        assert engine.api_failure_alert_needed() is True
+
+        # Recovery
+        tmp_db.set_state("consecutive_api_failures", "0")
+        assert engine.api_failure_alert_needed() is False
+
+        # Re-occurrence
+        tmp_db.set_state("consecutive_api_failures", "3")
+        assert engine.api_failure_alert_needed() is True

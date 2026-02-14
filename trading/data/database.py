@@ -227,11 +227,12 @@ class Database:
     def save_market_state(self, timestamp: str, vix: Optional[float] = None,
                           us10y: Optional[float] = None, sp500: Optional[float] = None,
                           nasdaq: Optional[float] = None, dow: Optional[float] = None,
-                          gold: Optional[float] = None, oil: Optional[float] = None) -> None:
+                          gold: Optional[float] = None, oil: Optional[float] = None,
+                          copper: Optional[float] = None) -> None:
         self.conn.execute(
-            "INSERT INTO market_states (timestamp, vix, us10y, sp500, nasdaq, dow, gold, oil) "
-            "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-            (timestamp, vix, us10y, sp500, nasdaq, dow, gold, oil),
+            "INSERT INTO market_states (timestamp, vix, us10y, sp500, nasdaq, dow, gold, oil, copper) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            (timestamp, vix, us10y, sp500, nasdaq, dow, gold, oil, copper),
         )
         self.conn.commit()
 
@@ -239,6 +240,7 @@ class Database:
         col_map = {
             "vix": "vix", "us10y": "us10y", "sp500": "sp500",
             "nasdaq": "nasdaq", "dow": "dow", "gold": "gold", "oil": "oil",
+            "copper": "copper",
         }
         col = col_map.get(key)
         if not col:

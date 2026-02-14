@@ -46,21 +46,23 @@ class MarketMonitor:
         # --- Alpaca: ETF prices ---
         alpaca_ok = self._fetch_alpaca_etf_prices(md)
 
-        # --- Track API failures ---
+        # --- Track API failures (weighted: both fail = +2) ---
         if fmp_ok and alpaca_ok:
             self._db.set_state("consecutive_api_failures", "0")
         else:
             prev = int(self._db.get_state("consecutive_api_failures", "0"))
-            self._db.set_state("consecutive_api_failures", str(prev + 1))
+            increment = (0 if fmp_ok else 1) + (0 if alpaca_ok else 1)
+            new_count = prev + increment
+            self._db.set_state("consecutive_api_failures", str(new_count))
             logger.warning(
-                "API failure detected: FMP=%s Alpaca=%s (consecutive=%d)",
+                "API failure detected: FMP=%s Alpaca=%s (increment=+%d, consecutive=%d)",
                 "OK" if fmp_ok else "FAIL",
                 "OK" if alpaca_ok else "FAIL",
-                prev + 1,
+                increment, new_count,
             )
 
         # --- Validate ranges ---
-        for attr in ("vix", "us10y", "sp500", "nasdaq", "dow", "gold", "oil"):
+        for attr in ("vix", "us10y", "sp500", "nasdaq", "dow", "gold", "oil", "copper"):
             val = getattr(md, attr, None)
             if val is not None and not self._validator.validate(attr, val):
                 logger.warning("Value out of range: %s=%.4f, using previous", attr, val)
@@ -78,6 +80,7 @@ class MarketMonitor:
             dow=md.dow,
             gold=md.gold,
             oil=md.oil,
+            copper=md.copper,
         )
 
         return md
@@ -182,7 +185,7 @@ class MarketMonitor:
 
     def _fill_from_previous(self, md: MarketData) -> None:
         """Fill MarketData from last known DB values as fallback."""
-        for attr in ("vix", "us10y", "sp500", "nasdaq", "dow", "gold", "oil"):
+        for attr in ("vix", "us10y", "sp500", "nasdaq", "dow", "gold", "oil", "copper"):
             prev = self._db.get_previous_market_state(attr)
             if prev is not None:
                 setattr(md, attr, prev)

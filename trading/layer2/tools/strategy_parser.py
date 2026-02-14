@@ -43,7 +43,7 @@ def parse_blog(blog_path: str | Path) -> StrategySpec:
         breadth_200ma=_parse_breadth_200ma(text),
         uptrend_ratio=_parse_uptrend_ratio(text),
         bubble_score=_parse_bubble_score(text),
-        pre_event_dates=_parse_pre_event_dates(text),
+        pre_event_dates=_parse_pre_event_dates(text, blog_date),
     )
 
 
@@ -406,17 +406,36 @@ _EVENT_DATE = re.compile(
 )
 
 
-def _parse_pre_event_dates(text: str) -> list[str]:
-    """Extract event dates from the 重要イベント table."""
+def _parse_pre_event_dates(text: str, blog_date: str = "") -> list[str]:
+    """Extract event dates from the 重要イベント table.
+
+    Converts M/DD format to YYYY-MM-DD using the blog year.
+    This ensures dates match the ISO format used by OrderValidator.
+    """
     event_section = _extract_section(text, "重要イベント")
     if not event_section:
         return []
 
+    # Infer year from blog_date (YYYY-MM-DD)
+    if len(blog_date) >= 7:
+        year = int(blog_date[:4])
+        blog_month = int(blog_date[5:7])
+    else:
+        from datetime import date as _date
+        year = _date.today().year
+        blog_month = _date.today().month
+
     dates: list[str] = []
     for m in _EVENT_DATE.finditer(event_section):
-        d = m.group(1)
-        if d not in dates:
-            dates.append(d)
+        raw = m.group(1)  # e.g. "2/18"
+        parts = raw.split("/")
+        month = int(parts[0])
+        day = int(parts[1])
+        # Handle year rollover (blog in Nov/Dec, event in Jan/Feb)
+        event_year = year + 1 if (blog_month >= 11 and month <= 2) else year
+        iso = f"{event_year}-{month:02d}-{day:02d}"
+        if iso not in dates:
+            dates.append(iso)
 
     return dates
 

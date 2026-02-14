@@ -205,5 +205,5 @@ def sample_strategy_spec():
         breadth_200ma=55.0,
         uptrend_ratio=32.0,
         bubble_score=9,
-        pre_event_dates=["2/18"],
+        pre_event_dates=["2026-02-18"],
     )

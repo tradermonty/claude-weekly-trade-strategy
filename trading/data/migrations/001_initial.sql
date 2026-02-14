@@ -76,5 +76,6 @@ CREATE TABLE IF NOT EXISTS market_states (
     nasdaq REAL,
     dow REAL,
     gold REAL,
-    oil REAL
+    oil REAL,
+    copper REAL
 );

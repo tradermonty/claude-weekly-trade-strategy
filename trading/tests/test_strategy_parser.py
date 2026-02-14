@@ -341,12 +341,12 @@ class TestPreEventDates:
         assert len(spec.pre_event_dates) > 0
 
     def test_contains_specific_dates(self, spec: StrategySpec) -> None:
-        """Known event dates from the sample blog should be present."""
-        # The blog lists: 2/16, 2/17, 2/18, 2/19, 2/20
-        assert "2/16" in spec.pre_event_dates
-        assert "2/18" in spec.pre_event_dates
-        assert "2/19" in spec.pre_event_dates
-        assert "2/20" in spec.pre_event_dates
+        """Known event dates from the sample blog should be present (YYYY-MM-DD)."""
+        # The blog lists: 2/16, 2/17, 2/18, 2/19, 2/20 → converted to YYYY-MM-DD
+        assert "2026-02-16" in spec.pre_event_dates
+        assert "2026-02-18" in spec.pre_event_dates
+        assert "2026-02-19" in spec.pre_event_dates
+        assert "2026-02-20" in spec.pre_event_dates
 
     def test_no_duplicate_dates(self, spec: StrategySpec) -> None:
         """Each date should appear only once."""

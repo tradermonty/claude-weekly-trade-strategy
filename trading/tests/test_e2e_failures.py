@@ -186,6 +186,71 @@ class TestApiEscalation3Then6:
         assert engine.api_failure_alert_needed() is False
 
 
+class TestApiFailureWeighting:
+    """Test that both APIs failing in one tick increments counter by 2 (M1 fix)."""
+
+    @patch("trading.layer1.market_monitor.AlpacaClient")
+    @patch("trading.layer1.market_monitor.FMPClient")
+    def test_both_fail_increments_by_2(self, mock_fmp_cls, mock_alpaca_cls, tmp_db, config):
+        """When both FMP and Alpaca fail, counter should increment by 2."""
+        from trading.layer1.market_monitor import MarketMonitor
+
+        tmp_db.set_state("consecutive_api_failures", "0")
+        monitor = MarketMonitor(config, tmp_db)
+
+        # Mock both APIs to fail
+        monitor._fmp = MagicMock()
+        monitor._fmp.fetch_quotes.return_value = None
+        monitor._alpaca = MagicMock()
+        monitor._alpaca.get_quotes.side_effect = Exception("Alpaca down")
+
+        monitor.fetch_market_data()
+
+        count = int(tmp_db.get_state("consecutive_api_failures", "0"))
+        assert count == 2, f"Expected +2 for both failures, got {count}"
+
+    @patch("trading.layer1.market_monitor.AlpacaClient")
+    @patch("trading.layer1.market_monitor.FMPClient")
+    def test_single_fmp_fail_increments_by_1(self, mock_fmp_cls, mock_alpaca_cls, tmp_db, config):
+        """When only FMP fails, counter increments by 1."""
+        from trading.layer1.market_monitor import MarketMonitor
+
+        tmp_db.set_state("consecutive_api_failures", "0")
+        monitor = MarketMonitor(config, tmp_db)
+
+        # FMP fails, Alpaca succeeds
+        monitor._fmp = MagicMock()
+        monitor._fmp.fetch_quotes.return_value = None
+        monitor._alpaca = MagicMock()
+        monitor._alpaca.get_quotes.return_value = {"SPY": 683.0}
+
+        monitor.fetch_market_data()
+
+        count = int(tmp_db.get_state("consecutive_api_failures", "0"))
+        assert count == 1, f"Expected +1 for single failure, got {count}"
+
+    @patch("trading.layer1.market_monitor.AlpacaClient")
+    @patch("trading.layer1.market_monitor.FMPClient")
+    def test_both_succeed_resets_to_0(self, mock_fmp_cls, mock_alpaca_cls, tmp_db, config):
+        """When both APIs succeed, counter resets to 0."""
+        from trading.layer1.market_monitor import MarketMonitor
+
+        tmp_db.set_state("consecutive_api_failures", "3")
+        monitor = MarketMonitor(config, tmp_db)
+
+        # Both succeed
+        monitor._fmp = MagicMock()
+        monitor._fmp.fetch_quotes.return_value = {"^VIX": {"price": 20.0}}
+        monitor._fmp.fetch_treasury.return_value = {"year10": 4.36}
+        monitor._alpaca = MagicMock()
+        monitor._alpaca.get_quotes.return_value = {"SPY": 683.0}
+
+        monitor.fetch_market_data()
+
+        count = int(tmp_db.get_state("consecutive_api_failures", "0"))
+        assert count == 0, f"Expected 0 after both succeed, got {count}"
+
+
 class TestStaleBlogHandling:
     """When the blog is very old (>7 days), the system should still function
     and the strategy_spec should carry the original blog_date."""

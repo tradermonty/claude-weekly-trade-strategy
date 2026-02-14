@@ -225,6 +225,22 @@ class RuleEngine:
         return None
 
     def api_failure_alert_needed(self) -> bool:
-        """Return True if consecutive API failures >= warn threshold (3-5)."""
+        """Return True if consecutive API failures >= warn threshold and not yet notified.
+
+        Uses DB state 'api_failure_last_alerted' to deduplicate alerts.
+        Only fires again when failure count increases. Resets when failures
+        drop below the warn threshold.
+        """
         failures = int(self._db.get_state("consecutive_api_failures", "0"))
-        return failures >= self._config.api_fail_warn_threshold
+        if failures < self._config.api_fail_warn_threshold:
+            # Clear alert tracking when failures drop below threshold
+            if int(self._db.get_state("api_failure_last_alerted", "0")) > 0:
+                self._db.set_state("api_failure_last_alerted", "0")
+            return False
+
+        last_alerted = int(self._db.get_state("api_failure_last_alerted", "0"))
+        if failures <= last_alerted:
+            return False  # Already notified at this count or higher
+
+        self._db.set_state("api_failure_last_alerted", str(failures))
+        return True
