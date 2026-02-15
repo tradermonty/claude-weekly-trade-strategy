@@ -7,6 +7,7 @@ from dataclasses import dataclass, field
 from datetime import date
 from typing import Optional
 
+from trading.backtest.config import CostModel
 from trading.core.constants import WHOLE_SHARES_ONLY
 
 logger = logging.getLogger(__name__)
@@ -23,6 +24,7 @@ class TradeRecord:
     price: float
     value: float  # shares * price
     reason: str = ""  # "rebalance", "trigger:bear", etc.
+    cost: float = 0.0  # transaction cost (spread + TAF)
 
 
 @dataclass
@@ -48,6 +50,8 @@ class SimulatedPortfolio:
         self._initial_capital: float = initial_capital
         self._trades: list[TradeRecord] = []
         self._slippage_fn: Optional[callable] = None
+        self._cost_model: Optional[CostModel] = None
+        self._total_costs: float = 0.0
 
     @property
     def cash(self) -> float:
@@ -73,6 +77,15 @@ class SimulatedPortfolio:
     def set_slippage_fn(self, fn) -> None:
         """Set a slippage function: fn(price, side) -> adjusted_price."""
         self._slippage_fn = fn
+
+    def set_cost_model(self, model: CostModel) -> None:
+        """Set a transaction cost model (spread + TAF)."""
+        self._cost_model = model
+
+    @property
+    def total_costs(self) -> float:
+        """Cumulative transaction costs."""
+        return self._total_costs
 
     def update_prices(self, prices: dict[str, float]) -> None:
         """Update current prices for mark-to-market valuation."""
@@ -187,22 +200,28 @@ class SimulatedPortfolio:
         self, symbol: str, shares: float, price: float,
         trade_date: date, reason: str,
     ) -> Optional[TradeRecord]:
-        cost = shares * price
-        if cost > self._cash + 0.01:  # floating point tolerance
+        purchase = shares * price
+        if purchase > self._cash + 0.01:  # floating point tolerance
             return None
-        cost = min(cost, self._cash)  # prevent negative cash from rounding
+        purchase = min(purchase, self._cash)  # prevent negative cash from rounding
 
-        self._cash -= cost
+        txn_cost = 0.0
+        if self._cost_model:
+            txn_cost = self._cost_model.calculate_cost("buy", shares, price)
+            self._total_costs += txn_cost
+
+        self._cash -= purchase + txn_cost
         if symbol not in self._positions:
             self._positions[symbol] = _Position(symbol)
         pos = self._positions[symbol]
-        pos.cost_basis += cost
+        pos.cost_basis += purchase
         pos.shares += shares
         pos.current_price = price
 
         trade = TradeRecord(
             date=trade_date, symbol=symbol, side="buy",
-            shares=shares, price=price, value=cost, reason=reason,
+            shares=shares, price=price, value=purchase, reason=reason,
+            cost=txn_cost,
         )
         self._trades.append(trade)
         return trade
@@ -219,13 +238,18 @@ class SimulatedPortfolio:
             return None
 
         proceeds = shares * price
+        txn_cost = 0.0
+        if self._cost_model:
+            txn_cost = self._cost_model.calculate_cost("sell", shares, price)
+            self._total_costs += txn_cost
+
         # Adjust cost basis proportionally
         if pos.shares > 0:
             fraction = shares / pos.shares
             pos.cost_basis *= (1 - fraction)
         pos.shares -= shares
         pos.current_price = price
-        self._cash += proceeds
+        self._cash += proceeds - txn_cost
 
         # Remove empty positions
         if pos.shares < 1e-9:
@@ -234,6 +258,7 @@ class SimulatedPortfolio:
         trade = TradeRecord(
             date=trade_date, symbol=symbol, side="sell",
             shares=shares, price=price, value=proceeds, reason=reason,
+            cost=txn_cost,
         )
         self._trades.append(trade)
         return trade

@@ -53,14 +53,23 @@ class BacktestResult:
     weekly_performance: list[WeeklyPerformance] = field(default_factory=list)
     skipped_reasons: list[tuple[str, str]] = field(default_factory=list)
     trade_records: list = field(default_factory=list)  # list[TradeRecord]
+    gross_return_pct: float = 0.0  # return before transaction costs
+    total_cost: float = 0.0  # cumulative transaction costs ($)
+    turnover: float = 0.0  # total trade value / mean portfolio value
 
 
 class BacktestMetrics:
     """Calculate performance metrics from daily snapshots."""
 
-    def __init__(self, snapshots: list[DailySnapshot], initial_capital: float) -> None:
+    def __init__(
+        self,
+        snapshots: list[DailySnapshot],
+        initial_capital: float,
+        trade_records: list | None = None,
+    ) -> None:
         self._snapshots = snapshots
         self._initial_capital = initial_capital
+        self._trade_records = trade_records or []
 
     @property
     def total_return_pct(self) -> float:
@@ -106,6 +115,17 @@ class BacktestMetrics:
     @property
     def total_trades(self) -> int:
         return sum(s.trades_today for s in self._snapshots)
+
+    @property
+    def turnover(self) -> float:
+        """Total trade value / mean portfolio value."""
+        if not self._snapshots:
+            return 0.0
+        total_trade_value = sum(abs(tr.value) for tr in self._trade_records)
+        mean_portfolio = sum(s.total_value for s in self._snapshots) / len(self._snapshots)
+        if mean_portfolio <= 0:
+            return 0.0
+        return total_trade_value / mean_portfolio
 
     def weekly_performance(
         self,
@@ -165,8 +185,14 @@ class BacktestMetrics:
         skipped_reasons: list[tuple[str, str]],
         transition_days: list[date],
         trade_records: list | None = None,
+        total_cost: float = 0.0,
     ) -> BacktestResult:
         """Build a complete BacktestResult."""
+        # gross_return = what the return would be without costs
+        # total_return_pct already reflects costs (portfolio value is post-cost)
+        net_return = self.total_return_pct
+        gross_return = net_return + (total_cost / self._initial_capital) * 100 if self._initial_capital > 0 else net_return
+
         return BacktestResult(
             phase=phase,
             start_date=start_date,
@@ -176,7 +202,7 @@ class BacktestMetrics:
             blogs_skipped=blogs_skipped,
             initial_capital=self._initial_capital,
             final_value=self.final_value,
-            total_return_pct=self.total_return_pct,
+            total_return_pct=net_return,
             max_drawdown_pct=self.max_drawdown_pct,
             sharpe_ratio=self.sharpe_ratio,
             total_trades=self.total_trades,
@@ -184,6 +210,9 @@ class BacktestMetrics:
             weekly_performance=self.weekly_performance(transition_days),
             skipped_reasons=skipped_reasons,
             trade_records=trade_records or [],
+            gross_return_pct=gross_return,
+            total_cost=total_cost,
+            turnover=self.turnover,
         )
 
     def _daily_returns(self) -> list[float]:

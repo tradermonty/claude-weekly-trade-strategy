@@ -78,6 +78,7 @@ class PhaseAEngine:
         portfolio = SimulatedPortfolio(self._config.initial_capital)
         if self._config.slippage_bps > 0:
             portfolio.set_slippage_fn(self._config.apply_slippage)
+        portfolio.set_cost_model(self._config.cost_model)
 
         trading_days = self._data.get_trading_days(start, end)
         snapshots: list[DailySnapshot] = []
@@ -131,7 +132,10 @@ class PhaseAEngine:
             )
             snapshots.append(snap)
 
-        metrics = BacktestMetrics(snapshots, self._config.initial_capital)
+        metrics = BacktestMetrics(
+            snapshots, self._config.initial_capital,
+            trade_records=portfolio.trades,
+        )
         transition_days = [
             d for d in self._timeline.get_all_transition_days()
             if start <= d <= end
@@ -149,6 +153,7 @@ class PhaseAEngine:
             ],
             transition_days=transition_days,
             trade_records=portfolio.trades,
+            total_cost=portfolio.total_costs,
         )
 
 
@@ -194,6 +199,7 @@ class PhaseBEngine:
         portfolio = SimulatedPortfolio(self._config.initial_capital)
         if self._config.slippage_bps > 0:
             portfolio.set_slippage_fn(self._config.apply_slippage)
+        portfolio.set_cost_model(self._config.cost_model)
 
         trading_days = self._data.get_trading_days(start, end)
         snapshots: list[DailySnapshot] = []
@@ -291,7 +297,10 @@ class PhaseBEngine:
             )
             snapshots.append(snap)
 
-        metrics = BacktestMetrics(snapshots, self._config.initial_capital)
+        metrics = BacktestMetrics(
+            snapshots, self._config.initial_capital,
+            trade_records=portfolio.trades,
+        )
         transition_days = [
             d for d in self._timeline.get_all_transition_days()
             if start <= d <= end
@@ -309,4 +318,5 @@ class PhaseBEngine:
             ],
             transition_days=transition_days,
             trade_records=portfolio.trades,
+            total_cost=portfolio.total_costs,
         )
