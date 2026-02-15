@@ -179,7 +179,7 @@ class Database:
     def count_today_orders(self) -> int:
         today_str = date.today().isoformat()
         row = self.conn.execute(
-            "SELECT COUNT(*) as cnt FROM trades WHERE date(created_at) = ?",
+            "SELECT COUNT(*) as cnt FROM trades WHERE date(created_at, 'localtime') = ?",
             (today_str,),
         ).fetchone()
         return row["cnt"] if row else 0
@@ -188,7 +188,7 @@ class Database:
         today_str = date.today().isoformat()
         row = self.conn.execute(
             "SELECT COALESCE(SUM(ABS(quantity * filled_price)), 0) as total "
-            "FROM trades WHERE date(created_at) = ? AND filled_price IS NOT NULL",
+            "FROM trades WHERE date(created_at, 'localtime') = ? AND filled_price IS NOT NULL",
             (today_str,),
         ).fetchone()
         return row["total"] if row else 0.0

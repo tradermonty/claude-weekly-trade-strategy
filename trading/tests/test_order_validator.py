@@ -152,11 +152,13 @@ class TestValidate:
         assert any("SPY" in e and "deviat" in e.lower() for e in result.errors)
 
     def test_daily_order_limit(
-        self, config, tmp_db, sample_portfolio, sample_strategy_spec
+        self, config, tmp_db, sample_strategy_spec
     ):
         """If 10 trades have already been recorded today, validation should reject.
 
         max_daily_orders in TradingConfig defaults to 10.
+        Uses a portfolio whose positions match the target allocation to isolate
+        the daily-order-limit check from single-order-size check.
         """
         validator = OrderValidator(config, tmp_db)
 
@@ -171,8 +173,25 @@ class TestValidate:
                 filled_price=683.0,
             )
 
+        # Portfolio with ALL positions (including BIL) matching the base allocation
+        # so the single-order-size check does not fire.
+        portfolio = Portfolio(
+            account_value=100000,
+            cash=0,
+            positions={
+                "SPY": Position("SPY", 32.2, 22000.0, 20000.0, 683.1),   # 22%
+                "QQQ": Position("QQQ", 7.5, 4000.0, 3500.0, 531.2),     #  4%
+                "DIA": Position("DIA", 18.1, 8000.0, 7800.0, 441.3),    #  8%
+                "XLV": Position("XLV", 80.0, 12000.0, 11500.0, 150.0),  # 12%
+                "XLP": Position("XLP", 40.0, 4000.0, 3800.0, 100.0),    #  4%
+                "GLD": Position("GLD", 22.0, 12000.0, 10000.0, 545.4),  # 12%
+                "XLE": Position("XLE", 100.0, 10000.0, 9500.0, 100.0),  # 10%
+                "BIL": Position("BIL", 306.0, 28000.0, 28000.0, 91.5),  # 28%
+            },
+        )
+
         intent = _base_intent()
-        result = validator.validate(intent, sample_strategy_spec, sample_portfolio)
+        result = validator.validate(intent, sample_strategy_spec, portfolio)
 
         assert result.is_approved is False
         assert any("order limit" in e.lower() or "daily" in e.lower() for e in result.errors)

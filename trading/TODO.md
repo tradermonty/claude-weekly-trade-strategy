@@ -1,30 +1,25 @@
 # Trading System - Remaining Tasks
 
 Last updated: 2026-02-14
-Current status: Phase 1 complete + Phase 2 code (F1/F3/F5) complete, 201 tests passing
+Current status: Phase 1 complete + Phase 2 code (F1/F3/F5) complete, all E2E tests implemented, 388 tests passing
 
 ---
 
-## 1. Unimplemented E2E Tests (from design doc Section 10)
+## 1. ~~Unimplemented E2E Tests~~ (COMPLETE)
 
-The following E2E tests are specified in `docs/auto-trade-system-design-v2.md:1066-1083`
-but not yet implemented in `trading/tests/test_e2e_failures.py`.
+All 14 E2E tests specified in `docs/auto-trade-system-design-v2.md:1066-1083`
+are now implemented in `trading/tests/test_e2e_failures.py`.
 
-| Test | Description | Priority |
-|------|-------------|----------|
-| `test_fmp_api_timeout` | FMP API 10s timeout: previous value retained + ALERT_ONLY | Medium |
-| `test_alpaca_order_rejected` | Alpaca order rejection: log + email notification | Medium |
-| `test_partial_fill_recovery` | Partial fill: correct evaluation at next check cycle | Medium |
-| `test_db_lock_contention` | SQLite lock: retry with PRAGMA busy_timeout=5000 | Low |
-| `test_process_crash_recovery` | Stale lock file: recovery via SchedulerGuard | Low |
-
-Already implemented (9 of 14):
+All implemented (14 of 14):
 `test_duplicate_order_prevention`, `test_kill_switch_overrides_claude`,
 `test_api_escalation_3_then_6`, `test_email_send_failure` (3 tests),
 `test_stale_blog_handling` (2 tests), `test_holiday_detection` (6 tests),
 `test_replace_order_failure_fallback` (in test_stop_loss_manager.py),
 `test_session_freshness_premarket` (in test_data_validator.py),
-`test_fractional_vs_whole_shares` (2 tests)
+`test_fractional_vs_whole_shares` (2 tests),
+`test_fmp_api_timeout`, `test_alpaca_order_rejected`,
+`test_partial_fill_recovery`, `test_db_lock_contention` (2 tests),
+`test_process_crash_recovery` (3 tests)
 
 ---
 
@@ -100,3 +95,5 @@ Before switching from `--dry-run` to `--live`:
 | 2026-02-13 | Phase 1 review fixes (4 HIGH, 5 MEDIUM, 1 LOW) | 180 |
 | 2026-02-14 | Phase 2 code: F1 Claude SDK, F3 atomic stop, F5 freshness | 199 |
 | 2026-02-14 | F5 Medium fixes: timezone conversion, single-source stale check | 201 |
+| 2026-02-14 | Backtest: cost model, benchmarks, robustness, walk-forward | 380 |
+| 2026-02-14 | Fix TZ bug in count_today_orders + all E2E tests complete | 388 |

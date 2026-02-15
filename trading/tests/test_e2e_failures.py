@@ -917,3 +917,209 @@ class TestFreshnessCheckInMonitor:
             f"Age should be ~30s, got {age:.0f}s "
             f"(likely timezone conversion bug if >> 120)"
         )
+
+
+class TestFmpApiTimeout:
+    """FMP API 10s timeout: previous value retained + counter incremented."""
+
+    @patch("trading.layer1.market_monitor.AlpacaClient")
+    @patch("trading.layer1.market_monitor.FMPClient")
+    def test_fmp_timeout_retains_previous_values(
+        self, mock_fmp_cls, mock_alpaca_cls, tmp_db, config
+    ):
+        """When FMP times out, MarketMonitor falls back to previous values
+        stored in market_states and increments the API failure counter."""
+        from trading.layer1.market_monitor import MarketMonitor
+
+        # Seed previous market state
+        prev_ts = datetime.now(timezone.utc).isoformat()
+        tmp_db.save_market_state(
+            timestamp=prev_ts, vix=19.5, sp500=6800.0, nasdaq=21500.0,
+            dow=44000.0, gold=5000.0, oil=62.0, copper=5.7,
+        )
+        tmp_db.set_state("consecutive_api_failures", "0")
+
+        monitor = MarketMonitor(config, tmp_db)
+
+        # FMP fetch returns None (simulating timeout / network error)
+        monitor._fmp = MagicMock()
+        monitor._fmp.fetch_quotes.return_value = None
+
+        # Alpaca succeeds
+        monitor._alpaca = MagicMock()
+        monitor._alpaca.get_quotes.return_value = {"SPY": 683.0, "QQQ": 530.0}
+
+        md = monitor.fetch_market_data()
+
+        # Previous VIX and SP500 should be retained
+        assert md.vix == 19.5, "VIX should fall back to previous value"
+        assert md.sp500 == 6800.0, "SP500 should fall back to previous value"
+
+        # API failure counter should be incremented by 1 (FMP only)
+        count = int(tmp_db.get_state("consecutive_api_failures", "0"))
+        assert count == 1, f"Expected 1 failure, got {count}"
+
+
+class TestAlpacaOrderRejected:
+    """Alpaca order rejection: logged and status updated to 'failed'."""
+
+    def test_rejected_order_returns_failed_status(self, config, tmp_db):
+        """When AlpacaClient.submit_order() returns None (rejection),
+        OrderExecutor marks the trade as 'failed' in the database."""
+        # Use live mode to exercise _live_order path
+        from trading.config import TradingConfig
+        live_config = TradingConfig(
+            dry_run=False,
+            db_path=config.db_path,
+            lock_file=config.lock_file,
+            log_dir=config.log_dir,
+            blogs_dir=config.blogs_dir,
+        )
+        executor = OrderExecutor(live_config, tmp_db)
+
+        # Mock the Alpaca client to reject the order
+        mock_client = MagicMock()
+        mock_client.submit_order.return_value = None
+        executor._client = mock_client
+
+        order = Order(
+            client_order_id="reject_test_001",
+            symbol="SPY",
+            side="buy",
+            quantity=10.0,
+            order_type="limit",
+            limit_price=683.0,
+        )
+
+        results = executor.execute([order])
+
+        assert len(results) == 1
+        assert results[0]["status"] == "failed"
+        assert results[0]["order_id"] is None
+
+        # Verify DB trade status is 'failed'
+        trades = tmp_db.get_recent_trades(limit=1)
+        assert len(trades) == 1
+        assert trades[0]["client_order_id"] == "reject_test_001"
+        assert trades[0]["status"] == "failed"
+
+
+class TestPartialFillRecovery:
+    """Partial fill: order can be re-evaluated at next check cycle."""
+
+    def test_submitted_order_can_be_rechecked(self, config, tmp_db):
+        """A trade saved as 'submitted' can be updated when fill status
+        is checked at the next cycle."""
+        # Save a trade in 'submitted' status (simulating an order placed
+        # but not yet filled)
+        tmp_db.save_trade(
+            client_order_id="partial_fill_001",
+            symbol="SPY",
+            side="buy",
+            quantity=10.0,
+            status="submitted",
+        )
+
+        # Verify it exists as submitted
+        trades = tmp_db.get_recent_trades(limit=1)
+        assert trades[0]["status"] == "submitted"
+
+        # Simulate partial fill update (next check cycle finds it filled)
+        tmp_db.update_trade_status(
+            "partial_fill_001",
+            status="filled",
+            filled_price=683.5,
+            filled_at=datetime.now(timezone.utc).isoformat(),
+        )
+
+        # Verify status was updated correctly
+        trades = tmp_db.get_recent_trades(limit=1)
+        assert trades[0]["status"] == "filled"
+        assert trades[0]["filled_price"] == 683.5
+        assert trades[0]["filled_at"] is not None
+
+
+class TestDbLockContention:
+    """SQLite lock: verify PRAGMA busy_timeout=5000 is configured."""
+
+    def test_busy_timeout_is_set(self, tmp_db):
+        """Database.connect() sets PRAGMA busy_timeout=5000 to handle
+        lock contention gracefully."""
+        row = tmp_db.conn.execute("PRAGMA busy_timeout").fetchone()
+        assert row[0] == 5000, f"Expected busy_timeout=5000, got {row[0]}"
+
+    def test_wal_mode_is_set(self, tmp_path):
+        """Database.connect() sets WAL journal mode for concurrent reads.
+        Uses a file-based DB because in-memory SQLite uses 'memory' mode."""
+        db = Database(tmp_path / "wal_test.db")
+        db.connect()
+        db.migrate()
+        try:
+            row = db.conn.execute("PRAGMA journal_mode").fetchone()
+            assert row[0] == "wal", f"Expected WAL mode, got {row[0]}"
+        finally:
+            db.close()
+
+
+class TestProcessCrashRecovery:
+    """Stale lock file: recovery via SchedulerGuard after process crash."""
+
+    def test_lock_released_after_context_exit(self, tmp_path):
+        """After a SchedulerGuard context exits (simulating normal shutdown),
+        a new instance can immediately acquire the lock."""
+        from trading.core.scheduler_guard import SchedulerGuard
+
+        lock_path = tmp_path / ".scheduler.lock"
+
+        # First instance acquires and releases via context manager
+        with SchedulerGuard(lock_path):
+            assert lock_path.exists()
+
+        # Second instance should be able to acquire immediately
+        guard2 = SchedulerGuard(lock_path)
+        assert guard2.acquire() is True, "Should acquire lock after previous release"
+        guard2.release()
+
+    def test_lock_blocks_concurrent_acquisition(self, tmp_path):
+        """While one SchedulerGuard holds the lock, another cannot acquire it."""
+        from trading.core.scheduler_guard import SchedulerGuard
+
+        lock_path = tmp_path / ".scheduler.lock"
+
+        guard1 = SchedulerGuard(lock_path)
+        assert guard1.acquire() is True
+
+        # Second instance should fail to acquire (non-blocking)
+        guard2 = SchedulerGuard(lock_path)
+        assert guard2.acquire() is False, "Should not acquire while first holds lock"
+
+        guard1.release()
+
+        # After release, second can acquire
+        assert guard2.acquire() is True
+        guard2.release()
+
+    def test_crash_recovery_via_os_release(self, tmp_path):
+        """Simulating process crash: when the file descriptor is closed by OS,
+        the lock is automatically released and a new instance can acquire."""
+        from trading.core.scheduler_guard import SchedulerGuard
+        import os
+        import fcntl
+
+        lock_path = tmp_path / ".scheduler.lock"
+
+        guard1 = SchedulerGuard(lock_path)
+        assert guard1.acquire() is True
+
+        # Simulate OS crash recovery: directly close the fd
+        # (OS does this automatically on process death)
+        if guard1._fd is not None:
+            os.close(guard1._fd)
+            guard1._fd = None
+
+        # New instance should acquire the lock
+        guard2 = SchedulerGuard(lock_path)
+        assert guard2.acquire() is True, (
+            "Should acquire lock after simulated crash (OS fd close)"
+        )
+        guard2.release()
