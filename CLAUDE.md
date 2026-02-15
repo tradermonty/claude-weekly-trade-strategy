@@ -110,7 +110,8 @@ Save the report to reports/2025-11-03/technical-market-analysis.md.
 
 **Input**:
 - `reports/YYYY-MM-DD/technical-market-analysis.md` (Step 1 result)
-- Breadth chart images in `charts/YYYY-MM-DD/` (**must actually read them**)
+- **CSV data via `fetch_breadth_csv.py`** (PRIMARY source for Breadth/Uptrend Ratio)
+- Breadth chart images in `charts/YYYY-MM-DD/` (supplementary visual confirmation)
 - Market data (VIX, Breadth, interest rates, etc.)
 
 **Output**:
@@ -120,20 +121,20 @@ Save the report to reports/2025-11-03/technical-market-analysis.md.
 ```
 Please run comprehensive US market analysis using the us-market-analyst agent.
 Reference reports/2025-11-03/technical-market-analysis.md,
-and be sure to actually read and analyze the Breadth charts (S&P 500 Breadth Index, Uptrend Stock Ratio)
-in charts/2025-11-03/.
-Evaluate market environment and bubble risk and save to reports/2025-11-03/us-market-analysis.md.
+fetch CSV data first via fetch_breadth_csv.py for accurate Breadth/Uptrend Ratio values,
+then confirm with chart images in charts/2025-11-03/.
+Save to reports/2025-11-03/us-market-analysis.md.
 ```
 
 **Analysis Content**:
 - Current market phase (Risk-On / Base / Caution / Stress)
 - Bubble detection score (0-16 scale)
-- **Breadth Index (200-day MA) current value and trend**
-- **Uptrend Stock Ratio current value, color (green/red), bottom reversal signal**
+- **Breadth Index (200-day MA) current value and trend** (from CSV)
+- **Uptrend Stock Ratio current value, color (green/red), bottom reversal signal** (from CSV)
 - Sector rotation pattern
 - Volatility regime
 
-**Important**: Uptrend Stock Ratio is a **leading indicator**. Bottom reversals (red to green transition, rebound from 20% range) often show improvement 1-2 weeks before Breadth 200MA. **Read the actual chart image, not assumptions or past data**.
+**Important**: Uptrend Stock Ratio is a **leading indicator**. Bottom reversals (red to green transition, rebound from 20% range) often show improvement 1-2 weeks before Breadth 200MA. **CSV data is the primary source; chart images are supplementary**.
 
 ---
 
@@ -530,9 +531,9 @@ reports/YYYY-MM-DD/
 
 ### us-market-analyst
 - **Skills**: market-environment-analysis, us-market-bubble-detector, **breadth-chart-analyst**
-- **Analysis Targets**: Market phase, Bubble score, Sentiment, **Breadth charts (including Uptrend Ratio)**
+- **Analysis Targets**: Market phase, Bubble score, Sentiment, **Breadth/Uptrend Ratio (CSV-first)**
 - **Output Format**: Markdown, Risk evaluation
-- **Important**: Must **actually read** Breadth chart images and identify leading indicators like Uptrend Ratio bottom reversals
+- **Important**: Must run `fetch_breadth_csv.py` first (PRIMARY). Chart images are supplementary confirmation only
 
 ### market-news-analyzer
 - **Skills**: market-news-analyst, economic-calendar-fetcher, earnings-calendar
@@ -564,92 +565,25 @@ reports/YYYY-MM-DD/
 
 ---
 
-## Breadth Chart Auto-Detection Tool
+## Breadth Data Source & Thresholds
 
-### Overview
-
-A Python script that uses OpenCV to automatically detect 200-day MA and 8-day MA values from S&P 500 Breadth Index charts.
-Prevents visual reading errors and obtains high-accuracy values.
-
-### Script Location
-
-```
-.claude/skills/breadth-chart-analyst/scripts/detect_breadth_values.py
-```
-
-### Usage
+### CSV Data Fetcher (PRIMARY)
 
 ```bash
-# Basic execution (display detection results)
-python3 .claude/skills/breadth-chart-analyst/scripts/detect_breadth_values.py charts/YYYY-MM-DD/IMG_XXXX.jpeg
-
-# Debug mode (visually confirm detection results)
-python3 .claude/skills/breadth-chart-analyst/scripts/detect_breadth_values.py charts/YYYY-MM-DD/IMG_XXXX.jpeg --debug
-
-# Output in JSON format
-python3 .claude/skills/breadth-chart-analyst/scripts/detect_breadth_values.py charts/YYYY-MM-DD/IMG_XXXX.jpeg --json
+python3 .claude/skills/breadth-chart-analyst/scripts/fetch_breadth_csv.py
 ```
 
-### Example Output
+**CSV Sources**:
+| Data | URL |
+|------|-----|
+| Market Breadth | `https://tradermonty.github.io/market-breadth-analysis/market_breadth_data.csv` |
+| Uptrend Ratio | `https://raw.githubusercontent.com/tradermonty/uptrend-dashboard/main/data/uptrend_ratio_timeseries.csv` |
+| Sector Summary | `https://raw.githubusercontent.com/tradermonty/uptrend-dashboard/main/data/sector_summary.csv` |
 
-```
-============================================================
-Breadth Chart Detection Results (OpenCV)
-============================================================
+**Data Source Priority**: CSV (PRIMARY) > Chart Image (SUPPLEMENTARY)
+OpenCV scripts (`detect_breadth_values.py`, `detect_uptrend_ratio.py`) are **DEPRECATED** (see Issue #7).
 
-Image: charts/2025-12-22/IMG_5499.jpeg
-Confidence: HIGH
-
---- Detected Values ---
-200-Day MA: 59.8% (narrow_rally (50-60%))
-8-Day MA:   61.9% (healthy_bullish (60-73%))
-
---- Calibration ---
-Red line (0.73) Y-pixel: 377
-Blue line (0.23) Y-pixel: 916
-Y-scale: -0.0009276437847866419
-Calibration successful: True
-============================================================
-```
-
-### How Detection Works
-
-1. **Y-axis Calibration**: Detect red dotted line (0.73) and blue dotted line (0.23), calculate conversion formula between pixel position and percentage
-2. **Green Line (200-day MA) Detection**: Extract green pixels in HSV color space, identify position at right edge
-3. **Orange Line (8-day MA) Detection**: Extract orange pixels in HSV color space, identify position at right edge
-4. **Value Conversion**: Convert detected pixel positions to percentage values
-
-### Confidence Levels
-
-- **HIGH**: Both reference lines (red/blue) detected, both MA values successfully detected
-- **MEDIUM**: Some reference lines or MA values could not be detected
-- **LOW**: Using estimated values (when reference lines not detected)
-- **FAILED**: Detection failed
-
-### Recommended Workflow
-
-1. **Run Before Chart Analysis**: Get accurate values with this script before LLM analyzes charts
-2. **Confirm with Debug Image**: Visually verify detection positions are correct using `--debug` generated image
-3. **Reflect in Reports**: Incorporate detection results into us-market-analysis.md and blog posts
-
-### Breadth Chart Reading Checklist (Required)
-
-**Important**: LLM chart reading is error-prone, so the following checklist **must** be executed.
-
-#### 1. Run Auto-Detection Script
-
-```bash
-python3 .claude/skills/breadth-chart-analyst/scripts/detect_breadth_values.py charts/YYYY-MM-DD/IMG_XXXX.jpeg --debug
-```
-
-#### 2. Confirm Detection Results
-
-- [ ] **Confidence**: Verify it's HIGH
-- [ ] **200-Day MA**: Record detected value (e.g., 59.8%)
-- [ ] **8-Day MA**: Record detected value (e.g., 61.9%)
-- [ ] **Debug Image**: Confirm detection positions are correct in `*_debug_detection.jpeg`
-
-#### 3. Compare with Thresholds
+### Thresholds
 
 | Indicator | Threshold | Evaluation |
 |-----------|-----------|------------|
@@ -663,84 +597,22 @@ python3 .claude/skills/breadth-chart-analyst/scripts/detect_breadth_values.py ch
 | **8-day MA** | 23-40% | Bearish |
 | **8-day MA** | <23% | Oversold |
 
-#### 4. Reflect in Reports
+### Checklist
 
-Accurately reflect detected values in the following files:
-
-- [ ] `reports/YYYY-MM-DD/us-market-analysis.md`
-- [ ] `blogs/YYYY-MM-DD-weekly-strategy.md`
-- [ ] `reports/YYYY-MM-DD/strategy-review.md` (during review)
-
-#### 5. Consistency Check
-
-- [ ] Verify Breadth values match across all 3 files
-- [ ] Verify interpretation based on thresholds (Healthy/Border/Fragile etc.) is correct
+1. Run `fetch_breadth_csv.py` → record 200MA, 8MA, Uptrend Ratio values
+2. Compare with thresholds above
+3. Verify values are consistent across `us-market-analysis.md`, blog, `strategy-review.md`
 
 ---
 
 ## Known Issues & Lessons Learned
 
-### Issue #1: FOMC Date Error (2025-12-22)
+Issues #1-#7 の対策は各 agent `.md` ファイルに実装済み。ここでは Prevention Rules を集約する。
 
-**Incident Summary**:
-- `market-news-analyzer` wrote "12月18日FOMC" (wrong)
-- `strategy-reviewer` validated it as "OK" (detection failure)
-- Actual FOMC was 12/9-10 (correctly stated in previous week's blog as "12/10 FOMC終了")
+### Economic Event Date Verification (Issues #1, #2)
 
-**Root Causes**:
-1. **Date confusion**: Micron earnings (12/18) was confused with FOMC (12/10)
-2. **Source mismatch ignored**: CNBC URL contained `/2025/12/10/` but body text said "12/18"
-3. **Previous blog not cross-checked**: Previous week clearly stated "12/10 FOMC終了"
-4. **Reviewer assumed correctness**: Did not verify against Fed official calendar
-
-**Countermeasures Implemented**:
-1. **market-news-analyzer.md**: Added "Critical Date Verification" section with WebSearch requirement
-2. **strategy-reviewer.md**: Added "4.4 Economic Event Date Verification" checklist item
-3. **Both agents**: Added "Known Error Pattern" documentation to prevent recurrence
-
-**Prevention Rule**:
-```
-IF previous_blog says "12/10 FOMC終了"
-AND current_blog says different FOMC date
-THEN → REVISION REQUIRED (automatic)
-```
-
-**Verification Method**:
-```bash
-# Always verify FOMC dates with:
-WebSearch("FOMC [month] [year] meeting date result")
-# Cross-check with: federalreserve.gov/monetarypolicy/fomccalendars.htm
-```
-
----
-
-### Issue #2: NFP/ISM PMI Date Error (2025-12-27)
-
-**Incident Summary**:
-- `market-news-analyzer` wrote "1/2 NFP" and "1/2 ISM PMI" (wrong)
-- `strategy-reviewer` did not catch the error
-- Actual: NFP is **1/9**, ISM PMI is **1/5** (holiday-adjusted schedules)
-
-**Root Causes**:
-1. **API limitation**: FMP API does not accurately reflect BLS/ISM release schedules around holidays
-2. **Assumption error**: Assumed "first Friday" (NFP) and "first business day" (ISM) without checking holiday adjustments
-3. **No official source verification**: Did not verify with BLS (bls.gov) or ISM (ismworld.org) official calendars
-4. **Reviewer checklist gap**: Section 4.4 only covered FOMC/CPI/PCE, not NFP/ISM PMI
-
-**Countermeasures Implemented**:
-1. **market-news-analyzer.md**: Added "Official Source Verification Table" with mandatory URLs for NFP, ISM PMI, FOMC, CPI, PCE
-2. **strategy-reviewer.md**: Expanded Section 4.4 to include NFP and ISM PMI verification
-3. **economic-calendar-fetcher SKILL.md**: Added "API Limitation Warning" about FMP inaccuracies
-4. **Report format requirement**: All major economic events must include official source URL
-
-**Prevention Rule**:
-```
-FOR major economic events (NFP, ISM PMI, FOMC, CPI, PCE):
-  1. WebSearch/WebFetch official source (BLS, ISM, Fed, BEA)
-  2. Include official source URL in report
-  3. Reviewer must verify URL matches stated date
-  4. Do NOT assume "first Friday" or "first business day" during holidays
-```
+Major economic events (FOMC, NFP, ISM PMI, CPI, PCE) は必ず公式ソースで日付を検証する。
+FMP API は祝日前後で不正確。「first Friday」等のルール仮定も禁止。
 
 **Official Sources**:
 | Event | Official Source |
@@ -751,297 +623,50 @@ FOR major economic events (NFP, ISM PMI, FOMC, CPI, PCE):
 | CPI | https://www.bls.gov/schedule/news_release/cpi.htm |
 | PCE | https://www.bea.gov/news/schedule |
 
----
+**Rules**:
+- WebSearch で公式ソースを確認し、レポートに URL を含める
+- 前週ブログと矛盾する日付 → REVISION REQUIRED
+- Reviewer は独立して日付を検証する
 
-### Issue #3: Geopolitical Event Detection Gap (2026-01-03)
+### Geopolitical Event Check (Issue #3)
 
-**Incident Summary**:
-- US military intervention in Venezuela (1/3/2026) NOT detected by market-news-analyzer
-- Blog published without geopolitical risk section for this major event
-- strategy-reviewer validated as "PASS WITH NOTES" despite missing critical information
+- Tier 1 産油国 (Venezuela, Iran, Libya, Russia, Saudi Arabia) の個別検索を実行
+- "military action breaking news" 検索を必ず実施
+- 重大イベントがレポートに未反映 → REVISION REQUIRED
 
-**Root Causes**:
-1. **Generic WebSearch queries**: "Middle East conflict" doesn't cover Latin America
-2. **No country-specific searches**: Venezuela, Iran, Libya not explicitly searched
-3. **No breaking news check**: Only analyzed "past 10 days" summary, not recent 48-hour events
-4. **Reviewer lacked geopolitical verification**: Only checked economic event dates, not geopolitical events
+### Breadth Data: CSV-First (Issues #4, #5, #7)
 
-**Market Impact (Potential)**:
-- Oil: HIGH (Venezuela = world's largest oil reserves)
-- Gold: HIGH (safe-haven demand)
-- VIX: MEDIUM-HIGH (geopolitical uncertainty)
-- Equities: MEDIUM (risk-off sentiment)
+OpenCV スクリプト (`detect_breadth_values.py`, `detect_uptrend_ratio.py`) は **DEPRECATED**。
+画像解析はチャートフォーマット変更に脆弱で、致命的な誤検出 (dead cross false positive, 色反転) を引き起こした。
 
-**Countermeasures Implemented**:
-1. **market-news-analyst SKILL.md**: Added country-specific searches for Tier 1 oil producers
-2. **market-news-analyzer.md**: Added "Breaking Geopolitical News Check" mandatory step
-3. **strategy-reviewer.md**: Added "4.5 Geopolitical Event Verification" section
-4. **This documentation**: Record for future reference
+**Current Rule**: `fetch_breadth_csv.py` を PRIMARY として必ず先に実行。CSV 値が全ての画像ベース検出を上書きする。
+- Reviewer は独立して CSV データを取得して検証
+- |200MA diff| > 2% or |8MA diff| > 5% → REVISION REQUIRED
 
-**Prevention Rule**:
-```
-FOR weekly analysis:
-  1. Run country-specific searches for: Venezuela, Iran, Libya, Russia, Saudi Arabia
-  2. Run "military action breaking news" search
-  3. Reviewer must independently verify geopolitical events
-  4. If major event found but not in reports → REVISION REQUIRED
-```
+### US Holiday & Day-of-Week Verification (Issue #6)
 
----
+日付に曜日を記載する前に必ず `calendar.month()` で検証する。
 
-### Issue #4: Uptrend Ratio Detection Gap (2026-01-04)
+**US Market Holidays**:
+| Holiday | Rule |
+|---------|------|
+| MLK Day | January 3rd Monday |
+| Presidents Day | February 3rd Monday |
+| Memorial Day | May last Monday |
+| Independence Day | July 4th (observed) |
+| Labor Day | September 1st Monday |
+| Thanksgiving | November 4th Thursday |
+| Christmas | December 25 (observed) |
+| New Year | January 1 (observed) |
 
-**Incident Summary**:
-- Uptrend Ratio reported as "28-32% GREEN, 回復継続中" (wrong)
-- Actual value: **~23% RED, declining trend**
-- Error propagated to blog without detection by strategy-reviewer
-
-**Root Causes**:
-1. **No OpenCV script for Uptrend Ratio**: `detect_breadth_values.py` only handles S&P 500 Breadth Index (200MA/8MA)
-2. **LLM visual analysis unreliable**: Used previous week's data instead of reading new chart
-3. **No previous week comparison**: 8% drop (31%→23%) not flagged as unusual
-4. **Reviewer didn't verify independently**: Trusted report values without running detection script
-
-**Market Impact**:
-- Uptrend Ratio is a **LEADING indicator** (precedes Breadth 200MA by 1-2 weeks)
-- Misreading caused incorrect "bullish recovery" assessment when market was warning
-- Correct reading: 23% RED = approaching 15% crisis line, requires defensive posture
-
-**Countermeasures Implemented**:
-1. **detect_uptrend_ratio.py**: New OpenCV script for Uptrend Ratio detection (TDD-developed)
-2. **breadth-chart-analyst SKILL.md**: Added "5.0 MANDATORY: Run Uptrend Ratio Detection Script"
-3. **strategy-reviewer.md**: Added "4.6 Uptrend Ratio Independent Verification" section
-4. **Previous week comparison**: Change detection (>7% triggers manual verification alert)
-
-**Prevention Rule**:
-```
-FOR Uptrend Ratio analysis:
-  1. MUST run detect_uptrend_ratio.py before LLM analysis
-  2. Compare script output vs LLM reading (>5% diff = investigate)
-  3. Compare vs previous week (>7% change = manual verify)
-  4. Reviewer must independently run detection script
-  5. If script color differs from report → REVISION REQUIRED
-```
-
-**TDD Implementation**:
-- 30 test cases implemented and passing
-- Tests cover: class structure, HSV color ranges, Y-axis calibration, current value detection, color detection, trend direction, confidence assessment, error handling
-- Test file: `.claude/skills/breadth-chart-analyst/tests/test_detect_uptrend_ratio.py`
-
----
-
-### Issue #5: Uptrend Ratio Early-Break Bug & Threshold Issue (2026-01-11)
-
-**Incident Summary**:
-- Uptrend Ratio script reported as "23.0% RED" (wrong)
-- Actual value: **~34.1% GREEN** (confirmed by user inspection)
-- Error due to algorithmic bug + inappropriate threshold value
-
-**Root Causes**:
-1. **Early-break logic bug**: Line 379-383 stopped at FIRST column with >10 pixels, not the TRUE rightmost column
-2. **Threshold too high**: 10-pixel threshold excluded thin GREEN line (6 pixels) at true rightmost position
-3. **Column selection order**: RED column (29px, col 1306) was selected before GREEN column (6px, col 1314)
-
-**Detailed Failure Mechanism**:
-```
-Right-to-left scan (column numbers decreasing):
-  Column 1314: GREEN 6px (<10px threshold → skipped)
-  Column 1313: GREEN 8px (<10px threshold → skipped)
-  Column 1312: GREEN 6px (<10px threshold → skipped)
-  ↓
-  Column 1306: RED 29px (>10px threshold → SELECTED & BREAK)
-  → Result: 23% RED detected (WRONG)
-  → Missed: 34.1% GREEN at column 1314 (CORRECT)
-```
-
-**Impact**:
-- 11.1% underestimation of Uptrend Ratio
-- Color inversion (RED instead of GREEN)
-- Incorrect bottom reversal signal assessment
-- Blog propagated wrong market analysis (bearish instead of bullish recovery)
-
-**Countermeasures Implemented**:
-1. **Algorithm Fix**: Replaced early-break with full-scan approach
-   - Changed from: `if col_pixels > 10: rightmost_col = col; break`
-   - Changed to: Collect all qualified columns, then `rightmost_col = max(colored_cols)`
-
-2. **Threshold Adjustment**: Lowered from 10 pixels to 3 pixels
-   - Reasoning: Real charts can have thin lines (4-8px) at rightmost edge
-   - 3-pixel minimum still filters out noise while detecting thin lines
-
-3. **New Test Cases**: Added `TestMultiColorRightmostDetection` class
-   - `test_rightmost_col_is_maximum_not_first`: Verifies true rightmost selection
-   - `test_debug_info_contains_colored_cols_metadata`: Validates new debug fields
-   - `test_color_at_true_rightmost_prevails`: Ensures color at rightmost column is detected
-
-4. **Debug Info Enhancement**: Added metadata for troubleshooting
-   - `colored_cols_found`: Number of columns with ≥3 pixels
-   - `colored_cols_range`: (min, max) of colored column indices
-
-**Modified Files**:
-- `.claude/skills/breadth-chart-analyst/scripts/detect_uptrend_ratio.py` (Lines 377-396, 649)
-- `.claude/skills/breadth-chart-analyst/tests/test_detect_uptrend_ratio.py` (Added Lines 338-431)
-
-**Test Results**:
-- All 33 tests passing (30 existing + 3 new)
-- 2026-01-12 chart now correctly detects: **34.1% GREEN** (previously 23.0% RED)
-- Confidence: MEDIUM (appropriate for 6-pixel thin line)
-
-**Prevention Rule**:
-```
-FOR rightmost column detection:
-  1. Scan ENTIRE search range (no early break)
-  2. Collect ALL columns meeting threshold (≥3 pixels)
-  3. Select absolute rightmost: max(colored_cols)
-  4. Use low threshold (3px) to detect thin lines
-  5. Verify detection with debug image (green circle at rightmost position)
-```
-
-**Lessons Learned**:
-- Early optimization (early break) caused correctness bug
-- Pixel count thresholds must accommodate real chart characteristics
-- User visual inspection can be more accurate than automated detection
-- Debug visualization (marked images) is critical for validation
-
----
-
-### Issue #6: US Holiday Day-of-Week Error (2026-01-19)
-
-**Incident Summary**:
-- Blog wrote "1/20（月）MLK Day" when actual MLK Day is 1/19（月）
-- Same date 1/20 listed as both Monday and Tuesday in the event table
-- strategy-reviewer did not detect the contradiction
-
-**Root Causes**:
-1. **Day-of-week written by inference**: Did not run `calendar.month(YYYY, MM)` before writing
-2. **MLK Day rule miscalculated**: MLK Day = "January 3rd Monday" was not properly computed
-3. **No holiday verification step**: No agent definition included US holiday verification
-4. **Reviewer blind spot**: strategy-reviewer checked economic dates but not holiday dates
-
-**Affected Lines in Blog**:
-```
-Line 14: "1/20（月）MLK Day休場" → should be "1/19（月）MLK Day休場"
-Line 71: "1/20(月) MLK Day" → should be "1/19(月) MLK Day"
-Line 72: "1/20(火) Netflix決算後の反応" → should be "1/21(水) Netflix決算反応"
-Line 170: "1/20（月）MLK Day休場" → should be "1/19（月）MLK Day休場"
-```
-
-**Countermeasures Implemented**:
-1. **strategy-reviewer.md**: Added "4.7 US Holiday and Day-of-Week Verification" section
-2. **market-news-analyzer.md**: Added "Holiday Verification" mandatory step
-3. **weekly-trade-blog-writer.md**: Added "Phase 0: Calendar Verification" preprocessing
-4. **CLAUDE.md**: This documentation for future reference
-
-**US Holiday Rules (Federal Holidays Affecting Market)**:
-| Holiday | Rule | Example (2026) |
-|---------|------|----------------|
-| MLK Day | January 3rd Monday | 1/19（月） |
-| Presidents Day | February 3rd Monday | 2/16（月） |
-| Memorial Day | May last Monday | 5/25（月） |
-| Independence Day | July 4th (observed) | 7/3（金）observed |
-| Labor Day | September 1st Monday | 9/7（月） |
-| Thanksgiving | November 4th Thursday | 11/26（木） |
-| Christmas | December 25 (observed) | 12/25（金） |
-| New Year | January 1 (observed) | 1/1（木） |
-
-**Prevention Rule**:
-```
-BEFORE writing ANY date with day-of-week:
-  1. Run: python3 -c "import calendar; print(calendar.month(YYYY, MM))"
-  2. Verify day-of-week from the output
-  3. For US holidays, calculate from rule (3rd Monday, etc.)
-  4. strategy-reviewer MUST independently verify holiday dates
-  5. If same date has different day-of-week in document → REVISION REQUIRED
-```
-
-**Verification Method**:
-```bash
-# Verify any month's calendar
-python3 -c "import calendar; print(calendar.month(2026, 1))"
-
-# Calculate 3rd Monday (MLK Day) - January 2026
-# Mo Tu We Th Fr Sa Su
-#           1  2  3  4
-#  5  6  7  8  9 10 11
-# 12 13 14 15 16 17 18
-# 19 20 21 22 23 24 25   ← 19 is 3rd Monday
-```
-
-**Lessons Learned**:
-- LLM date/day-of-week inference is unreliable
-- US holiday rules must be explicitly calculated, not assumed
-- Same date with different day-of-week is an obvious contradiction that reviewers must catch
-- Calendar tool verification should be mandatory, not optional
-
----
-
-### Issue #7: Breadth 8MA Dead Cross False Detection via OpenCV (2026-02-16)
-
-**Incident Summary**:
-- OpenCV detected Breadth 200MA 60.7%, 8MA 60.0% → "dead cross" reported
-- CSV data shows actual values: 200MA **62.26%**, 8MA **67.56%** → **NO dead cross** (8MA >> 200MA)
-- Error propagated through us-market-analysis, blog, and strategy-review without detection
-- strategy-reviewer validated as "PASS WITH NOTES" despite completely wrong Breadth data
-
-**Error Magnitude**:
-| Metric | OpenCV (Wrong) | CSV (Correct) | Error |
-|--------|---------------|---------------|-------|
-| 200MA | 60.7% | **62.26%** | -1.56pt |
-| 8MA | 60.0% | **67.56%** | **-7.56pt** |
-| Dead Cross | Yes | **No** | **Completely inverted** |
-| Uptrend Ratio | ~32-34% | **33.03% GREEN UP** | Approx correct |
-
-**Root Causes**:
-1. **Chart format change**: The chart image format changed, causing OpenCV color/line detection to fail catastrophically
-2. **No CSV validation**: No independent data source was used to cross-check OpenCV results
-3. **Structural vulnerability**: Entire pipeline depended on fragile image analysis
-4. **Reviewer trust**: Strategy reviewer accepted "HIGH confidence" OpenCV output without independent verification
-
-**Impact**:
-- Blog reported "Breadth 8MA dead cross" as a key Caution signal (false)
-- Bear Case probability influenced by non-existent signal
-- Readers received incorrect market assessment (Breadth was actually healthy, not deteriorating)
-
-**Countermeasures Implemented**:
-1. **fetch_breadth_csv.py**: New CSV data fetcher (stdlib only, no external deps)
-   - Location: `.claude/skills/breadth-chart-analyst/scripts/fetch_breadth_csv.py`
-   - Tests: `.claude/skills/breadth-chart-analyst/tests/test_fetch_breadth_csv.py` (50 tests)
-2. **Data Source Priority**: CSV (PRIMARY) > Image (SUPPLEMENTARY) > ~~OpenCV~~ (DEPRECATED)
-3. **breadth-chart-analyst SKILL.md**: Added Step 0 (CSV fetch before any image analysis)
-4. **us-market-analyst.md**: Added Step 0 (CSV fetch as first data gathering step)
-5. **strategy-reviewer.md**: Added Phase 1.0 (independent CSV verification)
-6. **weekly-trade-blog-writer.md**: Added data source hierarchy, no "~" approximations
-7. **Reports/Blog corrected**: All 2026-02-16 files updated with CSV values
-
-**CSV Data Sources**:
-| Data | URL |
-|------|-----|
-| Market Breadth | `https://tradermonty.github.io/market-breadth-analysis/market_breadth_data.csv` |
-| Uptrend Ratio | `https://raw.githubusercontent.com/tradermonty/uptrend-dashboard/main/data/uptrend_ratio_timeseries.csv` |
-| Sector Summary | `https://raw.githubusercontent.com/tradermonty/uptrend-dashboard/main/data/sector_summary.csv` |
-
-**Prevention Rule**:
-```
-FOR Breadth analysis:
-  1. ALWAYS run fetch_breadth_csv.py FIRST (PRIMARY source)
-  2. CSV values override ALL image-based detection
-  3. If OpenCV and CSV differ: CSV is correct
-  4. Reviewer MUST independently fetch CSV data
-  5. |200MA diff| > 2% or |8MA diff| > 5% or dead cross mismatch → REVISION REQUIRED
-```
-
-**Lessons Learned**:
-- Image-based analysis is structurally fragile (chart format changes are undetectable)
-- "HIGH confidence" from OpenCV only measures technical quality, not value accuracy
-- Independent data source verification is essential at every pipeline stage
-- CSV data provides ground truth that image analysis cannot
+**Rule**: 同一文書内で同じ日付に異なる曜日 → REVISION REQUIRED
 
 ---
 
 ## Version Control
 
-- **Project Version**: 1.9
-- **Last Updated**: 2026-02-16
+- **Project Version**: 2.0
+- **Last Updated**: 2026-02-14
 - **Maintenance**: Update this document regularly
 
 ---
