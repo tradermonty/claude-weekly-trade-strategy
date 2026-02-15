@@ -1,0 +1,2 @@
+phase,start_date,end_date,trading_days,blogs_used,blogs_skipped,initial_capital,final_value,total_return_pct,max_drawdown_pct,sharpe_ratio,total_trades
+B-friday,2025-11-03,2026-02-13,71,16,0,100000,105168.37440767,5.1684,-2.7288,2.3535,305

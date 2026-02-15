@@ -15,6 +15,37 @@ from trading.backtest.strategy_timeline import StrategyTimeline
 logger = logging.getLogger(__name__)
 
 
+def _is_last_trading_day_of_week(day: date, trading_days: list[date]) -> bool:
+    """Return True if *day* is the last trading day of its ISO week.
+
+    The check looks at the next trading day in the calendar.  If the next
+    trading day falls in a different ISO week (or *day* is the very last
+    trading day in the list), the current day is the week-end rebalance
+    point.
+    """
+    idx = _bisect_index(trading_days, day)
+    if idx is None:
+        return False
+    if idx == len(trading_days) - 1:
+        return True  # last trading day overall
+    next_day = trading_days[idx + 1]
+    return next_day.isocalendar()[1] != day.isocalendar()[1]
+
+
+def _bisect_index(trading_days: list[date], day: date) -> Optional[int]:
+    """Binary-search *day* in the sorted *trading_days* list."""
+    lo, hi = 0, len(trading_days) - 1
+    while lo <= hi:
+        mid = (lo + hi) // 2
+        if trading_days[mid] == day:
+            return mid
+        elif trading_days[mid] < day:
+            lo = mid + 1
+        else:
+            hi = mid - 1
+    return None
+
+
 class PhaseAEngine:
     """Phase A: Weekly rebalance to blog's current_allocation on transition days."""
 
@@ -60,7 +91,20 @@ class PhaseAEngine:
             strategy = self._timeline.get_strategy(day)
             trades_today = 0
 
-            if strategy and self._timeline.is_transition_day(day):
+            should_rebalance = False
+            if self._config.rebalance_timing == "week_end":
+                # Week-end mode: rebalance on transition days AND last
+                # trading day of each week.
+                if self._timeline.is_transition_day(day):
+                    should_rebalance = True
+                elif _is_last_trading_day_of_week(day, trading_days):
+                    should_rebalance = True
+            else:
+                # Default transition mode
+                if self._timeline.is_transition_day(day):
+                    should_rebalance = True
+
+            if strategy and should_rebalance:
                 trades = portfolio.rebalance_to(
                     strategy.current_allocation,
                     prices,
@@ -70,7 +114,7 @@ class PhaseAEngine:
                 trades_today = len(trades)
                 if self._config.verbose and trades:
                     logger.info(
-                        "Transition %s: %d trades, blog=%s",
+                        "Rebalance %s: %d trades, blog=%s",
                         day, len(trades), strategy.blog_date,
                     )
 
@@ -93,8 +137,9 @@ class PhaseAEngine:
             if start <= d <= end
         ]
 
+        phase_label = "A" if self._config.rebalance_timing == "transition" else "A-friday"
         return metrics.build_result(
-            phase="A",
+            phase=phase_label,
             start_date=start,
             end_date=end,
             blogs_used=len(self._timeline.entries),
@@ -166,13 +211,18 @@ class PhaseBEngine:
             trades_today = 0
             executed_today = False
 
-            # 1. Transition day rebalance (highest priority)
-            if strategy and self._timeline.is_transition_day(day):
+            # 1. Scheduled rebalance (highest priority)
+            is_transition = self._timeline.is_transition_day(day)
+            is_week_end = (
+                self._config.rebalance_timing == "week_end"
+                and _is_last_trading_day_of_week(day, trading_days)
+            )
+            if strategy and (is_transition or is_week_end):
                 trades = portfolio.rebalance_to(
                     strategy.current_allocation,
                     prices,
                     trade_date=day,
-                    reason="transition",
+                    reason="transition" if is_transition else "week_end_rebalance",
                 )
                 trades_today = len(trades)
                 executed_today = True
@@ -247,8 +297,9 @@ class PhaseBEngine:
             if start <= d <= end
         ]
 
+        phase_label = "B" if self._config.rebalance_timing == "transition" else "B-friday"
         return metrics.build_result(
-            phase="B",
+            phase=phase_label,
             start_date=start,
             end_date=end,
             blogs_used=len(self._timeline.entries),

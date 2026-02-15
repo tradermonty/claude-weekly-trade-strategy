@@ -67,6 +67,10 @@ def build_parser() -> argparse.ArgumentParser:
         help="Output directory for CSV reports",
     )
     parser.add_argument(
+        "--timing", choices=["transition", "week_end"], default="transition",
+        help="Rebalance timing: transition (blog publish day) or week_end (Friday)",
+    )
+    parser.add_argument(
         "--verbose", action="store_true",
         help="Verbose logging",
     )
@@ -98,6 +102,7 @@ def main(argv: list[str] | None = None) -> None:
         blogs_dir=args.blogs_dir,
         output_dir=args.output,
         verbose=args.verbose,
+        rebalance_timing=args.timing,
     )
 
     # Build timeline

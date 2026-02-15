@@ -20,6 +20,7 @@ class BacktestConfig:
     blogs_dir: Path = field(default_factory=lambda: Path("blogs"))
     output_dir: Optional[Path] = None
     verbose: bool = False
+    rebalance_timing: str = "transition"  # "transition" or "week_end"
 
     def apply_slippage(self, price: float, side: str) -> float:
         """Apply slippage to a price. Buy pays more, sell receives less."""
