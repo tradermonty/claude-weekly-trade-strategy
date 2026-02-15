@@ -363,3 +363,319 @@ class TestStopLosses:
         """S&P 500 stop loss from the blog should be 6,685."""
         assert "sp500" in spec.stop_losses
         assert spec.stop_losses["sp500"] == pytest.approx(6685.0, abs=1.0)
+
+
+# ---------------------------------------------------------------------------
+# ETF range format (Fix 2)
+# ---------------------------------------------------------------------------
+
+class TestRangeAllocation:
+    """Test that range-format allocations (e.g. 'SPY 25-30%') are parsed."""
+
+    def test_midpoint_is_used(self) -> None:
+        """SPY 25-30% should produce midpoint 27.5%."""
+        from trading.layer2.tools.strategy_parser import _midpoint
+        assert _midpoint(25.0, "30") == 27.5
+
+    def test_midpoint_no_range(self) -> None:
+        """Single value (no range) returns value as-is."""
+        from trading.layer2.tools.strategy_parser import _midpoint
+        assert _midpoint(22.0, None) == 22.0
+
+    def test_range_etf_regex_matches(self) -> None:
+        """_ETF_SYMBOLS regex should capture range format."""
+        from trading.layer2.tools.strategy_parser import _ETF_SYMBOLS
+        text = "SPY 25-30%、QQQ 10-12%、DIA 5%"
+        matches = list(_ETF_SYMBOLS.finditer(text))
+        assert len(matches) == 3
+        # SPY: group(2)=25, group(3)=30
+        assert matches[0].group(1) == "SPY"
+        assert matches[0].group(2) == "25"
+        assert matches[0].group(3) == "30"
+        # DIA: no range
+        assert matches[2].group(1) == "DIA"
+        assert matches[2].group(2) == "5"
+        assert matches[2].group(3) is None
+
+    def test_range_cash_row_regex(self) -> None:
+        """_CASH_ROW regex should capture range format."""
+        from trading.layer2.tools.strategy_parser import _CASH_ROW
+        text = "| **現金・短期債** | 25-30% | BIL、MMF |"
+        m = _CASH_ROW.search(text)
+        assert m is not None
+        assert m.group(1) == "25"
+        assert m.group(2) == "30"
+
+    def test_real_blog_with_range(self) -> None:
+        """2025-11-24 blog uses range format and should parse successfully."""
+        blog_path = Path(__file__).parent.parent.parent / "blogs" / "2025-11-24-weekly-strategy.md"
+        if not blog_path.exists():
+            pytest.skip("Blog file not available")
+        spec = parse_blog(blog_path)
+        assert len(spec.current_allocation) > 0
+        total = sum(spec.current_allocation.values())
+        assert 90 <= total <= 110, f"Total allocation {total}% outside 90-110%"
+
+    def test_normalization_over_105(self) -> None:
+        """When midpoints push total > 105%, normalization to 100% occurs."""
+        from trading.layer2.tools.strategy_parser import _parse_sector_allocation
+        # Construct text with ranges that sum > 105%
+        text = """
+### セクター配分(4本柱)
+
+| カテゴリ | 配分 | 具体的ETF/銘柄 |
+|---------|------|---------------|
+| **コア指数** | 45-55% | SPY 30-40%、QQQ 10-15%、DIA 5-8% |
+| **防御セクター** | 20-25% | XLV 15-18%、XLP 5-7% |
+| **テーマ/ヘッジ** | 15-20% | GLD 10-12%、XLE 5-8% |
+| **現金・短期債** | 25-30% | BIL、MMF |
+"""
+        alloc = _parse_sector_allocation(text)
+        total = sum(alloc.values())
+        assert 95 <= total <= 105, f"Total after normalization: {total}%"
+
+
+# ---------------------------------------------------------------------------
+# Category-level fallback (Fix 3)
+# ---------------------------------------------------------------------------
+
+class TestCategoryFallback:
+    """Test category-level parsing for early blogs lacking ETF-level data."""
+
+    def test_category_table_row_regex(self) -> None:
+        """_CATEGORY_TABLE_ROW should match bold percentage values."""
+        from trading.layer2.tools.strategy_parser import _CATEGORY_TABLE_ROW
+        text = "| **コア指数** | 50-55% | **30-35%** | -20% | Death Cross |"
+        m = _CATEGORY_TABLE_ROW.search(text)
+        assert m is not None
+        assert m.group("cat") == "コア指数"
+        assert m.group("lo") == "30"
+        assert m.group("hi") == "35"
+
+    def test_distribute_categories_to_etfs(self) -> None:
+        """Category percentages should distribute to ETFs correctly."""
+        from trading.layer2.tools.strategy_parser import _distribute_categories_to_etfs
+        cat_alloc = {
+            "コア指数": 40.0,
+            "ヘルスケア": 10.0,
+            "コモディティ": 10.0,
+            "現金": 25.0,
+        }
+        result = _distribute_categories_to_etfs(cat_alloc)
+        # コア指数: SPY 65% of 40 = 26, QQQ 25% of 40 = 10, DIA 10% of 40 = 4
+        assert result["SPY"] == pytest.approx(26.0, abs=0.1)
+        assert result["QQQ"] == pytest.approx(10.0, abs=0.1)
+        assert result["DIA"] == pytest.approx(4.0, abs=0.1)
+        assert result["XLV"] == pytest.approx(10.0, abs=0.1)
+        assert result["GLD"] == pytest.approx(10.0, abs=0.1)
+        assert result["BIL"] == pytest.approx(25.0, abs=0.1)
+
+    def test_real_blog_category_only(self) -> None:
+        """2025-11-03 blog (category-only) should parse via fallback."""
+        blog_path = Path(__file__).parent.parent.parent / "blogs" / "2025-11-03-weekly-strategy.md"
+        if not blog_path.exists():
+            pytest.skip("Blog file not available")
+        spec = parse_blog(blog_path)
+        assert len(spec.current_allocation) > 0
+        total = sum(spec.current_allocation.values())
+        assert 90 <= total <= 110, f"Total allocation {total}% outside 90-110%"
+        # Should contain standard ETFs from distribution
+        assert "SPY" in spec.current_allocation
+
+    def test_real_blog_2025_11_10(self) -> None:
+        """2025-11-10 blog should also parse via category fallback."""
+        blog_path = Path(__file__).parent.parent.parent / "blogs" / "2025-11-10-weekly-strategy.md"
+        if not blog_path.exists():
+            pytest.skip("Blog file not available")
+        spec = parse_blog(blog_path)
+        assert len(spec.current_allocation) > 0
+        total = sum(spec.current_allocation.values())
+        assert 90 <= total <= 110, f"Total allocation {total}% outside 90-110%"
+
+
+# ---------------------------------------------------------------------------
+# Scenario header formats (Fix 1)
+# ---------------------------------------------------------------------------
+
+class TestScenarioHeaderFormats:
+    """Test all three scenario header formats."""
+
+    def test_format_a_english_only(self) -> None:
+        """Format A: ### Base Case: desc (55%) — no prefix."""
+        from trading.layer2.tools.strategy_parser import _SCENARIO_HEADER_EN
+        text = "### Base Case: サンタラリー小幅上昇 (55%)"
+        m = _SCENARIO_HEADER_EN.search(text)
+        assert m is not None
+        assert m.group(1) == "Base Case"
+        assert m.group(2) == "55"
+
+    def test_format_b_with_prefix(self) -> None:
+        """Format B: ### シナリオA) Base Case: desc (55%) — with prefix."""
+        from trading.layer2.tools.strategy_parser import _SCENARIO_HEADER_EN
+        text = "### シナリオA) Base Case: 慎重な横ばい (55%)"
+        m = _SCENARIO_HEADER_EN.search(text)
+        assert m is not None
+        assert m.group(1) == "Base Case"
+        assert m.group(2) == "55"
+
+    def test_format_b_fullwidth_paren(self) -> None:
+        """Format B with fullwidth parenthesis: ### シナリオA）Base Case (55%)."""
+        from trading.layer2.tools.strategy_parser import _SCENARIO_HEADER_EN
+        text = "### シナリオA）Base Case: テスト (55%)"
+        m = _SCENARIO_HEADER_EN.search(text)
+        assert m is not None
+        assert m.group(1) == "Base Case"
+
+    def test_format_c_japanese_only(self) -> None:
+        """Format C: ### シナリオA）悪化継続（確率：45%）— Japanese only."""
+        from trading.layer2.tools.strategy_parser import _SCENARIO_HEADER_JP
+        text = "### シナリオA）悪化継続（確率：45%）— 採用ベースケース"
+        m = _SCENARIO_HEADER_JP.search(text)
+        assert m is not None
+        assert m.group(1) == "A"
+        assert m.group(2) == "悪化継続"
+        assert m.group(3) == "45"
+
+    def test_format_c_half_paren(self) -> None:
+        """Format C with half-width paren: ### シナリオB)反発回復(確率:30%)."""
+        from trading.layer2.tools.strategy_parser import _SCENARIO_HEADER_JP
+        text = "### シナリオB)反発回復(確率:30%)"
+        m = _SCENARIO_HEADER_JP.search(text)
+        assert m is not None
+        assert m.group(1) == "B"
+        assert m.group(3) == "30"
+
+    def test_real_blog_format_b_scenarios(self) -> None:
+        """2025-12-08 blog (Format B) should parse all scenarios."""
+        blog_path = Path(__file__).parent.parent.parent / "blogs" / "2025-12-08-weekly-strategy.md"
+        if not blog_path.exists():
+            pytest.skip("Blog file not available")
+        spec = parse_blog(blog_path)
+        assert len(spec.scenarios) >= 3, f"Expected >=3 scenarios, got {len(spec.scenarios)}"
+        assert "base" in spec.scenarios
+
+    def test_real_blog_format_c_scenarios(self) -> None:
+        """2025-11-03 blog (Format C) should parse all scenarios."""
+        blog_path = Path(__file__).parent.parent.parent / "blogs" / "2025-11-03-weekly-strategy.md"
+        if not blog_path.exists():
+            pytest.skip("Blog file not available")
+        spec = parse_blog(blog_path)
+        assert len(spec.scenarios) >= 3, f"Expected >=3 scenarios, got {len(spec.scenarios)}"
+        assert "base" in spec.scenarios
+
+
+# ---------------------------------------------------------------------------
+# Japanese scenario name mapping (Fix 1)
+# ---------------------------------------------------------------------------
+
+class TestJapaneseScenarioNameMapping:
+    """Test mapping of Japanese scenario descriptions to standard names."""
+
+    def test_highest_prob_is_base(self) -> None:
+        """Highest probability scenario should map to 'base'."""
+        from trading.layer2.tools.strategy_parser import _map_jp_scenarios_to_names
+        scenarios = [
+            ("A", "悪化継続", 45),
+            ("B", "反発回復", 30),
+            ("C", "急落", 25),
+        ]
+        result = _map_jp_scenarios_to_names(scenarios)
+        assert result["A"] == "base"
+
+    def test_bull_keyword_detected(self) -> None:
+        """Scenarios containing bull keywords should map to 'bull'."""
+        from trading.layer2.tools.strategy_parser import _map_jp_scenarios_to_names
+        scenarios = [
+            ("A", "横ばい継続", 45),
+            ("B", "反発回復", 30),
+            ("C", "調整深化", 25),
+        ]
+        result = _map_jp_scenarios_to_names(scenarios)
+        assert result["A"] == "base"
+        assert result["B"] == "bull"
+        assert result["C"] == "bear"
+
+    def test_bear_keyword_detected(self) -> None:
+        """Scenarios containing bear keywords should map to 'bear'."""
+        from trading.layer2.tools.strategy_parser import _map_jp_scenarios_to_names
+        scenarios = [
+            ("A", "継続", 50),
+            ("B", "悪化シナリオ", 30),
+            ("C", "上昇加速", 20),
+        ]
+        result = _map_jp_scenarios_to_names(scenarios)
+        assert result["A"] == "base"
+        assert result["B"] == "bear"
+        assert result["C"] == "bull"
+
+    def test_remaining_fills_unfilled(self) -> None:
+        """Unclassified scenarios fill remaining slots."""
+        from trading.layer2.tools.strategy_parser import _map_jp_scenarios_to_names
+        scenarios = [
+            ("A", "横ばい", 50),
+            ("B", "シナリオ2", 30),
+            ("C", "シナリオ3", 20),
+        ]
+        result = _map_jp_scenarios_to_names(scenarios)
+        assert result["A"] == "base"
+        # B and C should fill "bull" and "bear" (or "tail_risk")
+        assert set(result.values()) >= {"base", "bull", "bear"}
+
+    def test_empty_scenarios(self) -> None:
+        """Empty input returns empty mapping."""
+        from trading.layer2.tools.strategy_parser import _map_jp_scenarios_to_names
+        assert _map_jp_scenarios_to_names([]) == {}
+
+    def test_four_scenarios_with_tail_risk(self) -> None:
+        """Four scenarios should include tail_risk."""
+        from trading.layer2.tools.strategy_parser import _map_jp_scenarios_to_names
+        scenarios = [
+            ("A", "継続", 45),
+            ("B", "回復", 25),
+            ("C", "調整", 20),
+            ("D", "ブラックスワン", 10),
+        ]
+        result = _map_jp_scenarios_to_names(scenarios)
+        assert result["A"] == "base"
+        assert result["B"] == "bull"
+        assert result["C"] == "bear"
+        assert result["D"] == "tail_risk"
+
+
+# ---------------------------------------------------------------------------
+# Integration: all blogs parse successfully
+# ---------------------------------------------------------------------------
+
+class TestAllBlogsParse:
+    """Verify all blog files in the blogs/ directory parse successfully."""
+
+    def test_all_blogs_valid_via_timeline(self) -> None:
+        """StrategyTimeline should report 0 skipped blogs."""
+        from trading.backtest.strategy_timeline import StrategyTimeline
+        blogs_dir = Path(__file__).parent.parent.parent / "blogs"
+        if not blogs_dir.exists():
+            pytest.skip("Blogs directory not available")
+
+        tl = StrategyTimeline()
+        tl.build(blogs_dir)
+        skipped_info = [(s.blog_date, s.reason) for s in tl.skipped]
+        assert len(tl.skipped) == 0, f"Skipped blogs: {skipped_info}"
+        assert len(tl.entries) >= 16, f"Expected >=16 entries, got {len(tl.entries)}"
+
+    def test_each_blog_has_allocation_and_scenarios(self) -> None:
+        """Every parsed blog should have non-empty allocation and scenarios."""
+        from trading.backtest.strategy_timeline import StrategyTimeline
+        blogs_dir = Path(__file__).parent.parent.parent / "blogs"
+        if not blogs_dir.exists():
+            pytest.skip("Blogs directory not available")
+
+        tl = StrategyTimeline()
+        tl.build(blogs_dir)
+        for entry in tl.entries:
+            alloc_total = sum(entry.strategy.current_allocation.values())
+            assert alloc_total >= 90, (
+                f"{entry.blog_date}: allocation total {alloc_total}% < 90%"
+            )
+            assert len(entry.strategy.scenarios) >= 3, (
+                f"{entry.blog_date}: only {len(entry.strategy.scenarios)} scenarios"
+            )

@@ -61,14 +61,51 @@ def _extract_date_from_filename(filename: str) -> str:
 
 # --- Sector allocation ---------------------------------------------------
 
+# Fix 2: Support range format (e.g. "SPY 25-30%") — use midpoint
 _ETF_SYMBOLS = re.compile(
     r"(SPY|QQQ|DIA|XLV|XLP|GLD|XLE|BIL|TLT|URA|SH|SDS)\s*"
-    r"(\d+(?:\.\d+)?)\s*%"
+    r"(\d+(?:\.\d+)?)"
+    r"(?:\s*-\s*(\d+(?:\.\d+)?))?"
+    r"\s*%"
 )
 
+# Fix 2: Support range format for cash row
 _CASH_ROW = re.compile(
-    r"\|\s*\*?\*?現金[・&]?短期債\*?\*?\s*\|\s*(\d+)\s*%"
+    r"\|\s*\*?\*?現金[・&]?短期債\*?\*?\s*\|\s*"
+    r"(?:\*?\*?)?\s*(\d+)(?:\s*-\s*(\d+))?\s*%"
 )
+
+# Fix 3: Category table row with bold "今週" values for fallback
+_CATEGORY_TABLE_ROW = re.compile(
+    r"^\|\s*\*?\*?(?:[①②③④]\s*)?(?:-\s*)?"
+    r"(?P<cat>コア指数|テクノロジー|金融|ヘルスケア|エネルギー|"
+    r"コモディティ|防衛/ヘッジ|防衛／ヘッジ|現金|防御セクター|テーマ/ヘッジ|現金・短期債)"
+    r".*?\*\*\s*(?P<lo>\d+)(?:\s*-\s*(?P<hi>\d+))?\s*%\s*\*\*",
+    re.MULTILINE,
+)
+
+# Default ETF distribution ratios for category-level fallback
+_DEFAULT_CATEGORY_ETF_MAP: dict[str, dict[str, float]] = {
+    "コア指数": {"SPY": 0.65, "QQQ": 0.25, "DIA": 0.10},
+    "テクノロジー": {"QQQ": 1.0},
+    "金融": {"SPY": 1.0},  # absorbed into SPY
+    "ヘルスケア": {"XLV": 1.0},
+    "防御セクター": {"XLV": 0.65, "XLP": 0.35},
+    "エネルギー": {"XLE": 1.0},
+    "コモディティ": {"GLD": 1.0},
+    "防衛/ヘッジ": {"TLT": 0.5, "GLD": 0.5},
+    "防衛／ヘッジ": {"TLT": 0.5, "GLD": 0.5},
+    "テーマ/ヘッジ": {"GLD": 0.60, "XLE": 0.40},
+    "現金": {"BIL": 1.0},
+    "現金・短期債": {"BIL": 1.0},
+}
+
+
+def _midpoint(lo: float, hi_str: Optional[str]) -> float:
+    """Return midpoint if hi_str given, otherwise just lo."""
+    if hi_str:
+        return (lo + float(hi_str)) / 2.0
+    return lo
 
 
 def _parse_sector_allocation(text: str) -> dict[str, float]:
@@ -78,93 +115,249 @@ def _parse_sector_allocation(text: str) -> dict[str, float]:
         | コア指数 | 34% | SPY 22%、QQQ 4%、DIA 8% |
     and the cash row:
         | 現金・短期債 | 28% | BIL、MMF |
+
+    Falls back to category-level parsing for early blogs that lack
+    individual ETF percentages.
     """
     alloc: dict[str, float] = {}
 
-    # Find the sector allocation section (セクター配分 or the second table with ETFs)
-    # Use the table that contains individual ETF percentages
     for m in _ETF_SYMBOLS.finditer(text):
         symbol = m.group(1)
-        pct = float(m.group(2))
+        pct = _midpoint(float(m.group(2)), m.group(3))
         # Keep the last occurrence (the セクター配分 table comes after ロット管理)
         alloc[symbol] = pct
 
     # Cash row: assign to BIL
     cash_matches = list(_CASH_ROW.finditer(text))
     if cash_matches:
-        # Use the last match (from セクター配分 table)
-        alloc["BIL"] = float(cash_matches[-1].group(1))
+        last = cash_matches[-1]
+        alloc["BIL"] = _midpoint(float(last.group(1)), last.group(2))
+
+    # Fix 3: Fallback to category-level parsing when ETF-level is insufficient
+    total = sum(alloc.values())
+    if total < 50:
+        cat_alloc = _parse_category_table(text)
+        if cat_alloc:
+            alloc = _distribute_categories_to_etfs(cat_alloc)
+
+    # Normalize if midpoints pushed total beyond 105%
+    total = sum(alloc.values())
+    if total > 105:
+        factor = 100.0 / total
+        alloc = {k: round(v * factor, 1) for k, v in alloc.items()}
 
     return alloc
 
 
+def _parse_category_table(text: str) -> Optional[dict[str, float]]:
+    """Parse category-level allocation from bold table values.
+
+    For early blogs (2025-11-03 through 2025-11-17) that only have
+    category-level tables like:
+        | **コア指数** | 50-55% | **30-35%** | ...
+    """
+    result: dict[str, float] = {}
+    for m in _CATEGORY_TABLE_ROW.finditer(text):
+        cat = m.group("cat")
+        lo = float(m.group("lo"))
+        pct = _midpoint(lo, m.group("hi"))
+        # Keep last occurrence (セクター配分 table comes after ロット管理)
+        result[cat] = pct
+
+    return result if len(result) >= 3 else None
+
+
+def _distribute_categories_to_etfs(cat_alloc: dict[str, float]) -> dict[str, float]:
+    """Convert category percentages to ETF allocations using default ratios."""
+    etf_alloc: dict[str, float] = {}
+    for cat, pct in cat_alloc.items():
+        mapping = _DEFAULT_CATEGORY_ETF_MAP.get(cat)
+        if mapping:
+            for symbol, ratio in mapping.items():
+                val = round(pct * ratio, 1)
+                if symbol in etf_alloc:
+                    etf_alloc[symbol] += val
+                else:
+                    etf_alloc[symbol] = val
+
+    # Normalize if total exceeds 105%
+    total = sum(etf_alloc.values())
+    if total > 105:
+        factor = 100.0 / total
+        etf_alloc = {k: round(v * factor, 1) for k, v in etf_alloc.items()}
+
+    return etf_alloc
+
+
 # --- Scenarios ------------------------------------------------------------
 
-_SCENARIO_HEADER = re.compile(
-    r"###\s+"
+# Fix 1: Format A (no prefix) and Format B (with シナリオX prefix)
+_SCENARIO_HEADER_EN = re.compile(
+    r"###\s+(?:シナリオ[A-D][）\)]\s*)?"
     r"(Base Case|Bull Case|Bear Case|Tail Risk)"
     r"[^(]*\((\d+)%\)",
     re.IGNORECASE,
 )
 
-_SCENARIO_TRIGGER = re.compile(r"\*\*トリガー\*\*:\s*(.+?)(?:\n\n|\n###|\n---|\Z)", re.DOTALL)
+# Fix 1: Format C — Japanese-only with 確率 notation
+_SCENARIO_HEADER_JP = re.compile(
+    r"###\s+シナリオ([A-D])[）\)]\s*"
+    r"(.+?)"
+    r"[（(]確率[：:]\s*(\d+)%",
+)
+
+# Support both **トリガー**: and **トリガー条件**: and **条件**:
+_SCENARIO_TRIGGER = re.compile(
+    r"\*\*(?:トリガー(?:条件)?|条件)\*\*[：:]\s*(.+?)(?:\n\n|\n###|\n---|\Z)",
+    re.DOTALL,
+)
 
 _SCENARIO_ACTION_LINE = re.compile(
     r"-\s*(?:\*\*)?(?:コア|防御|テーマ|現金)[^:：]*(?:\*\*)?:\s*"
     r"(?:[\d]+%\s*→\s*)?(?:\*\*)?\s*(\d+)\s*%"
 )
 
-_CATEGORY_ETF_MAP: dict[str, dict[str, float]] = {}  # built dynamically
+# Keywords for mapping Japanese scenario names to standard names
+_BULL_KEYWORDS = frozenset({
+    "反発", "回復", "加速", "上昇", "再開", "リスクオン", "V字",
+})
+_BEAR_KEYWORDS = frozenset({
+    "悪化", "調整", "深化", "Caution", "下落", "弱気", "リスクオフ",
+})
 
 
 def _parse_scenarios(text: str) -> dict[str, ScenarioSpec]:
-    """Parse the シナリオ別プラン section."""
+    """Parse the シナリオ別プラン section.
+
+    Supports three header formats:
+      A) ### Base Case: desc (55%)            — 2026-01-12 onwards
+      B) ### シナリオA) Base Case: desc (55%)  — 2025-11-24 to 2026-01-05
+      C) ### シナリオA）Japanese desc（確率：45%） — 2025-11-03 to 2025-11-17
+    """
     scenarios: dict[str, ScenarioSpec] = {}
 
-    # First, get the current allocation to distribute category %s to ETFs
     current = _parse_sector_allocation(text)
-
-    # Get the base category->ETF ratios from current allocation
     etf_ratios = _build_etf_ratios(current)
 
-    # Split text into scenario blocks
-    headers = list(_SCENARIO_HEADER.finditer(text))
-    for idx, header_match in enumerate(headers):
-        raw_name = header_match.group(1)
-        probability = int(header_match.group(2))
-        name = _normalize_scenario_name(raw_name)
+    # Try EN headers first (Format A and B)
+    headers_en = list(_SCENARIO_HEADER_EN.finditer(text))
+    if headers_en:
+        for idx, header_match in enumerate(headers_en):
+            raw_name = header_match.group(1)
+            probability = int(header_match.group(2))
+            name = _normalize_scenario_name(raw_name)
 
-        # Extract the block of text for this scenario
-        start = header_match.end()
-        end = headers[idx + 1].start() if idx + 1 < len(headers) else len(text)
-        block = text[start:end]
+            start = header_match.end()
+            end = headers_en[idx + 1].start() if idx + 1 < len(headers_en) else len(text)
+            block = text[start:end]
 
-        # Parse triggers
-        trigger_match = _SCENARIO_TRIGGER.search(block)
-        triggers: list[str] = []
-        if trigger_match:
-            raw = trigger_match.group(1).strip()
-            # Split on common separators
-            for part in re.split(r"\s*(?:\+|or|、)\s*", raw):
-                cleaned = re.sub(r"\*\*", "", part).strip()
-                if cleaned:
-                    triggers.append(cleaned)
+            triggers = _parse_trigger_list(block)
+            cat_alloc = _parse_category_allocation(block)
+            alloc = _distribute_to_etfs(cat_alloc, etf_ratios) if cat_alloc else dict(current)
 
-        # Parse allocation (category level -> distribute to ETFs)
-        cat_alloc = _parse_category_allocation(block)
-        if cat_alloc:
-            alloc = _distribute_to_etfs(cat_alloc, etf_ratios)
-        else:
-            alloc = dict(current)
+            scenarios[name] = ScenarioSpec(
+                name=name, probability=probability,
+                triggers=triggers, allocation=alloc,
+            )
+        return scenarios
 
-        scenarios[name] = ScenarioSpec(
-            name=name,
-            probability=probability,
-            triggers=triggers,
-            allocation=alloc,
+    # Try JP headers (Format C)
+    headers_jp = list(_SCENARIO_HEADER_JP.finditer(text))
+    if headers_jp:
+        # Collect raw scenario data
+        raw_scenarios: list[tuple[str, str, int, list[str], dict[str, float]]] = []
+        for idx, header_match in enumerate(headers_jp):
+            letter = header_match.group(1)
+            desc = header_match.group(2).strip()
+            probability = int(header_match.group(3))
+
+            start = header_match.end()
+            end = headers_jp[idx + 1].start() if idx + 1 < len(headers_jp) else len(text)
+            block = text[start:end]
+
+            triggers = _parse_trigger_list(block)
+            cat_alloc = _parse_category_allocation(block)
+            alloc = _distribute_to_etfs(cat_alloc, etf_ratios) if cat_alloc else dict(current)
+
+            raw_scenarios.append((letter, desc, probability, triggers, alloc))
+
+        # Map Japanese names to standard scenario names
+        name_map = _map_jp_scenarios_to_names(
+            [(letter, desc, prob) for letter, desc, prob, _, _ in raw_scenarios]
         )
 
+        for letter, desc, prob, triggers, alloc in raw_scenarios:
+            name = name_map.get(letter, letter.lower())
+            scenarios[name] = ScenarioSpec(
+                name=name, probability=prob,
+                triggers=triggers, allocation=alloc,
+            )
+
     return scenarios
+
+
+def _parse_trigger_list(block: str) -> list[str]:
+    """Extract trigger strings from a scenario block."""
+    trigger_match = _SCENARIO_TRIGGER.search(block)
+    triggers: list[str] = []
+    if trigger_match:
+        raw = trigger_match.group(1).strip()
+        for part in re.split(r"\s*(?:\+|or|、)\s*", raw):
+            cleaned = re.sub(r"\*\*", "", part).strip()
+            if cleaned:
+                triggers.append(cleaned)
+    return triggers
+
+
+def _map_jp_scenarios_to_names(
+    scenarios: list[tuple[str, str, int]],
+) -> dict[str, str]:
+    """Map Japanese scenario descriptions to standard names.
+
+    Args:
+        scenarios: [(letter, description, probability), ...]
+
+    Returns:
+        {letter: standard_name} e.g. {"A": "base", "B": "bull", "C": "bear"}
+
+    Rules:
+        1. Highest probability → "base"
+        2. Contains bull keywords → "bull"
+        3. Contains bear keywords → "bear"
+        4. Remaining → fill unfilled slots in probability order
+    """
+    if not scenarios:
+        return {}
+
+    sorted_by_prob = sorted(scenarios, key=lambda x: x[2], reverse=True)
+    result: dict[str, str] = {}
+    used_names: set[str] = set()
+
+    # Highest probability → base
+    base = sorted_by_prob[0]
+    result[base[0]] = "base"
+    used_names.add("base")
+
+    # Classify remaining by keywords
+    remaining = sorted_by_prob[1:]
+    unclassified: list[tuple[str, str, int]] = []
+
+    for letter, desc, prob in remaining:
+        if "bull" not in used_names and any(kw in desc for kw in _BULL_KEYWORDS):
+            result[letter] = "bull"
+            used_names.add("bull")
+        elif "bear" not in used_names and any(kw in desc for kw in _BEAR_KEYWORDS):
+            result[letter] = "bear"
+            used_names.add("bear")
+        else:
+            unclassified.append((letter, desc, prob))
+
+    # Fill remaining slots
+    available = [n for n in ["bull", "bear", "tail_risk"] if n not in used_names]
+    for (letter, desc, prob), name in zip(unclassified, available):
+        result[letter] = name
+
+    return result
 
 
 _CATEGORY_NAMES = {
@@ -174,9 +367,11 @@ _CATEGORY_NAMES = {
     "現金": "cash",
 }
 
+# Support range format in "from → to" pattern (e.g. "40-45% → **30-35%**")
 _CAT_ALLOC_LINE = re.compile(
-    r"-\s*(?:\*\*)?(?P<cat>コア|防御|テーマ|現金)[^:：]*(?:\*\*)?:\s*"
-    r"(?:[\d]+%\s*→\s*)?(?:\*\*)?\s*(?P<pct>\d+)\s*%"
+    r"-\s*(?:\*\*)?(?P<cat>コア|防御|テーマ|現金)[^:：]*(?:\*\*)?[：:]\s*"
+    r"(?:[\d]+(?:\s*-\s*\d+)?%\s*→\s*)?"
+    r"(?:\*\*)?\s*(?P<pct>\d+)(?:\s*-\s*(?P<pct_hi>\d+))?\s*%"
 )
 
 
@@ -190,7 +385,12 @@ def _parse_category_allocation(block: str) -> Optional[dict[str, int]]:
         cat_jp = m.group("cat")
         cat_en = _CATEGORY_NAMES.get(cat_jp)
         if cat_en:
-            result[cat_en] = int(m.group("pct"))
+            lo = int(m.group("pct"))
+            hi_str = m.group("pct_hi")
+            if hi_str:
+                result[cat_en] = round((lo + int(hi_str)) / 2)
+            else:
+                result[cat_en] = lo
 
     return result if len(result) >= 3 else None
 
