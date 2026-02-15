@@ -42,6 +42,7 @@ uv.lock
 charts/**
 blogs/**
 reports/**
+results/
 
 # Keep folder structure with .gitkeep files
 !**/.gitkeep

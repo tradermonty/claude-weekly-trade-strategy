@@ -76,6 +76,22 @@ Before switching from `--dry-run` to `--live`:
 
 ---
 
+## 5. Backtest Walk-Forward Re-validation
+
+- [ ] **~2026-05-08**: Walk-forward 統計的有意性の再検証
+  - 現状: n=71日, p=0.1456, verdict=NOT_SIGNIFICANT
+  - 推定必要日数: ~127日（~25週）で p<0.05 到達見込み
+  - 前提: 平均日次超過リターン +0.073%, IR=2.78 が維持される場合
+  - コマンド:
+    ```bash
+    .venv/bin/python -m trading.backtest --start 2025-11-03 --end 2026-05-08 \
+      --phase B --walk-forward --output results/robustness/
+    ```
+  - 判定が SIGNIFICANT に変われば B-transition 戦略の統計的裏付けが得られる
+  - レジーム変化があった場合は Newey-West / ブートストラップ CI の追加を検討
+
+---
+
 ## Implementation History
 
 | Date | Milestone | Tests |
