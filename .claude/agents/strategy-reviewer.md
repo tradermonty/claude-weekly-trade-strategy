@@ -22,7 +22,38 @@ Act as the final quality gate to ensure:
 
 ### Phase 1: Source Data Verification
 
-**1.1 Chart Image Re-Reading (CRITICAL)**
+**1.0 CSV Data Verification (PRIMARY - MANDATORY - Added Issue #7)**
+
+⚠️ **This is now the FIRST verification step. CSV data takes precedence over ALL image-based detection.**
+
+```bash
+python .claude/skills/breadth-chart-analyst/scripts/fetch_breadth_csv.py
+```
+
+1. **Independently fetch CSV data** (do NOT trust values in reports)
+2. **Compare blog/report values against CSV**:
+
+   | Metric | Blog Value | CSV Value | Diff | Threshold |
+   |--------|-----------|-----------|------|-----------|
+   | Breadth 200MA | X% | Y% | |200MA diff| > 2% → REVISION REQUIRED |
+   | Breadth 8MA | X% | Y% | |8MA diff| > 5% → REVISION REQUIRED |
+   | Dead Cross | Yes/No | Yes/No | If different → **REVISION REQUIRED** |
+   | Uptrend Ratio | X% | Y% | |diff| > 5% → investigate |
+   | Uptrend Color | GREEN/RED | GREEN/RED | If different → **REVISION REQUIRED** |
+
+3. **If any threshold exceeded → REVISION REQUIRED**
+
+### Known Error Pattern (Issue #7)
+```
+Date: 2026-02-16
+Error: OpenCV detected 200MA 60.7%, 8MA 60.0% (dead cross)
+Actual CSV: 200MA 62.26%, 8MA 67.56% (NO dead cross, 8MA >> 200MA)
+Impact: Blog reported false dead cross, reviewer validated as "OK"
+Root Cause: Chart format change caused OpenCV detection failure
+Fix: CSV data is now PRIMARY source; reviewer MUST independently verify
+```
+
+**1.1 Chart Image Re-Reading (SUPPLEMENTARY)**
 - [ ] **Re-read actual chart images** in `charts/YYYY-MM-DD/` folder
 - [ ] Verify Uptrend Stock Ratio current value and color (green/red)
 - [ ] Verify Breadth 200MA percentage
@@ -188,15 +219,16 @@ Error: Validated blog as "PASS WITH NOTES" despite missing Venezuela interventio
 Fix: Always run independent geopolitical WebSearch before approval
 ```
 
-**4.6 Uptrend Ratio Independent Verification (MANDATORY - Added Issue #4, 2026-01-04)**
+**4.6 Uptrend Ratio Independent Verification (UPDATED Issue #7 -- CSV First)**
 
-⚠️ **This check was added after Uptrend Ratio was misread as 28-32% GREEN when actual was 23% RED**
+⚠️ **Updated: CSV data is now PRIMARY. OpenCV script is SUPPLEMENTARY only.**
 
 ### Verification Steps
 
-1. **Run detection script independently**:
+1. **Use CSV data from Step 1.0** (already fetched):
    ```bash
-   python .claude/skills/breadth-chart-analyst/scripts/detect_uptrend_ratio.py charts/YYYY-MM-DD/<uptrend_chart>.jpeg
+   # CSV data already fetched in Phase 1.0
+   # Uptrend Ratio value, color, trend, slope from CSV
    ```
 
 2. **Compare with report values**:

@@ -57,6 +57,63 @@ This skill enables specialized analysis of two complementary market breadth char
 
 ## Analysis Workflow
 
+### Step 0: Fetch CSV Data (PRIMARY SOURCE - MANDATORY)
+
+**CRITICAL**: CSV data is the PRIMARY source for all Breadth values. This step MUST be executed BEFORE any image analysis.
+
+```bash
+python .claude/skills/breadth-chart-analyst/scripts/fetch_breadth_csv.py
+```
+
+**Why CSV is PRIMARY**:
+- OpenCV image detection is fragile -- chart format changes cause catastrophic failures (Issue #7)
+- CSV provides exact numerical values directly from the data source
+- Image analysis is SUPPLEMENTARY only (for visual trend context)
+
+**Data Sources**:
+1. **Market Breadth**: `tradermonty.github.io/market-breadth-analysis/market_breadth_data.csv`
+   - Provides: 200-Day MA, 8-Day MA, Trend, Dead Cross status
+2. **Uptrend Ratio**: `tradermonty/uptrend-dashboard/data/uptrend_ratio_timeseries.csv`
+   - Provides: Current ratio, 10MA, slope, trend (UP/DOWN), color (GREEN/RED)
+3. **Sector Summary**: `tradermonty/uptrend-dashboard/data/sector_summary.csv`
+   - Provides: Per-sector ratio, trend, status (overbought/oversold)
+
+**Data Source Priority**:
+| Priority | Source | Use For | Reliability |
+|----------|--------|---------|-------------|
+| 1 (PRIMARY) | **CSV Data** | All numerical values, dead cross status, color | HIGH |
+| 2 (SUPPLEMENTARY) | **Chart Image** | Visual trend context, pattern confirmation | MEDIUM |
+| 3 (DEPRECATED) | ~~OpenCV detect_breadth_values.py~~ | ~~Breadth detection~~ | **UNRELIABLE** |
+| 4 (LAST RESORT) | ~~LLM visual reading~~ | ~~Emergency only~~ | LOW |
+
+**Expected Output**:
+```
+============================================================
+Breadth Data (CSV) - 2026-02-13
+============================================================
+--- Market Breadth (S&P 500) ---
+200-Day MA: 62.26% (healthy (>=60%))
+8-Day MA:   67.56% (healthy_bullish (60-73%))
+8MA vs 200MA: +5.30pt (8MA ABOVE -- NO dead cross)
+Trend: UPTREND
+--- Uptrend Ratio (All Markets) ---
+Current: 33.03% GREEN (neutral_bullish)
+10MA: 32.65%, Slope: +0.0055, Trend: UP
+--- Sector Summary ---
+...
+============================================================
+```
+
+**Validation**: After running CSV fetch, verify:
+- [ ] CSV data retrieved successfully
+- [ ] 200-Day MA value recorded
+- [ ] 8-Day MA value recorded
+- [ ] Dead cross status determined (8MA < 200MA = dead cross)
+- [ ] Uptrend Ratio value + color + trend recorded
+- [ ] Use these CSV values as the authoritative source for all subsequent analysis
+
+---
+
 ### Step 1: Receive Chart Images and Prepare Analysis
 
 When the user provides breadth chart images for analysis:
@@ -305,9 +362,9 @@ Create 2-3 scenarios with probability estimates:
 
 If Chart 2 is provided, conduct systematic analysis:
 
-#### 5.0 MANDATORY: Run Uptrend Ratio Detection Script (Added after Issue #4)
+#### 5.0 ~~MANDATORY~~ DEPRECATED: Uptrend Ratio Detection Script (Superseded by Step 0 CSV Fetch)
 
-**CRITICAL**: Before visual analysis, MUST run the OpenCV detection script to get accurate current values.
+**NOTE (Issue #7)**: This OpenCV detection step is **DEPRECATED**. Use CSV data from Step 0 as the PRIMARY source. The OpenCV script may be run for supplementary validation only, but CSV values take precedence in all cases.
 
 ```bash
 python .claude/skills/breadth-chart-analyst/scripts/detect_uptrend_ratio.py <image_path> [--debug]

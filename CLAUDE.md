@@ -975,10 +975,73 @@ python3 -c "import calendar; print(calendar.month(2026, 1))"
 
 ---
 
+### Issue #7: Breadth 8MA Dead Cross False Detection via OpenCV (2026-02-16)
+
+**Incident Summary**:
+- OpenCV detected Breadth 200MA 60.7%, 8MA 60.0% → "dead cross" reported
+- CSV data shows actual values: 200MA **62.26%**, 8MA **67.56%** → **NO dead cross** (8MA >> 200MA)
+- Error propagated through us-market-analysis, blog, and strategy-review without detection
+- strategy-reviewer validated as "PASS WITH NOTES" despite completely wrong Breadth data
+
+**Error Magnitude**:
+| Metric | OpenCV (Wrong) | CSV (Correct) | Error |
+|--------|---------------|---------------|-------|
+| 200MA | 60.7% | **62.26%** | -1.56pt |
+| 8MA | 60.0% | **67.56%** | **-7.56pt** |
+| Dead Cross | Yes | **No** | **Completely inverted** |
+| Uptrend Ratio | ~32-34% | **33.03% GREEN UP** | Approx correct |
+
+**Root Causes**:
+1. **Chart format change**: The chart image format changed, causing OpenCV color/line detection to fail catastrophically
+2. **No CSV validation**: No independent data source was used to cross-check OpenCV results
+3. **Structural vulnerability**: Entire pipeline depended on fragile image analysis
+4. **Reviewer trust**: Strategy reviewer accepted "HIGH confidence" OpenCV output without independent verification
+
+**Impact**:
+- Blog reported "Breadth 8MA dead cross" as a key Caution signal (false)
+- Bear Case probability influenced by non-existent signal
+- Readers received incorrect market assessment (Breadth was actually healthy, not deteriorating)
+
+**Countermeasures Implemented**:
+1. **fetch_breadth_csv.py**: New CSV data fetcher (stdlib only, no external deps)
+   - Location: `.claude/skills/breadth-chart-analyst/scripts/fetch_breadth_csv.py`
+   - Tests: `.claude/skills/breadth-chart-analyst/tests/test_fetch_breadth_csv.py` (50 tests)
+2. **Data Source Priority**: CSV (PRIMARY) > Image (SUPPLEMENTARY) > ~~OpenCV~~ (DEPRECATED)
+3. **breadth-chart-analyst SKILL.md**: Added Step 0 (CSV fetch before any image analysis)
+4. **us-market-analyst.md**: Added Step 0 (CSV fetch as first data gathering step)
+5. **strategy-reviewer.md**: Added Phase 1.0 (independent CSV verification)
+6. **weekly-trade-blog-writer.md**: Added data source hierarchy, no "~" approximations
+7. **Reports/Blog corrected**: All 2026-02-16 files updated with CSV values
+
+**CSV Data Sources**:
+| Data | URL |
+|------|-----|
+| Market Breadth | `https://tradermonty.github.io/market-breadth-analysis/market_breadth_data.csv` |
+| Uptrend Ratio | `https://raw.githubusercontent.com/tradermonty/uptrend-dashboard/main/data/uptrend_ratio_timeseries.csv` |
+| Sector Summary | `https://raw.githubusercontent.com/tradermonty/uptrend-dashboard/main/data/sector_summary.csv` |
+
+**Prevention Rule**:
+```
+FOR Breadth analysis:
+  1. ALWAYS run fetch_breadth_csv.py FIRST (PRIMARY source)
+  2. CSV values override ALL image-based detection
+  3. If OpenCV and CSV differ: CSV is correct
+  4. Reviewer MUST independently fetch CSV data
+  5. |200MA diff| > 2% or |8MA diff| > 5% or dead cross mismatch → REVISION REQUIRED
+```
+
+**Lessons Learned**:
+- Image-based analysis is structurally fragile (chart format changes are undetectable)
+- "HIGH confidence" from OpenCV only measures technical quality, not value accuracy
+- Independent data source verification is essential at every pipeline stage
+- CSV data provides ground truth that image analysis cannot
+
+---
+
 ## Version Control
 
-- **Project Version**: 1.8
-- **Last Updated**: 2026-01-25
+- **Project Version**: 1.9
+- **Last Updated**: 2026-02-16
 - **Maintenance**: Update this document regularly
 
 ---

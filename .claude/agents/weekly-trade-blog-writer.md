@@ -64,17 +64,27 @@ Cause: Skipped calendar verification
    - Thoroughly read and synthesize each report's findings
    - Identify key themes, trends, and actionable insights across all reports
 
-   **⚠️ CRITICAL: Breadth Analysis Extraction (MANDATORY)**
+   **⚠️ CRITICAL: Breadth Analysis Extraction (MANDATORY -- CSV Data Priority)**
+
+   **Data Source Hierarchy** (Issue #7):
+   1. **CSV Data (PRIMARY)**: Exact numerical values from `us-market-analysis.md` (sourced from fetch_breadth_csv.py)
+   2. **Chart Image**: Visual context only -- do NOT use image-derived values if they differ from CSV
+   3. ~~OpenCV detection~~ → DEPRECATED (unreliable after chart format changes)
+
    From `us-market-analysis.md`, you MUST extract and include in the blog:
-   - **Chart 1 (Breadth 200MA)**: Current percentage and trend evaluation
+   - **Chart 1 (Breadth 200MA)**: Current percentage from CSV data (e.g., "62.26%", NOT "~60%")
+   - **Chart 1 (Breadth 8MA)**: Current percentage from CSV data + dead cross status
    - **Chart 2 (Uptrend Stock Ratio)**:
-     - Current value (e.g., "20-22%")
-     - Color status (**緑/GREEN** or **赤/RED**)
-     - Trend direction (improving/deteriorating/flat)
-     - **Bottom reversal signals** if present (e.g., "20%→30% 底打ち反転")
+     - Current value from CSV data (e.g., "33.03%", NOT "~32-34%")
+     - Color status (**GREEN** or **RED**) from CSV
+     - Trend direction (UP/DOWN) from CSV
+     - Slope value (e.g., "+0.0055")
+     - **Bottom reversal signals** if present (e.g., "RED→GREEN転換")
+
+   **IMPORTANT**: Do NOT use "~" (tilde/approximate) for Breadth values -- CSV provides exact values.
 
    Uptrend Ratio is a **LEADING INDICATOR** (1-2 weeks ahead of Breadth 200MA).
-   Bottom reversals from extreme lows (15-25%) are **bullish signals** that MUST be highlighted.
+   Bottom reversals (RED→GREEN transition) are **bullish signals** that MUST be highlighted.
 
 2. **Review Previous Week's Content**:
    - Access the previous week's blog post from https://monty-trader.com/ OR check blogs/ directory
