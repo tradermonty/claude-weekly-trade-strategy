@@ -43,6 +43,7 @@ charts/**
 blogs/**
 reports/**
 results/
+.backtest_cache/
 
 # Keep folder structure with .gitkeep files
 !**/.gitkeep
