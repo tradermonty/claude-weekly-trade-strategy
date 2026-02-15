@@ -232,6 +232,80 @@ Features:
 - Identification of macro turning points (monetary policy, economic cycles)
 - Clear invalidation conditions for each scenario
 
+### Automated Trading System
+
+The project includes a rule-based automated trading system that executes the blog strategies programmatically.
+
+**Architecture (3-layer):**
+
+| Layer | Role | Description |
+|-------|------|-------------|
+| **Layer 1** | Rule Engine | 15-min interval market checks, trigger detection (no LLM) |
+| **Layer 2** | Claude Agent | Triggered only when Layer 1 detects scenario changes |
+| **Layer 3** | Order Execution | Order validation, generation, and execution via Alpaca API |
+
+**Setup:**
+
+```bash
+python -m venv .venv && source .venv/bin/activate
+pip install -e .
+```
+
+**Environment variables** (`.env`):
+
+```bash
+ALPACA_API_KEY=your_key
+ALPACA_SECRET_KEY=your_secret
+FMP_API_KEY=your_fmp_key
+ANTHROPIC_API_KEY=your_claude_key  # Layer 2 only
+```
+
+**Run:**
+
+```bash
+python -m trading.main --dry-run   # Paper trading mode
+python -m trading.main --live      # Live trading (use with caution)
+```
+
+### Backtest Module
+
+Backtest verification system for validating blog strategy performance against historical data.
+
+**Modes:**
+
+| Mode | Description |
+|------|-------------|
+| Phase A | Weekly rebalance to blog allocation on transition days |
+| Phase B | Rule engine simulation with trigger detection and D+1 execution |
+| `--benchmark` | Compare against SPY B&H, 60/40, Equal-Weight |
+| `--cost-matrix` | Cost sensitivity analysis (4 modes x 5 cost levels) |
+| `--full-robustness` | Complete robustness analysis with report |
+| `--walk-forward` | Statistical significance testing (t-test, rolling windows) |
+
+**Quick start:**
+
+```bash
+source .venv/bin/activate
+
+# Basic run
+python -m trading.backtest --start 2025-11-03 --end 2026-02-14 --phase B
+
+# Walk-forward validation (sub-period consistency + statistical tests)
+python -m trading.backtest --start 2025-11-03 --end 2026-02-14 \
+  --phase B --walk-forward --output results/robustness/
+
+# Full robustness analysis
+python -m trading.backtest --start 2025-11-03 --end 2026-02-14 \
+  --phase B --full-robustness --output results/robustness/
+```
+
+**Walk-forward validation** tests three axes:
+1. **Per-Week Excess** - Weekly win rate and mean excess return vs SPY
+2. **Rolling Windows** - 6-week rolling Sharpe/Return stability
+3. **Statistical Tests** - Paired t-test on daily excess returns (scipy-free, `math.erfc` based)
+
+Verdict: `SIGNIFICANT` (p<0.05 + win>=60%) / `INCONCLUSIVE` / `NOT_SIGNIFICANT`
+
 ### Project Structure
 
 ```
@@ -239,19 +313,31 @@ weekly-trade-strategy/
 │
 ├── charts/                          # Chart images (user-provided)
 │   └── YYYY-MM-DD/
-│       ├── vix.jpeg
-│       ├── 10year_yield.jpeg
-│       └── ...
 │
 ├── reports/                         # Analysis reports (auto-generated)
 │   └── YYYY-MM-DD/
 │       ├── technical-market-analysis.md
 │       ├── us-market-analysis.md
 │       ├── market-news-analysis.md
-│       └── druckenmiller-strategy.md  # (Optional: medium-term strategy)
+│       └── druckenmiller-strategy.md  # (Optional)
 │
 ├── blogs/                           # Final blog posts (auto-generated)
 │   └── YYYY-MM-DD-weekly-strategy.md
+│
+├── trading/                         # Automated trading system
+│   ├── core/                        # Constants, holidays, scheduler
+│   ├── data/                        # SQLite models
+│   ├── layer1/                      # Rule engine (15-min checks)
+│   ├── layer2/                      # Claude agent integration
+│   ├── layer3/                      # Order validation & execution
+│   ├── services/                    # FMP, Alpaca, Email services
+│   ├── backtest/                    # Backtest & walk-forward validation
+│   │   ├── engine.py               # Phase A & B engines
+│   │   ├── walk_forward.py         # Statistical significance testing
+│   │   ├── robustness.py           # Cost sensitivity analysis
+│   │   └── benchmark.py            # SPY B&H, 60/40, Equal-Weight
+│   ├── tests/                       # 380+ tests
+│   └── main.py                      # Entry point (--dry-run / --live)
 │
 ├── .claude/
 │   ├── agents/                      # Claude agent definitions (6 agents)
@@ -642,6 +728,71 @@ reports/2025-11-17/druckenmiller-strategy.mdに保存してください。
 #### ステップ別実行
 
 より詳細な手順は `CLAUDE.md` を参照してください。
+
+### 自動売買システム
+
+ブログ戦略をプログラマティックに実行するルールベースの自動売買システムを含んでいます。
+
+**アーキテクチャ（3層構造）:**
+
+| レイヤー | 役割 | 説明 |
+|---------|------|------|
+| **Layer 1** | ルールエンジン | 15分間隔の市場チェック、トリガー検出（LLM不使用） |
+| **Layer 2** | Claude Agent | Layer 1がシナリオ変化を検出した場合のみ起動 |
+| **Layer 3** | 注文執行 | 注文バリデーション、生成、Alpaca API経由の執行 |
+
+**セットアップ:**
+
+```bash
+python -m venv .venv && source .venv/bin/activate
+pip install -e .
+```
+
+**実行:**
+
+```bash
+python -m trading.main --dry-run   # ペーパートレードモード
+python -m trading.main --live      # ライブトレード（要注意）
+```
+
+### バックテストモジュール
+
+ブログ戦略のパフォーマンスを過去データで検証するバックテストシステム。
+
+**モード:**
+
+| モード | 説明 |
+|--------|------|
+| Phase A | ブログ更新日にアロケーションへリバランス |
+| Phase B | ルールエンジンシミュレーション（トリガー検出 + D+1執行） |
+| `--benchmark` | SPY B&H、60/40、等配分との比較 |
+| `--cost-matrix` | コスト感応度分析（4モード x 5コストレベル） |
+| `--full-robustness` | 完全ロバストネス分析（レポート出力付き） |
+| `--walk-forward` | 統計的有意性テスト（t検定、ローリング窓分析） |
+
+**クイックスタート:**
+
+```bash
+source .venv/bin/activate
+
+# 基本実行
+python -m trading.backtest --start 2025-11-03 --end 2026-02-14 --phase B
+
+# Walk-forward検証（サブ期間一貫性 + 統計検定）
+python -m trading.backtest --start 2025-11-03 --end 2026-02-14 \
+  --phase B --walk-forward --output results/robustness/
+
+# 完全ロバストネス分析
+python -m trading.backtest --start 2025-11-03 --end 2026-02-14 \
+  --phase B --full-robustness --output results/robustness/
+```
+
+**Walk-forward検証**は3つの軸でテスト:
+1. **週次超過リターン** - 対SPY週次勝率・平均超過リターン
+2. **ローリング窓** - 6週ローリングでSharpe/Returnの安定性
+3. **統計検定** - 日次超過リターンの対応t検定（scipy不要、`math.erfc`ベース）
+
+判定: `SIGNIFICANT`（p<0.05 かつ勝率>=60%）/ `INCONCLUSIVE` / `NOT_SIGNIFICANT`
 
 ### プロジェクト構造
 
