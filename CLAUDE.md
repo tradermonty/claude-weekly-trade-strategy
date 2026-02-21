@@ -607,12 +607,12 @@ OpenCV scripts (`detect_breadth_values.py`, `detect_uptrend_ratio.py`) are **DEP
 
 ## Known Issues & Lessons Learned
 
-Issues #1-#7 の対策は各 agent `.md` ファイルに実装済み。ここでは Prevention Rules を集約する。
+Countermeasures for Issues #1-#7 are implemented in each agent `.md` file. This section consolidates the Prevention Rules.
 
 ### Economic Event Date Verification (Issues #1, #2)
 
-Major economic events (FOMC, NFP, ISM PMI, CPI, PCE) は必ず公式ソースで日付を検証する。
-FMP API は祝日前後で不正確。「first Friday」等のルール仮定も禁止。
+Major economic events (FOMC, NFP, ISM PMI, CPI, PCE) must always be verified against official sources.
+FMP API is unreliable around holidays. Assumptions based on rules like "first Friday" are also prohibited.
 
 **Official Sources**:
 | Event | Official Source |
@@ -624,28 +624,28 @@ FMP API は祝日前後で不正確。「first Friday」等のルール仮定も
 | PCE | https://www.bea.gov/news/schedule |
 
 **Rules**:
-- WebSearch で公式ソースを確認し、レポートに URL を含める
-- 前週ブログと矛盾する日付 → REVISION REQUIRED
-- Reviewer は独立して日付を検証する
+- Verify against official sources via WebSearch and include URLs in reports
+- Dates contradicting previous week's blog → REVISION REQUIRED
+- Reviewer must independently verify dates
 
 ### Geopolitical Event Check (Issue #3)
 
-- Tier 1 産油国 (Venezuela, Iran, Libya, Russia, Saudi Arabia) の個別検索を実行
-- "military action breaking news" 検索を必ず実施
-- 重大イベントがレポートに未反映 → REVISION REQUIRED
+- Run individual searches for Tier 1 oil-producing nations (Venezuela, Iran, Libya, Russia, Saudi Arabia)
+- Always run a "military action breaking news" search
+- Significant events missing from reports → REVISION REQUIRED
 
 ### Breadth Data: CSV-First (Issues #4, #5, #7)
 
-OpenCV スクリプト (`detect_breadth_values.py`, `detect_uptrend_ratio.py`) は **DEPRECATED**。
-画像解析はチャートフォーマット変更に脆弱で、致命的な誤検出 (dead cross false positive, 色反転) を引き起こした。
+OpenCV scripts (`detect_breadth_values.py`, `detect_uptrend_ratio.py`) are **DEPRECATED**.
+Image analysis is fragile against chart format changes and caused critical false detections (dead cross false positive, color inversion).
 
-**Current Rule**: `fetch_breadth_csv.py` を PRIMARY として必ず先に実行。CSV 値が全ての画像ベース検出を上書きする。
-- Reviewer は独立して CSV データを取得して検証
+**Current Rule**: Always run `fetch_breadth_csv.py` first as PRIMARY. CSV values override all image-based detections.
+- Reviewer must independently fetch and verify CSV data
 - |200MA diff| > 2% or |8MA diff| > 5% → REVISION REQUIRED
 
 ### US Holiday & Day-of-Week Verification (Issue #6)
 
-日付に曜日を記載する前に必ず `calendar.month()` で検証する。
+Always verify with `calendar.month()` before writing a day of week alongside a date.
 
 **US Market Holidays**:
 | Holiday | Rule |
@@ -659,14 +659,14 @@ OpenCV スクリプト (`detect_breadth_values.py`, `detect_uptrend_ratio.py`) �
 | Christmas | December 25 (observed) |
 | New Year | January 1 (observed) |
 
-**Rule**: 同一文書内で同じ日付に異なる曜日 → REVISION REQUIRED
+**Rule**: Same date with different days of week within the same document → REVISION REQUIRED
 
 ---
 
 ## Version Control
 
 - **Project Version**: 2.0
-- **Last Updated**: 2026-02-14
+- **Last Updated**: 2026-02-21
 - **Maintenance**: Update this document regularly
 
 ---
