@@ -149,6 +149,7 @@ Create the blog post with these sections:
    - Current hedge recommendations (1 line)
    - This week's specific risks (2-3 bullets)
    - Stop loss discipline reminder (1 line)
+   - **Options strikes MUST match underlying instrument scale**: QQQ=$XXX, NDX=XXXXX, GLD=$XXX, GC=$X,XXX. OTM hedges require purpose/expiry notation.
    - **Max length: 15-20 lines**
 
 8. **まとめ** (Summary) - **3-5 SENTENCES ONLY**
@@ -177,6 +178,7 @@ Create the blog post with these sections:
 - Start every section with "what to do" not "what is happening"
 - Specific numbers: "Buy at 6,753", not "look for buying opportunities"
 - Clear triggers: "If VIX > 23, reduce to 45%", not "consider reducing exposure"
+- Trigger definitions MUST include time criteria: "VIX 23超を**終値ベースで2日連続**", NOT "VIX 23超定着"
 
 **PRIORITY 3: SCANNABILITY**
 - Use **bold** for critical numbers and actions
@@ -196,6 +198,14 @@ Create the blog post with these sections:
 - [ ] **Uptrend Ratio included**: Value + color (緑/赤) + bottom reversal signals (if any)
 - [ ] **Actionable**: Every sentence provides specific action or decision
 - [ ] **No redundancy**: No repetitive content across sections
+- [ ] **資産表記統一**: ETF名(GLD/QQQ)にはETFスケール価格、先物表記(GC/NQ)には先物価格。混在禁止
+- [ ] **オプション整合**: ストライクが原資産と同一スケール。桁違い（QQQに24,000等）は絶対NG。OTMヘッジはヘッジ目的・満期を明示
+- [ ] **ベース方針統一**: 3行まとめ・アクション表・配分表・コモディティ表の間で同一ETFの方針が一致
+- [ ] **シナリオ論理**: 各シナリオの前提条件と推奨行動が矛盾しない（Bull「原油反落」→XLE追加は矛盾）
+- [ ] **シナリオ内訳**: シナリオ配分変更はカテゴリ合計+ETF単位内訳を数値明示
+- [ ] **トリガー精度**: 全トリガーに時間基準(終値/ザラ場 × 即時/2日連続)を明記。「定着」「持続」単独使用禁止
+- [ ] **確率根拠**: 確率記載に根拠を付与（裸の「確率X%」禁止→「筆者推定X%（根拠: ...）」）
+- [ ] **ソースURL**: 全外部参照にURL付き。内部レポート参照はデータソースURLに置換
 
 ## Output Requirements
 

@@ -94,6 +94,27 @@ Fix: CSV data is now PRIMARY source; reviewer MUST independently verify
 - [ ] Probabilities are consistent between reports and blog
 - [ ] Higher probability scenarios have more conservative positioning
 
+**2.4 Instrument Notation & Scale Check (Issue #8)**
+- [ ] Verify all price amounts are on correct scale (ETF vs futures) at every occurrence
+  - GLD → $XXX range, GC → $X,XXX range
+  - QQQ → $XXX range, NDX → XXXXX range
+- [ ] Options strike price scale verification
+  - Strike fundamentally wrong scale (e.g., QQQ at 24,000) → **REVISION REQUIRED**
+  - >±20% OTM → acceptable if hedge purpose, expiry, and IV are stated; otherwise flag
+- [ ] Base policy consistency check (across 3-line summary, action table, allocation table, commodity tactics table)
+  - Same ETF with contradictory policies across these sections → **REVISION REQUIRED**
+- [ ] Scenario conditional action logic check (within scenarios, condition-based changes are OK)
+  - Premise and recommended action contradict → **REVISION REQUIRED**
+  - Example: Bull "crude oil pullback" premise → XLE addition is contradiction
+- [ ] Scenario allocation has ETF-level numerical breakdown (not just category totals)
+
+**2.5 Trigger Precision & Attribution Check (Issue #8)**
+- [ ] All triggers have time criteria (closing/intraday × immediate/2-day consecutive) specified
+  - Search for ambiguous words: "定着", "持続", "超" → flag if no time definition
+- [ ] Probability statements have basis attached (search for bare "確率X%")
+- [ ] All external sources include URLs (media name alone is insufficient)
+- [ ] Sources section has no remaining internal report references
+
 ### Phase 3: Qualitative Review
 
 **3.1 Signal Interpretation**
@@ -416,29 +437,45 @@ Generate a review report with the following structure:
 
 ## Execution Instructions
 
-When invoked:
+### Single Round Mode (legacy compatible)
+When strategy-reviewer is invoked standalone, execute the full checklist once.
 
-1. **Read ALL source materials**:
-   - All chart images in `charts/YYYY-MM-DD/`
-   - All reports in `reports/YYYY-MM-DD/`
-   - The blog post in `blogs/YYYY-MM-DD-weekly-strategy.md`
-   - Previous week's blog for continuity
+### Iterative Mode (3 rounds, recommended)
+When called by orchestrator as "iterative QA":
 
-2. **Use breadth-chart-analyst skill** to re-verify breadth chart readings:
-   ```
-   Skill(breadth-chart-analyst)
-   ```
-   This is CRITICAL - the most common error is misreading or missing Uptrend Ratio signals.
+**Round 1 (Full Review)**:
+1. Read ALL source materials (charts, reports, blog, previous week's blog)
+2. Use breadth-chart-analyst skill to re-verify breadth readings
+3. Complete ALL checklist items (Phase 1-4)
+4. Generate review report: `Round: 1/3`, findings with severity
+5. Verdict: PASS → end, otherwise → return findings for fix
 
-3. **Complete ALL checklist items** - do not skip any
+**Round 2 (Delta + Invariants + Regressions)**:
+1. Read previous round's findings and the updated blog
+2. Verify each previous finding is fixed
+3. **Full invariant check (mandatory every round)**:
+   - [ ] 4-pillar allocation total = 100% (all scenarios)
+   - [ ] Scenario probability total = 100%
+   - [ ] $100K portfolio example = matches allocation %
+   - [ ] VIX/10Y/Breadth trigger levels match standard values
+   - [ ] Asset notation scale consistency across all instances
+4. Check for NEW issues introduced by fixes (regressions)
+5. Generate review report: `Round: 2/3`, fixed/remaining/new findings
+6. Verdict: PASS → end, otherwise → return findings for fix
 
-4. **Generate review report** saved to:
-   `reports/YYYY-MM-DD/strategy-review.md`
+**Round 3 (Final Full Review)**:
+1. Read ALL source materials again
+2. Complete ALL checklist items (Phase 1-4) — full review
+3. Generate final review report: `Round: 3/3`
+4. **Final Verdict**:
+   - PASS: All findings resolved
+   - PASS WITH NOTES: No High severity, only Medium/Low remaining
+   - REVISION REQUIRED: High severity remaining (human review required)
 
-5. **Provide clear verdict**:
-   - **PASS**: Blog is ready to publish
-   - **PASS WITH NOTES**: Minor issues, can publish with awareness
-   - **REVISION REQUIRED**: Critical issues must be fixed before publishing
+**Review Report Additional Fields**:
+- `Review Round: N/3`
+- `Previous Round Findings Fixed: X/Y`
+- `New Findings This Round: Z`
 
 ## Common Errors to Watch For
 
@@ -457,6 +494,20 @@ Based on historical issues, pay special attention to:
    - **Root cause**: Not cross-checking with previous week's blog or Fed official calendar
    - **Fix**: ALWAYS verify FOMC dates against (1) previous week's blog and (2) federalreserve.gov
    - **Detection**: If previous blog says "12/10 FOMC終了" and current says different date → REVISION REQUIRED
+7. **ETF/Futures Scale Mixing** (Issue #8):
+   - Bad: "Gold(GLD) $5,080" → GLD is ~$508, $5,080 is gold futures (GC) scale
+   - Bad: "QQQ put 24,000" → QQQ is ~$510, 24,000 is NDX scale
+   - Fix: Verify instrument name and price scale match at every occurrence
+8. **Intra-Article Policy Contradiction** (Issue #8):
+   - Base policy contradiction: Opening "XLE maintain" → Mid-article "XLE increase 5%→6%" (REVISION REQUIRED)
+   - Scenario logic contradiction: Bull Case "crude oil pullback" premise → "XLE addition" (REVISION REQUIRED)
+   - Note: Different actions across scenarios is normal. Only base policy inconsistency is an error
+   - Fix: Search all base policy sections for each ETF and verify consistency + check scenario premise vs action logic
+9. **Trigger/Probability/Source Deficiencies** (Issue #8):
+   - Bad: "VIX 23超定着" → 定着=30 min? 2 days? Closing?
+   - Bad: "Probability 40%" → Based on what?
+   - Bad: "CNN/Reuters" → No URL
+   - Fix: All triggers need time criteria, all probabilities need basis, all sources need URLs
 
 ## Quality Standards
 

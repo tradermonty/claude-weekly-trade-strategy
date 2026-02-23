@@ -254,7 +254,7 @@ Follow these rules to maintain the established "Monty Style" in blog posts:
      **Note**: The following is for experienced options traders. Part-time traders should use ETF hedges above.
 
      - VIX call: Buy 25 strike before 11/20 earnings (cost 1-2%)
-     - QQQ put: 24,000 strike (NVIDIA downside hedge, 12/20 expiry)
+     - QQQ put: $490 strike (NVIDIA downside hedge, current ~$510, 12/20 expiry)
      ```
    - Reason: Most part-time traders are inexperienced with options. Main strategy should be complete with ETFs.
 
@@ -302,13 +302,113 @@ Follow these rules to maintain the established "Monty Style" in blog posts:
       - Risk Management section: "**ATR 1.6x** (-6-8%) immediate stop loss. **NVIDIA earnings week reduced to 1.2x** (-5-6%)"
     - Reason: Lighter reading, details can be confirmed in Risk Management section.
 
+12. **Asset Name and Price Scale Consistency**
+    - When using futures prices → use futures notation (GC, NQ, CL)
+    - When using ETF names → use ETF-scale prices
+    - Combined notation: "Gold Futures(GC)/ETF: GLD | GC $5,080"
+    - Bad: "Gold(GLD) $5,080" → GLD≈$508, $5,080 is GC scale
+    - Good: "Gold Futures(GC) $5,080 (ETF: GLD≈$508)"
+    - Reason: Mixing ETF names with futures prices causes reader confusion and incorrect trade sizing.
+
+13. **Options Strike Price Scale Verification**
+    | Instrument | ETF Scale | Index/Futures Scale |
+    |------------|-----------|---------------------|
+    | QQQ / NDX | $XXX range | XXXXX range |
+    | GLD / GC | $XXX range | $X,XXX range |
+    | SPY / SPX | $XXX range | X,XXX range |
+    - Default warning: Strike >±20% from underlying current price → requires confirmation
+    - Exception allowed: If hedge purpose, expiry, and IV are explicitly stated, >±20% OTM is acceptable
+      Example: "QQQ put $450 (current $510, -12% OTM, insurance purpose, 3/20 expiry, IV 25%)" → OK
+    - Bad: "QQQ put 24,000" → QQQ≈$510, 24,000 is NDX (fundamentally different scale → REVISION REQUIRED)
+    - Good: "QQQ put $490 (current ~$510, -4%)"
+    - Reason: Wrong-scale strikes lead to impossible trades and destroy reader trust.
+
+14. **Intra-Article Consistency Check (Base Policy vs Scenario Actions)**
+    - **Base Policy Consistency** (must be unified across these sections):
+      - 3-line summary, This Week's Action table, Sector Allocation table, Commodity/Sector Tactics table
+      - Same ETF having contradictory policies (increase/maintain/decrease) across these → REVISION REQUIRED
+        Bad: This Week's Action "XLE maintain" → Commodity Tactics "XLE increase 5%→6%"
+    - **Scenario Conditional Actions** (changes per scenario are normal):
+      - Within Scenario Plans (Bull/Bear/Tail Risk), increases/decreases based on conditions are OK
+      - However, **logical consistency between premise and recommended action** is mandatory:
+        Bad: Bull Case "crude oil pullback" premise → XLE addition (contradicts premise)
+        Good: Bull Case "crude oil pullback" premise → XLE reduction → shift to copper
+    - **Scenario Allocation Detail**:
+      - Show not just category totals but ETF-level numerical breakdown
+        Bad: "Theme 16%→18% (+2%)" (breakdown unknown)
+        Good: "Theme 16%→18% (GLD 10% maintain, XLE 4% reduce, COPX 4% new)"
+    - Reason: Part-time traders execute from a single article; contradictions cause wrong trades.
+
+15. **Trigger Time Criteria, Probability Basis, Source Attribution**
+    - **Trigger Time Criteria**:
+      - All triggers must specify "closing/intraday" × "immediate/2-day consecutive/weekly close"
+        - Panic-level (VIX 26+): "Intraday, immediate action"
+        - Stress-level (VIX 23+): "Closing basis, 2-day consecutive"
+        - Normal: "Closing basis confirmation"
+      - Bad: "VIX 23超定着"
+      - Good: "VIX 23超を終値ベースで2日連続"
+    - **Probability Basis**:
+      - Bare "probability 40%" is prohibited
+      - Format: "Author estimate X% (basis: news frequency/market consensus/historical)"
+    - **Source Attribution**:
+      - All external references must include URLs (media name alone is insufficient)
+      - Internal report references → replace with actual data source URLs (TraderMonty CSV, TradingView, etc.)
+    - Reason: Vague triggers cause hesitation; unsourced claims undermine credibility.
+
 ---
 
-### Step 5 (Required): Strategy Review - Quality Assurance
+### Step 5 (Required): Iterative Quality Assurance — 3-Round Review
 
-**Purpose**: Conduct quality assurance review from third-party perspective, detect data misreading, logical contradictions, signal omissions
+**Purpose**: Ensure quality through up to 3 review→auto-fix cycles before human review
 
-**Agent**: `strategy-reviewer`
+**Agent**: `strategy-reviewer` (review) + orchestrator (fix)
+
+**Process**:
+
+```
+Round 1: strategy-reviewer → findings list
+  ├── PASS → Done (Step 5 complete)
+  └── findings exist → auto-fix → Round 2
+
+Round 2: strategy-reviewer (verify previous findings + full invariant check + regression detection)
+  ├── PASS → Done
+  └── findings exist → auto-fix → Round 3
+
+Round 3: strategy-reviewer (final full check)
+  ├── PASS → Done
+  ├── PASS WITH NOTES → OK to publish (with notes)
+  └── REVISION REQUIRED → Human review required (High severity remaining)
+```
+
+**Review Scope by Round**:
+
+| Round | Review Scope | Fix Agent |
+|-------|-------------|-----------|
+| Round 1 | Full checklist (complete review) | Auto-fix |
+| Round 2 | Previous findings verification + **full invariant check** + regression detection | Auto-fix |
+| Round 3 | Remaining findings + **full checklist (complete review)** | — |
+
+**Invariant Checks (mandatory full check every round)**:
+- 4-pillar allocation total = 100% (all scenarios)
+- Scenario probability total = 100%
+- $100K portfolio example = matches allocation %
+- VIX/10Y/Breadth trigger levels match standard values
+- Asset notation scale consistency across all instances
+
+**Final Verdict Criteria**:
+- **PASS**: All findings resolved
+- **PASS WITH NOTES**: No High severity, only Medium/Low remaining
+- **REVISION REQUIRED**: High severity remaining (human review required)
+
+**Example Command (3-round batch)**:
+```
+Please run iterative QA (up to 3 rounds) for the blog of 2026-02-23.
+
+Round 1: Full review of blogs/2026-02-23-weekly-strategy.md with strategy-reviewer.
+If findings exist, fix them and run Round 2 (verify fixes + invariants + regressions).
+If Round 2 has findings, fix and run Round 3 (final full review).
+Save final review to reports/2026-02-23/strategy-review.md with round count.
+```
 
 **Input**:
 - All chart images in `charts/YYYY-MM-DD/` (**re-reading required**)
@@ -321,25 +421,15 @@ Follow these rules to maintain the established "Monty Style" in blog posts:
 **Output**:
 - `reports/YYYY-MM-DD/strategy-review.md`
 
-**Example Command**:
-```
-Please review the blog post for the week of 2025-12-01 using the strategy-reviewer agent.
-Re-read the charts in charts/2025-12-01/,
-verify the quality of blogs/2025-12-01-weekly-strategy.md.
-Save review results to reports/2025-12-01/strategy-review.md.
-```
-
 **Review Content**:
 - **Data Verification**: Re-read chart images, compare with blog values
 - **Uptrend Ratio Confirmation**: Check for missed bottom reversal signals (most important)
 - **Allocation Calculation Check**: Verify 4 pillars total 100%
 - **Scenario Consistency**: Check probabilities and stance match between reports
 - **Continuity Check**: Verify ±10-15% gradual adjustment from previous week
-
-**Judgment Results**:
-- **PASS**: OK to publish
-- **PASS WITH NOTES**: Minor issues, OK to publish with awareness
-- **REVISION REQUIRED**: Corrections required, do not publish
+- **Instrument Notation**: ETF/futures scale consistency (Issue #8)
+- **Trigger Precision**: Time criteria, probability basis, source URLs (Issue #8)
+- **Intra-Article Consistency**: Base policy vs scenario actions (Issue #8)
 
 **Important**: This step is **required**. Always run before publishing blog post.
 The Uptrend Ratio oversight issue can be detected by this review.
@@ -661,11 +751,27 @@ Always verify with `calendar.month()` before writing a day of week alongside a d
 
 **Rule**: Same date with different days of week within the same document → REVISION REQUIRED
 
+### Instrument Notation & Execution Precision (Issue #8)
+
+2026-02-23: 6件の品質問題を手動レビューで検出（strategy-reviewerが見逃し）。
+
+| # | 問題 | Prevention Rule |
+|---|------|----------------|
+| 1 | ETF名+先物価格の混在 | Monty Style Rule 12 |
+| 2 | オプションストライクの桁不整合 | Rule 13 |
+| 3 | 同一記事内でETF方針矛盾 | Rule 14 |
+| 4 | トリガー時間定義なし | Rule 15 |
+| 5 | 確率根拠なし | Rule 15 |
+| 6 | ソースURL不足 | Rule 15 |
+
+**Root Cause**: strategy-reviewerのチェックリストにこれらの観点がなかった。
+**Fix**: チェックリスト追加 + 3回イテレーティブレビューで検出率向上。
+
 ---
 
 ## Version Control
 
-- **Project Version**: 2.0
+- **Project Version**: 2.1
 - **Last Updated**: 2026-02-21
 - **Maintenance**: Update this document regularly
 

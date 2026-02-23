@@ -148,8 +148,17 @@ def generate_robustness_report(
     """Generate the final robustness assessment report as Markdown."""
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
+    # Use B-transition as canonical period; fall back to any available result.
+    reference_result = (
+        strategy_results.get("B-transition")
+        or next(iter(strategy_results.values()), None)
+        or (cost_matrix_results[0]["result"] if cost_matrix_results else None)
+    )
+
     # Determine judgment
-    judgment = _determine_judgment(strategy_results, benchmark_results, breakeven)
+    judgment = _determine_judgment(
+        strategy_results, benchmark_results, breakeven, reference_result,
+    )
 
     lines: list[str] = []
 
@@ -247,8 +256,16 @@ def generate_robustness_report(
     # 7. Data Limitation
     lines.append("## 7. Data Limitation")
     lines.append("")
-    lines.append("- Backtest period: ~15 weeks (statistically limited)")
-    lines.append("- No out-of-sample validation (insufficient data for split)")
+    if reference_result:
+        weeks = len(reference_result.weekly_performance)
+        lines.append(
+            f"- Backtest period: {reference_result.start_date} to "
+            f"{reference_result.end_date} ({weeks} weeks, "
+            f"{reference_result.trading_days} trading days)"
+        )
+        if reference_result.trading_days < 252:
+            lines.append("- Sample length is short; statistical power is limited")
+    lines.append("- No true out-of-sample validation (forward data still needed)")
     lines.append("- Results may not generalize to different market regimes")
     lines.append("- Transaction costs are estimated (actual may vary by time of day, liquidity)")
     lines.append("")
@@ -261,6 +278,7 @@ def _determine_judgment(
     strategy_results: dict[str, BacktestResult],
     benchmark_results: dict[str, BacktestResult],
     breakeven: dict,
+    reference_result: BacktestResult | None = None,
 ) -> dict:
     """Determine Adopt/Conditional/Reject verdict."""
     b_trans = strategy_results.get("B-transition")
@@ -296,7 +314,9 @@ def _determine_judgment(
         elif spy:
             weaknesses.append("Larger max drawdown than SPY")
 
-    weaknesses.append("Limited backtest period (~15 weeks)")
+    if reference_result and reference_result.trading_days < 252:
+        weeks = len(reference_result.weekly_performance)
+        weaknesses.append(f"Limited backtest period (~{weeks} weeks)")
 
     # Verdict
     if b_trans and all([
