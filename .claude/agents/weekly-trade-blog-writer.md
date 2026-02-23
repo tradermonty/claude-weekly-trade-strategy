@@ -112,6 +112,12 @@ Create the blog post with these sections:
 
 2. **今週のアクション** (This Week's Actions) - **ACTION-FIRST APPROACH**
    - **ロット管理**: Current trigger status (Risk-On/Base/Caution/Stress) + recommended position size
+     - Table format: `| カテゴリ | 前週 | 今週 | 変化 | 実行タイミング | 根拠 |`
+     - **実行タイミング**: 各配分変更の推奨実行タイミングを明記
+       - **月曜寄り**: イベント非依存のベース調整（例: VIX改善に基づく現金→コア振替）
+       - **〇曜〇〇後**: 特定イベント結果を確認後に実行（例: "水曜NVIDIA後"）
+       - **トリガー時**: シナリオ発動条件を満たした時点で即実行
+       - **段階的**: 週を通じて分割実行（大きな変更の場合）
    - **今週の売買レベル**: ONE TABLE with key indices, buy levels, sell levels, stop loss
    - **セクター配分**: ONE TABLE with recommended allocation percentages
      - **CRITICAL RULE**: Changes from previous week must be **GRADUAL (±10-15% max)**
@@ -206,6 +212,7 @@ Create the blog post with these sections:
 - [ ] **トリガー精度**: 全トリガーに時間基準(終値/ザラ場 × 即時/2日連続)を明記。「定着」「持続」単独使用禁止
 - [ ] **確率根拠**: 確率記載に根拠を付与（裸の「確率X%」禁止→「筆者推定X%（根拠: ...）」）
 - [ ] **ソースURL**: 全外部参照にURL付き。内部レポート参照はデータソースURLに置換
+- [ ] **実行タイミング**: ロット管理テーブルの全行に実行タイミング（月曜寄り/〇曜イベント後/トリガー時/段階的）が記載されている
 
 ## Output Requirements
 

@@ -355,6 +355,17 @@ Follow these rules to maintain the established "Monty Style" in blog posts:
       - Internal report references → replace with actual data source URLs (TraderMonty CSV, TradingView, etc.)
     - Reason: Vague triggers cause hesitation; unsourced claims undermine credibility.
 
+16. **配分変更に実行タイミングを明記**
+    - ロット管理テーブルの各行に「いつ実行するか」を記載
+    - Bad: 根拠のみ記載、タイミングは読者の判断任せ
+    - Good:
+      | カテゴリ | 前週 | 今週 | 変化 | 実行タイミング | 根拠 |
+      |---------|------|------|------|-------------|------|
+      | コア指数 | 34% | 38% | +4% | 月曜寄り | VIX改善でSPY追加 |
+      | テーマ | 14% | 16% | +2% | 月曜寄り | 米イラン緊張でGLD増 |
+    - タイミング種別: 「月曜寄り」「〇曜イベント後」「トリガー時」「段階的」
+    - Reason: 兼業トレーダーは「何を」だけでなく「いつ」が分からないと実行できない
+
 ---
 
 ### Step 5 (Required): Iterative Quality Assurance — 3-Round Review
