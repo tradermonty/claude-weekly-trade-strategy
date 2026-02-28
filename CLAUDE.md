@@ -778,6 +778,24 @@ Always verify with `calendar.month()` before writing a day of week alongside a d
 **Root Cause**: strategy-reviewerのチェックリストにこれらの観点がなかった。
 **Fix**: チェックリスト追加 + 3回イテレーティブレビューで検出率向上。
 
+### VIX Data Source Priority (Issue #9)
+
+2026-02-23~27: VIX closing values were consistently reported 1 day late (e.g., reported 18.63 as 2/27 close, actual was 19.86; 18.63 was the 2/26 close).
+
+**Root Cause**: FRED (VIXCLS) updates with a 1-business-day lag, causing the previous day's value to be picked up as the current day's close. WebSearch results frequently return FRED-sourced data.
+
+**Data Source Priority**:
+| Priority | Source | Note |
+|----------|--------|------|
+| 1 (PRIMARY) | **TradingView** (`CBOE:VIX`) | User-verifiable, real-time |
+| 2 | **Cboe official** (`cboe.com/tradable-products/vix/`) | Shows Prev Close + Spot |
+| 3 (DEPRECATED) | ~~FRED (VIXCLS)~~ | **Prohibited for same-day data**. 1-day update lag |
+
+**Rules**:
+- Always cite data source when reporting VIX values (e.g., "VIX 19.86 (TradingView 2/27 close)")
+- When VIX values come from WebSearch, verify source URL; if FRED-sourced, note potential 1-day lag
+- User-confirmed TradingView values always take highest priority
+
 ---
 
 ## Version Control
