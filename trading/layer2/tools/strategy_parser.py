@@ -100,6 +100,9 @@ _DEFAULT_CATEGORY_ETF_MAP: dict[str, dict[str, float]] = {
     "現金・短期債": {"BIL": 1.0},
 }
 
+_SECTOR_ALLOCATION_SECTION_KEYWORD = "セクター配分"
+_TRADING_LEVELS_SECTION_KEYWORD = "売買レベル"
+
 
 def _midpoint(lo: float, hi_str: Optional[str]) -> float:
     """Return midpoint if hi_str given, otherwise just lo."""
@@ -121,14 +124,19 @@ def _parse_sector_allocation(text: str) -> dict[str, float]:
     """
     alloc: dict[str, float] = {}
 
-    for m in _ETF_SYMBOLS.finditer(text):
+    # Parse from the dedicated allocation section first so scenario blocks
+    # (which can contain ETF percentages) do not overwrite current allocation.
+    section = _extract_section(text, _SECTOR_ALLOCATION_SECTION_KEYWORD)
+    parse_source = section if section else text
+
+    for m in _ETF_SYMBOLS.finditer(parse_source):
         symbol = m.group(1)
         pct = _midpoint(float(m.group(2)), m.group(3))
-        # Keep the last occurrence (the セクター配分 table comes after ロット管理)
+        # Keep the last occurrence inside the allocation section.
         alloc[symbol] = pct
 
     # Cash row: assign to BIL
-    cash_matches = list(_CASH_ROW.finditer(text))
+    cash_matches = list(_CASH_ROW.finditer(parse_source))
     if cash_matches:
         last = cash_matches[-1]
         alloc["BIL"] = _midpoint(float(last.group(1)), last.group(2))
@@ -136,7 +144,11 @@ def _parse_sector_allocation(text: str) -> dict[str, float]:
     # Fix 3: Fallback to category-level parsing when ETF-level is insufficient
     total = sum(alloc.values())
     if total < 50:
-        cat_alloc = _parse_category_table(text)
+        cat_alloc = _parse_category_table(parse_source)
+        # Backward-compatibility fallback for older formats where the heading
+        # might be missing but category rows still exist elsewhere in the text.
+        if not cat_alloc and parse_source is not text:
+            cat_alloc = _parse_category_table(text)
         if cat_alloc:
             alloc = _distribute_categories_to_etfs(cat_alloc)
 
@@ -450,15 +462,6 @@ def _normalize_scenario_name(raw: str) -> str:
 
 # --- Trading levels -------------------------------------------------------
 
-_TRADING_LEVEL_ROW = re.compile(
-    r"\|\s*\*?\*?"
-    r"(?P<name>S&P\s*500|Nasdaq\s*100|ダウ|Gold|Oil\s*\(WTI\))"
-    r"\*?\*?\s*\|\s*"
-    r"(?P<buy>[0-9,.$]+)\s*(?:（[^）]*）)?\s*\|\s*"
-    r"(?P<sell>[0-9,.$]+)\s*(?:（[^）]*）)?\s*\|\s*"
-    r"(?P<stop>[0-9,.$]+)"
-)
-
 _INDEX_NAME_MAP = {
     "s&p 500": "sp500",
     "s&p500": "sp500",
@@ -470,24 +473,82 @@ _INDEX_NAME_MAP = {
     "oil(wti)": "oil",
 }
 
+_MARKDOWN_TABLE_LINE = re.compile(r"^\|.*\|$")
+_TABLE_SEPARATOR_CELL = re.compile(r"^:?-{3,}:?$")
+_NUMBER_TOKEN = re.compile(r"\$?\d[\d,]*(?:\.\d+)?")
+
+
+def _split_markdown_row(line: str) -> list[str]:
+    """Split a markdown table row into cells."""
+    row = line.strip()
+    if not _MARKDOWN_TABLE_LINE.match(row):
+        return []
+    return [cell.strip() for cell in row.strip("|").split("|")]
+
+
+def _is_table_separator(cells: list[str]) -> bool:
+    """Return True if a row is a markdown separator like |---|:---:|."""
+    if not cells:
+        return False
+    return all(_TABLE_SEPARATOR_CELL.match(c.replace(" ", "")) for c in cells)
+
+
+def _normalize_trading_level_name(raw: str) -> Optional[str]:
+    """Normalize a trading-level row label to StrategySpec index keys."""
+    cleaned = re.sub(r"\*+", "", raw).strip()
+    lowered = cleaned.lower()
+
+    if "s&p" in lowered:
+        return "sp500"
+    if "nasdaq" in lowered:
+        return "nasdaq"
+    if "ダウ" in cleaned or "dow" in lowered:
+        return "dow"
+    if "gold" in lowered or "金" in cleaned:
+        return "gold"
+    if "oil" in lowered or "wti" in lowered or "原油" in cleaned:
+        return "oil"
+    return _INDEX_NAME_MAP.get(lowered)
+
+
+def _parse_first_number_token(s: str) -> Optional[float]:
+    """Parse the first numeric token from a table cell."""
+    m = _NUMBER_TOKEN.search(s)
+    if not m:
+        return None
+    return _parse_number(m.group(0))
+
 
 def _parse_trading_levels(text: str) -> dict[str, TradingLevel]:
     """Parse the 今週の売買レベル table."""
-    # Limit search to the trading levels section to avoid matching
+    # Limit parsing to the trading levels section to avoid matching
     # the マーケット状況 table which has a different column layout.
-    section = _extract_section(text, "売買レベル")
+    section = _extract_section(text, _TRADING_LEVELS_SECTION_KEYWORD)
     if not section:
         section = text
 
     levels: dict[str, TradingLevel] = {}
-    for m in _TRADING_LEVEL_ROW.finditer(section):
-        raw_name = m.group("name").strip().lower()
-        key = _INDEX_NAME_MAP.get(raw_name, raw_name)
-        levels[key] = TradingLevel(
-            buy_level=_parse_number(m.group("buy")),
-            sell_level=_parse_number(m.group("sell")),
-            stop_loss=_parse_number(m.group("stop")),
+    for line in section.splitlines():
+        cells = _split_markdown_row(line)
+        if len(cells) < 4:
+            continue
+        if _is_table_separator(cells):
+            continue
+
+        key = _normalize_trading_level_name(cells[0])
+        if not key:
+            continue
+
+        level = TradingLevel(
+            buy_level=_parse_first_number_token(cells[1]),
+            sell_level=_parse_first_number_token(cells[2]),
+            stop_loss=_parse_first_number_token(cells[3]),
         )
+
+        # Require at least one parsed number to avoid accidental empty rows.
+        if level.buy_level is None and level.sell_level is None and level.stop_loss is None:
+            continue
+        levels[key] = level
     return levels
 
 

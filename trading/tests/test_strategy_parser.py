@@ -128,6 +128,41 @@ class TestCurrentAllocation:
         """BIL (cash) should be 28% per the sample blog."""
         assert spec.current_allocation["BIL"] == 28.0
 
+    def test_sector_allocation_section_is_prioritized_over_scenarios(self) -> None:
+        """Scenario ETF percentages must not overwrite current allocation values."""
+        from trading.layer2.tools.strategy_parser import _parse_sector_allocation
+
+        text = """
+### セクター配分（4本柱）
+| カテゴリ | 配分 | 具体的ETF/銘柄 |
+|---------|------|---------------|
+| **コア指数** | 38% | SPY 24%、QQQ 6%、DIA 8% |
+| **防御セクター** | 22% | XLV 12%、XLP 10% |
+| **テーマ/ヘッジ** | 16% | GLD 10%、XLE 6% |
+| **現金・短期債** | 24% | BIL、MMF |
+
+### シナリオ別プラン
+### Bull Case: テスト (20%)
+**アクション（合計100%）**:
+- コア: 38% → **42%**
+- 防御: 22% → **20%**
+- テーマ: 16% → **18%**（内訳: GLD 10%、XLE 4%、COPX 4%）
+- 現金: 24% → **20%**
+"""
+        alloc = _parse_sector_allocation(text)
+        assert alloc["SPY"] == pytest.approx(24.0, abs=0.1)
+        assert alloc["XLE"] == pytest.approx(6.0, abs=0.1)
+        assert alloc["BIL"] == pytest.approx(24.0, abs=0.1)
+
+    def test_real_blog_keeps_sector_table_xle_value(self) -> None:
+        """Real blog: XLE should come from セクター配分 table, not scenario sub-lines."""
+        blog_path = Path(__file__).parent.parent.parent / "blogs" / "2026-02-23-weekly-strategy.md"
+        if not blog_path.exists():
+            pytest.skip("Blog file not available")
+        parsed = parse_blog(blog_path)
+        assert parsed.current_allocation["XLE"] == pytest.approx(6.0, abs=0.1)
+        assert parsed.current_allocation["BIL"] == pytest.approx(24.0, abs=0.1)
+
 
 # ---------------------------------------------------------------------------
 # Scenarios
@@ -256,6 +291,32 @@ class TestTradingLevels:
             assert level.buy_level is not None, f"{name} missing buy_level"
             assert level.sell_level is not None, f"{name} missing sell_level"
             assert level.stop_loss is not None, f"{name} missing stop_loss"
+
+    def test_arrow_sell_level_and_futures_gold_label(self) -> None:
+        """Parser should accept arrow sell levels and 金先物(GC) row names."""
+        from trading.layer2.tools.strategy_parser import _parse_trading_levels
+
+        text = """
+### 今週の売買レベル
+| 指数 | 買いレベル | 売りレベル | ストップロス |
+|------|-----------|-----------|-------------|
+| **S&P 500** | 6,771（20週MA） | 7,018（ATH） | 6,685（50週MA） |
+| **Nasdaq 100** | 24,270（20週MA） | 25,067（直近抵抗）→26,233（ATH） | 23,758（50週MA） |
+| **金先物(GC)** | $4,900（短期サポート） | $5,155（上値レジスタンス）→$5,300（拡張） | $4,634（20週MA） |
+| **Oil (WTI)** | $61.22（水平サポート） | $67.16（抵抗）→$70.74（50週MA） | $55（長期サポート） |
+"""
+        levels = _parse_trading_levels(text)
+        assert levels["nasdaq"].buy_level == pytest.approx(24270.0, abs=1.0)
+        assert levels["nasdaq"].sell_level == pytest.approx(25067.0, abs=1.0)
+        assert levels["nasdaq"].stop_loss == pytest.approx(23758.0, abs=1.0)
+
+        assert levels["gold"].buy_level == pytest.approx(4900.0, abs=1.0)
+        assert levels["gold"].sell_level == pytest.approx(5155.0, abs=1.0)
+        assert levels["gold"].stop_loss == pytest.approx(4634.0, abs=1.0)
+
+        assert levels["oil"].buy_level == pytest.approx(61.22, abs=0.01)
+        assert levels["oil"].sell_level == pytest.approx(67.16, abs=0.01)
+        assert levels["oil"].stop_loss == pytest.approx(55.0, abs=0.01)
 
 
 # ---------------------------------------------------------------------------
