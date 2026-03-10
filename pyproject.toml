@@ -8,6 +8,8 @@ dependencies = [
     "anthropic>=0.40",
     "apscheduler>=3.10,<4.0",
     "aiosqlite>=0.20",
+    "markdown>=3.5",
+    "python-dotenv>=1.0",
     "pytz",
 ]
 
@@ -26,5 +28,5 @@ build-backend = "setuptools.build_meta"
 include = ["trading*"]
 
 [tool.pytest.ini_options]
-testpaths = ["trading/tests"]
+testpaths = ["trading/tests", "scripts/tests"]
 asyncio_mode = "auto"

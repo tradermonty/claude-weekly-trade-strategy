@@ -51,8 +51,10 @@ log "Working directory: $(pwd)"
 
 # --- Load .env if exists ---
 if [ -f "$PROJECT_ROOT/.env" ]; then
-    # shellcheck disable=SC2046
-    export $(grep -v '^#' "$PROJECT_ROOT/.env" | grep '=' | xargs)
+    set -a
+    # shellcheck disable=SC1091
+    source "$PROJECT_ROOT/.env"
+    set +a
     log "Loaded .env"
 fi
 
@@ -122,6 +124,10 @@ fi
 
 if [ -f "$EXPECTED" ]; then
     log "Output created: $EXPECTED"
+
+    # --- Send email notification (non-blocking) ---
+    log "Sending email notification..."
+    $PYTHON "$PROJECT_ROOT/scripts/send_dap_email.py" "$EXPECTED" 2>&1 | tee -a "$LOG_FILE" || true
 else
     log "WARNING: Expected output not found: $EXPECTED"
 fi
