@@ -144,13 +144,13 @@ def is_dead_cross(breadth_8ma: float, breadth_200ma: float) -> bool:
 
 
 def uptrend_color(trend: Optional[str]) -> str:
-    """Convert trend string to color: up -> GREEN, down -> RED."""
+    """Convert trend string to color: up/1 -> GREEN, down/-1 -> RED."""
     if trend is None:
         return "UNKNOWN"
     t = trend.strip().lower()
-    if t in ("up", "uptrend"):
+    if t in ("up", "uptrend", "1"):
         return "GREEN"
-    elif t in ("down", "downtrend"):
+    elif t in ("down", "downtrend", "-1"):
         return "RED"
     return "UNKNOWN"
 
@@ -178,11 +178,20 @@ def fetch_breadth_data(url: str = BREADTH_CSV_URL) -> list:
             results.append(
                 BreadthData(
                     date=row.get("Date", "").strip(),
-                    sp500_price=_float_or_none(row.get("SP500_Price")),
+                    sp500_price=_float_or_none(
+                        row.get("S&P500_Price") or row.get("SP500_Price")
+                    ),
                     breadth_raw=_float_or_none(row.get("Breadth_Index_Raw")),
-                    breadth_200ma=_float_or_none(row.get("Breadth_200MA")),
-                    breadth_8ma=_float_or_none(row.get("Breadth_8MA")),
-                    trend=row.get("Trend", "").strip() or None,
+                    breadth_200ma=_float_or_none(
+                        row.get("Breadth_Index_200MA") or row.get("Breadth_200MA")
+                    ),
+                    breadth_8ma=_float_or_none(
+                        row.get("Breadth_Index_8MA") or row.get("Breadth_8MA")
+                    ),
+                    trend=(
+                        row.get("Breadth_200MA_Trend", "")
+                        or row.get("Trend", "")
+                    ).strip() or None,
                 )
             )
         except (ValueError, KeyError):

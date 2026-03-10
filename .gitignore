@@ -37,6 +37,7 @@ uv.lock
 # Temporary files
 *.tmp
 *.log
+/logs/
 
 # Generated content - ignore files but keep folder structure
 charts/**

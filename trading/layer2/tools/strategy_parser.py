@@ -43,6 +43,7 @@ def parse_blog(blog_path: str | Path) -> StrategySpec:
         breadth_200ma=_parse_breadth_200ma(text),
         uptrend_ratio=_parse_uptrend_ratio(text),
         bubble_score=_parse_bubble_score(text),
+        phase=_parse_phase(text),
         pre_event_dates=_parse_pre_event_dates(text, blog_date),
     )
 
@@ -62,8 +63,13 @@ def _extract_date_from_filename(filename: str) -> str:
 # --- Sector allocation ---------------------------------------------------
 
 # Fix 2: Support range format (e.g. "SPY 25-30%") — use midpoint
+_VALID_ETFS = frozenset({
+    "SPY", "QQQ", "DIA", "XLV", "XLP", "GLD", "XLE",
+    "BIL", "TLT", "URA", "SH", "SDS", "IWM", "COPX",
+})
+
 _ETF_SYMBOLS = re.compile(
-    r"(SPY|QQQ|DIA|XLV|XLP|GLD|XLE|BIL|TLT|URA|SH|SDS)\s*"
+    r"(SPY|QQQ|DIA|XLV|XLP|GLD|XLE|BIL|TLT|URA|SH|SDS|IWM|COPX)\s*"
     r"(\d+(?:\.\d+)?)"
     r"(?:\s*-\s*(\d+(?:\.\d+)?))?"
     r"\s*%"
@@ -111,13 +117,36 @@ def _midpoint(lo: float, hi_str: Optional[str]) -> float:
     return lo
 
 
+def _parse_pipe_allocation_table(section: str) -> dict[str, float]:
+    """Parse ``| セクター | ETF | 配分(%) | ... |`` pipe table format.
+
+    Handles the latest blog format where each row has a separate ETF column:
+        | コア | SPY | 12% | -2% | 縮小維持 |
+        | 現金 | BIL/Cash | 42% | +5% | 積み増し |
+    """
+    alloc: dict[str, float] = {}
+    for line in section.splitlines():
+        cells = _split_markdown_row(line)
+        if len(cells) < 3 or _is_table_separator(cells):
+            continue
+        # Column 2 (index 1): ETF name — handle "BIL/Cash" → "BIL", strip bold
+        etf_raw = re.sub(r"\*+", "", cells[1]).strip().split("/")[0].strip().upper()
+        if etf_raw not in _VALID_ETFS:
+            continue
+        # Column 3 (index 2): percentage
+        pct_m = re.search(r"(\d+(?:\.\d+)?)\s*%", cells[2])
+        if pct_m:
+            alloc[etf_raw] = float(pct_m.group(1))
+    return alloc
+
+
 def _parse_sector_allocation(text: str) -> dict[str, float]:
     """Parse the セクター配分 table for individual ETF percentages.
 
-    Looks for a table with rows like:
-        | コア指数 | 34% | SPY 22%、QQQ 4%、DIA 8% |
-    and the cash row:
-        | 現金・短期債 | 28% | BIL、MMF |
+    Supports multiple table formats:
+      - Pipe table with ETF column: ``| コア | SPY | 12% | ...``
+      - Inline ETF: ``SPY 22%、QQQ 4%``
+      - Category-level fallback for early blogs
 
     Falls back to category-level parsing for early blogs that lack
     individual ETF percentages.
@@ -129,17 +158,22 @@ def _parse_sector_allocation(text: str) -> dict[str, float]:
     section = _extract_section(text, _SECTOR_ALLOCATION_SECTION_KEYWORD)
     parse_source = section if section else text
 
-    for m in _ETF_SYMBOLS.finditer(parse_source):
-        symbol = m.group(1)
-        pct = _midpoint(float(m.group(2)), m.group(3))
-        # Keep the last occurrence inside the allocation section.
-        alloc[symbol] = pct
+    # 1. Try pipe table format first (latest blogs: | セクター | ETF | 配分 |)
+    alloc = _parse_pipe_allocation_table(parse_source)
 
-    # Cash row: assign to BIL
-    cash_matches = list(_CASH_ROW.finditer(parse_source))
-    if cash_matches:
-        last = cash_matches[-1]
-        alloc["BIL"] = _midpoint(float(last.group(1)), last.group(2))
+    # 2. If insufficient, fall back to inline ETF regex
+    if sum(alloc.values()) < 50:
+        for m in _ETF_SYMBOLS.finditer(parse_source):
+            symbol = m.group(1)
+            pct = _midpoint(float(m.group(2)), m.group(3))
+            alloc[symbol] = pct
+
+    # Cash row: assign to BIL (only if not already parsed from pipe table)
+    if "BIL" not in alloc or alloc.get("BIL", 0) == 0:
+        cash_matches = list(_CASH_ROW.finditer(parse_source))
+        if cash_matches:
+            last = cash_matches[-1]
+            alloc["BIL"] = _midpoint(float(last.group(1)), last.group(2))
 
     # Fix 3: Fallback to category-level parsing when ETF-level is insufficient
     total = sum(alloc.values())
@@ -238,20 +272,117 @@ _BEAR_KEYWORDS = frozenset({
 })
 
 
+_SCENARIO_HEADER_D = re.compile(
+    r"###\s+シナリオ\d+[（(]\s*(.+?)\s*[）)][：:]\s*"
+    r".+?--\s*筆者推定\s*(\d+)\s*%",
+)
+
+# Inline ETF detail in scenario blocks:
+# "SPY 12%→20%" → 20, "QQQ 2%(復帰)" → 2, "DIA 8%維持" → 8
+_SCENARIO_ETF_INLINE = re.compile(
+    r"(" + "|".join(_VALID_ETFS) + r")"
+    r"\s+"
+    r"(?:\d+(?:\.\d+)?%?\s*→\s*)?"   # optional: current% →
+    r"(\d+(?:\.\d+)?)\s*%"           # target percentage
+)
+
+
+def _normalize_scenario_name_d(raw: str) -> str:
+    """Map Format D parenthetical name to standard name."""
+    lowered = raw.lower().strip()
+    if lowered == "base":
+        return "base"
+    if lowered == "bull":
+        return "bull"
+    if "bear" in lowered and "tail" in lowered:
+        return "bear"  # combined scenario
+    if "bear" in lowered:
+        return "bear"
+    if "tail" in lowered:
+        return "tail_risk"
+    return lowered.replace(" ", "_")
+
+
+def _parse_scenario_cash_pct(text: str) -> Optional[float]:
+    """Extract cash percentage from scenario action line.
+
+    Handles:
+      - "現金 42%→**47%**" → 47  (take target after arrow)
+      - "現金 **42%**"      → 42  (no arrow, take the value)
+    """
+    for line in text.splitlines():
+        if "現金" not in line:
+            continue
+        # Prefer value after → (target)
+        arrow_m = re.search(r"→\s*\*?\*?\s*(\d+(?:\.\d+)?)\s*%", line)
+        if arrow_m:
+            return float(arrow_m.group(1))
+        # No arrow — take first percentage after 現金
+        plain_m = re.search(r"現金.*?(\d+(?:\.\d+)?)\s*%", line)
+        if plain_m:
+            return float(plain_m.group(1))
+    return None
+
+
+def _parse_scenario_etf_detail(block: str) -> dict[str, float]:
+    """Extract explicit ETF percentages from scenario action lines."""
+    etf_alloc: dict[str, float] = {}
+    action_section = block.split("**アクション")[1] if "**アクション" in block else block
+    for m in _SCENARIO_ETF_INLINE.finditer(action_section):
+        etf_alloc[m.group(1)] = float(m.group(2))
+    # Map "現金 X%" to BIL if BIL not already found
+    if "BIL" not in etf_alloc:
+        cash_pct = _parse_scenario_cash_pct(action_section)
+        if cash_pct is not None:
+            etf_alloc["BIL"] = cash_pct
+    return etf_alloc
+
+
 def _parse_scenarios(text: str) -> dict[str, ScenarioSpec]:
     """Parse the シナリオ別プラン section.
 
-    Supports three header formats:
+    Supports four header formats:
       A) ### Base Case: desc (55%)            — 2026-01-12 onwards
       B) ### シナリオA) Base Case: desc (55%)  — 2025-11-24 to 2026-01-05
       C) ### シナリオA）Japanese desc（確率：45%） — 2025-11-03 to 2025-11-17
+      D) ### シナリオ1（Base）: desc -- 筆者推定45% — 2026-03-09 onwards
     """
     scenarios: dict[str, ScenarioSpec] = {}
 
     current = _parse_sector_allocation(text)
     etf_ratios = _build_etf_ratios(current)
 
-    # Try EN headers first (Format A and B)
+    # Try Format D first (latest blogs: シナリオ1（Base）... 筆者推定45%)
+    headers_d = list(_SCENARIO_HEADER_D.finditer(text))
+    if headers_d:
+        for idx, header_match in enumerate(headers_d):
+            raw_name = header_match.group(1)
+            probability = int(header_match.group(2))
+            name = _normalize_scenario_name_d(raw_name)
+
+            start = header_match.end()
+            end = headers_d[idx + 1].start() if idx + 1 < len(headers_d) else len(text)
+            block = text[start:end]
+
+            triggers = _parse_trigger_list(block)
+
+            # ETF detail extraction takes priority over category distribution
+            etf_detail = _parse_scenario_etf_detail(block)
+            if sum(etf_detail.values()) >= 90:
+                alloc = etf_detail
+            else:
+                cat_alloc = _parse_category_allocation(block)
+                alloc = _distribute_to_etfs(cat_alloc, etf_ratios) if cat_alloc else dict(current)
+                # Overlay explicit ETF details
+                alloc.update(etf_detail)
+
+            scenarios[name] = ScenarioSpec(
+                name=name, probability=probability,
+                triggers=triggers, allocation=alloc,
+            )
+        return scenarios
+
+    # Try EN headers (Format A and B)
     headers_en = list(_SCENARIO_HEADER_EN.finditer(text))
     if headers_en:
         for idx, header_match in enumerate(headers_en):
@@ -264,8 +395,15 @@ def _parse_scenarios(text: str) -> dict[str, ScenarioSpec]:
             block = text[start:end]
 
             triggers = _parse_trigger_list(block)
-            cat_alloc = _parse_category_allocation(block)
-            alloc = _distribute_to_etfs(cat_alloc, etf_ratios) if cat_alloc else dict(current)
+
+            # ETF detail extraction takes priority
+            etf_detail = _parse_scenario_etf_detail(block)
+            if sum(etf_detail.values()) >= 90:
+                alloc = etf_detail
+            else:
+                cat_alloc = _parse_category_allocation(block)
+                alloc = _distribute_to_etfs(cat_alloc, etf_ratios) if cat_alloc else dict(current)
+                alloc.update(etf_detail)
 
             scenarios[name] = ScenarioSpec(
                 name=name, probability=probability,
@@ -414,9 +552,9 @@ def _build_etf_ratios(current: dict[str, float]) -> dict[str, dict[str, float]]:
     returns e.g. {"core": {"SPY": 0.647, "QQQ": 0.118, "DIA": 0.235}, ...}
     """
     categories: dict[str, list[str]] = {
-        "core": ["SPY", "QQQ", "DIA"],
+        "core": ["SPY", "QQQ", "DIA", "IWM"],
         "defensive": ["XLV", "XLP"],
-        "theme": ["GLD", "XLE", "URA", "TLT"],
+        "theme": ["GLD", "XLE", "URA", "TLT", "COPX"],
         "cash": ["BIL"],
     }
 
@@ -704,6 +842,21 @@ def _parse_pre_event_dates(text: str, blog_date: str = "") -> list[str]:
 # ---------------------------------------------------------------------------
 # Utilities
 # ---------------------------------------------------------------------------
+
+_PHASE_PATTERN = re.compile(
+    r"現在フェーズ\*?\*?\s*[:：]\s*\*?\*?\s*(.+?)(?:\s*--|[\*\n])"
+)
+
+
+def _parse_phase(text: str) -> Optional[str]:
+    """Parse market phase from '現在フェーズ: **Stress（危機）継続**' etc."""
+    m = _PHASE_PATTERN.search(text)
+    if not m:
+        return None
+    raw = re.sub(r"\*+", "", m.group(1)).strip()
+    word_m = re.match(r"(\w+)", raw)
+    return word_m.group(1) if word_m else raw
+
 
 def _parse_number(s: str) -> Optional[float]:
     """Parse a number string like '6,771', '$5,046.3', '4.050%' into a float."""

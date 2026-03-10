@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.weekly-trade-strategy.pre-market</string>
+    <key>ProgramArguments</key>
+    <array>
+        <string>/Users/takueisaotome/PycharmProjects/weekly-trade-strategy/scripts/run_daily_action_plan.sh</string>
+        <string>pre-market</string>
+    </array>
+    <key>WorkingDirectory</key>
+    <string>/Users/takueisaotome/PycharmProjects/weekly-trade-strategy</string>
+    <key>StartCalendarInterval</key>
+    <dict>
+        <!-- 6:13 AM PT = 9:13 AM ET (weekdays only) -->
+        <key>Hour</key>
+        <integer>6</integer>
+        <key>Minute</key>
+        <integer>13</integer>
+    </dict>
+    <key>StandardOutPath</key>
+    <string>/Users/takueisaotome/PycharmProjects/weekly-trade-strategy/logs/launchd-pre-market.log</string>
+    <key>StandardErrorPath</key>
+    <string>/Users/takueisaotome/PycharmProjects/weekly-trade-strategy/logs/launchd-pre-market.err</string>
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>PATH</key>
+        <string>/Users/takueisaotome/.local/bin:/usr/local/bin:/usr/bin:/bin</string>
+        <key>HOME</key>
+        <string>/Users/takueisaotome</string>
+    </dict>
+</dict>
+</plist>

@@ -701,8 +701,9 @@ OpenCV scripts (`detect_breadth_values.py`, `detect_uptrend_ratio.py`) are **DEP
 ### Checklist
 
 1. Run `fetch_breadth_csv.py` → record 200MA, 8MA, Uptrend Ratio values
-2. Compare with thresholds above
-3. Verify values are consistent across `us-market-analysis.md`, blog, `strategy-review.md`
+2. Run `scripts/fetch_market_close.py --compact` → record VIX, indices, commodities, ETFs, Treasury yields
+3. Compare with thresholds above
+4. Verify values are consistent across `us-market-analysis.md`, blog, `strategy-review.md`
 
 ---
 
@@ -764,19 +765,19 @@ Always verify with `calendar.month()` before writing a day of week alongside a d
 
 ### Instrument Notation & Execution Precision (Issue #8)
 
-2026-02-23: 6件の品質問題を手動レビューで検出（strategy-reviewerが見逃し）。
+2026-02-23: 6 quality issues detected by manual review (strategy-reviewer missed them).
 
-| # | 問題 | Prevention Rule |
-|---|------|----------------|
-| 1 | ETF名+先物価格の混在 | Monty Style Rule 12 |
-| 2 | オプションストライクの桁不整合 | Rule 13 |
-| 3 | 同一記事内でETF方針矛盾 | Rule 14 |
-| 4 | トリガー時間定義なし | Rule 15 |
-| 5 | 確率根拠なし | Rule 15 |
-| 6 | ソースURL不足 | Rule 15 |
+| # | Issue | Prevention Rule |
+|---|-------|----------------|
+| 1 | Mixed ETF names with futures prices | Monty Style Rule 12 |
+| 2 | Options strike price scale mismatch | Rule 13 |
+| 3 | Contradictory ETF policies within same article | Rule 14 |
+| 4 | Missing trigger time criteria | Rule 15 |
+| 5 | Missing probability basis | Rule 15 |
+| 6 | Missing source URLs | Rule 15 |
 
-**Root Cause**: strategy-reviewerのチェックリストにこれらの観点がなかった。
-**Fix**: チェックリスト追加 + 3回イテレーティブレビューで検出率向上。
+**Root Cause**: strategy-reviewer's checklist lacked these verification items.
+**Fix**: Added checklist items + 3-round iterative review to improve detection rate.
 
 ### VIX Data Source Priority (Issue #9)
 
@@ -787,21 +788,68 @@ Always verify with `calendar.month()` before writing a day of week alongside a d
 **Data Source Priority**:
 | Priority | Source | Note |
 |----------|--------|------|
+| 0 (MANDATORY) | **FMP API** (`scripts/fetch_market_close.py`) | **Must run first**. See Issue #10 |
 | 1 (PRIMARY) | **TradingView** (`CBOE:VIX`) | User-verifiable, real-time |
 | 2 | **Cboe official** (`cboe.com/tradable-products/vix/`) | Shows Prev Close + Spot |
 | 3 (DEPRECATED) | ~~FRED (VIXCLS)~~ | **Prohibited for same-day data**. 1-day update lag |
+| 4 (DEPRECATED) | ~~WebSearch~~ | **Prohibited as primary source for prices**. See Issue #10 |
 
 **Rules**:
+- **Must run `scripts/fetch_market_close.py` before reporting any market prices** (Issue #10)
 - Always cite data source when reporting VIX values (e.g., "VIX 19.86 (TradingView 2/27 close)")
 - When VIX values come from WebSearch, verify source URL; if FRED-sourced, note potential 1-day lag
 - User-confirmed TradingView values always take highest priority
+- FMP WTI (CLUSD) is spot/CFD price; futures settle price may differ → note when divergence is significant
+
+### Market Price Data: FMP API-First (Issue #10)
+
+2026-03-09: WebSearch-based price retrieval repeatedly produced incorrect values. VIX close, WTI close, and Gold close were all inaccurate, requiring manual correction by the user every time.
+
+**Root Cause**: WebSearch returns mixed sources (FRED, Yahoo, Reuters, etc.) without distinguishing settle price vs close vs after-hours vs previous day's value. VIX was particularly affected by FRED's 1-day lag, while WTI suffered from settle vs spot vs futures confusion.
+
+**Fix**: Created `scripts/fetch_market_close.py` to fetch all indicators from FMP API in a single call.
+
+**Script Usage**:
+```bash
+# Quick check after market close (key indicators only)
+python3 scripts/fetch_market_close.py --compact
+
+# Full detail (includes Day High/Low, Prev Close)
+python3 scripts/fetch_market_close.py
+
+# JSON output (for programmatic use)
+python3 scripts/fetch_market_close.py --json
+```
+
+**Available Data**:
+| Category | Symbols |
+|----------|---------|
+| Indices/Vol | VIX, S&P 500, Nasdaq 100, Dow Jones |
+| Commodities | WTI Oil, Gold, Copper, Nat Gas |
+| ETFs | SPY, QQQ, DIA, GLD, XLE, XLV, XLP, BIL, TLT, URA |
+| Treasury | 3M, 2Y, 5Y, 10Y, 30Y |
+
+**Rules**:
+- **Must run `fetch_market_close.py` first when creating daily action plans or any market analysis**
+- Using WebSearch to retrieve price data is **prohibited** (WebSearch is OK for news/events)
+- If FMP values and user-confirmed values diverge, user-confirmed values take priority
+- FMP WTI (CLUSD) is spot/CFD price; futures settle price may differ — note when divergence is significant
+- Output includes Day High/Low and Previous Close, useful for confirming intraday price action
+
+**Verification (2026-03-09)**:
+| Indicator | FMP API | Cboe/User | Match |
+|-----------|---------|-----------|-------|
+| VIX | 25.50 | 25.50 (Cboe) | ✓ exact |
+| S&P 500 | 6,794.34 | 6,795.99 | ✓ ~equal |
+| Dow | 47,740.79 | 47,740.80 | ✓ exact |
+| WTI | 83.67 (spot) | 87 (user) | △ spot vs futures |
 
 ---
 
 ## Version Control
 
-- **Project Version**: 2.1
-- **Last Updated**: 2026-02-21
+- **Project Version**: 2.2
+- **Last Updated**: 2026-03-09
 - **Maintenance**: Update this document regularly
 
 ---

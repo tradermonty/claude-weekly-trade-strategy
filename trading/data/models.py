@@ -114,6 +114,7 @@ class StrategySpec:
     uptrend_ratio: Optional[float] = None
     bubble_score: Optional[int] = None
     bubble_max: int = 15
+    phase: Optional[str] = None       # "Stress", "Base", "Caution" etc.
     pre_event_dates: list[str] = field(default_factory=list)
 
     def get_scenario_allocation(self, scenario_name: str) -> dict[str, float]:
