@@ -125,6 +125,8 @@ Create the blog post with these sections:
      - Cash allocation changes should be incremental: 10% → 15-20% → 25-30%, NOT 10% → 35%
      - If market is at all-time highs with Base/Risk-On triggers, avoid drastic position cuts
    - **重要イベント**: ONE TABLE with date, event, market impact (top 5-7 events only)
+     - **High Impact決算にはIRリンク必須**: 各銘柄行に `[IR](https://investors.xxx.com/)` をインラインで付与
+     - 複数銘柄を同一行で並記する場合、各ティッカーにIR URLが必要。付けられない場合は行を分割
    - **Max length: 60-80 lines**
 
 3. **シナリオ別プラン** (Scenario-Based Plans) - **2-3 SCENARIOS ONLY**
@@ -146,9 +148,10 @@ Create the blog post with these sections:
 
 6. **兼業運用ガイド** (Part-Time Trading Guide) - **CHECKLIST FORMAT**
    - **朝チェック** (Morning, 3-5 bullets)
-   - **夜チェック** (Evening, 3-5 bullets)
+   - **夜・早朝チェック — JST基準** (Evening/Early morning, 3-6 bullets)
+     - 全イベントにJST時刻を明記（公式発表時刻をpython3で変換して確認）
    - **今週の注意点** (This week's cautions, 2-3 bullets)
-   - **Max length: 20-30 lines**
+   - **Max length: 25-35 lines**
 
 7. **リスク管理** (Risk Management) - **THIS WEEK ONLY**
    - Current position size limits (1 line)
@@ -164,6 +167,11 @@ Create the blog post with these sections:
    - Risk reminder (1 sentence)
    - Encouraging closing (1-2 sentences)
    - **Max length: 10-15 lines**
+
+9. **Sources** - 記事末尾に必ず付与
+   - 本文中で参照した外部ソースURL一覧（公式経済カレンダー、決算IR、データソース等）
+   - High Impact決算のIRリンクは本文イベント表のインラインと**この末尾Sourcesの両方**に記載
+   - **Max length: 5-15 lines**
 
 **SECTIONS TO ELIMINATE**:
 - ❌ Long "Last Week's Review" (integrate key lessons into action sections)
@@ -213,6 +221,15 @@ Create the blog post with these sections:
 - [ ] **確率根拠**: 確率記載に根拠を付与（裸の「確率X%」禁止→「筆者推定X%（根拠: ...）」）
 - [ ] **ソースURL**: 全外部参照にURL付き。内部レポート参照はデータソースURLに置換
 - [ ] **実行タイミング**: ロット管理テーブルの全行に実行タイミング（月曜寄り/〇曜イベント後/トリガー時/段階的）が記載されている
+- [ ] **JST時差変換**: 夜・早朝チェックの全イベントにJST時刻を記載。
+  - 公式発表時刻を確認し、python3 `zoneinfo`で変換を検算（手動offset禁止）:
+    `python3 -c "from datetime import datetime; from zoneinfo import ZoneInfo; dt=datetime(YYYY,M,D,HH,MM,tzinfo=ZoneInfo('America/New_York')); print(dt.astimezone(ZoneInfo('Asia/Tokyo')))"`
+  - DST境界（3月・11月）と分単位時刻（8:30 ET等）を正確に処理するため、zoneinfo必須
+  - 典型例（参考のみ、必ず公式時刻から変換）: AMC≈翌日5:00 JST, FOMC≈翌日3:00 JST, 経済指標(8:30ET)≈21:30 JST
+- [ ] **Fed公式カレンダー照合**: パウエル講演・Fed理事講演など非FOMCのFedイベントは以下の両方で検証。未検証イベントは記載禁止:
+    (1) `https://www.federalreserve.gov/newsevents/YYYY-month.htm`（月次カレンダー）
+    (2) `https://www.federalreserve.gov/newsevents/speech/YYYY-speeches.htm`（講演一覧）
+- [ ] **決算IRリンク**: High Impact決算に公式IRリンクを付与（イベント表インライン + Sources末尾の両方）。**複数銘柄を同一行で並記する場合も、各ティッカーごとにIR URLが必要。満たせない場合は行を分割する**
 
 ## Output Requirements
 

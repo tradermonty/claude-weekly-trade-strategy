@@ -366,6 +366,25 @@ Follow these rules to maintain the established "Monty Style" in blog posts:
     - タイミング種別: 「月曜寄り」「〇曜イベント後」「トリガー時」「段階的」
     - Reason: 兼業トレーダーは「何を」だけでなく「いつ」が分からないと実行できない
 
+17. **夜・早朝チェックはJST基準で記述**
+    - 兼業運用ガイドの「夜・早朝チェック」セクションでは、全イベントにJST時刻を明記
+    - 公式発表時刻を確認し、python3 `zoneinfo`で変換を検算（手動offset禁止）:
+      ```bash
+      python3 -c "from datetime import datetime; from zoneinfo import ZoneInfo; dt=datetime(YYYY,M,D,HH,MM,tzinfo=ZoneInfo('America/New_York')); print(dt.astimezone(ZoneInfo('Asia/Tokyo')))"
+      ```
+    - DST境界（3月・11月）と分単位時刻（8:30 ET等）を正確に処理するため、zoneinfo必須
+    - 典型例（参考のみ、必ず公式時刻から変換）: AMC≈翌日5:00 JST, FOMC≈翌日3:00 JST, 経済指標(8:30ET)≈21:30 JST
+    - Bad: "夜チェック: FOMC結果確認（ET 14:00）" → JST読者は「いつ？」となる
+    - Good: "夜チェック: FOMC結果確認（**3/20(木) 3:00 JST** = ET 14:00）"
+    - Reason: 日本在住の兼業トレーダーはJST基準で生活している。ET表記のみだと誤誘導になる
+
+18. **決算IRリンク必須**
+    - High Impact決算には公式IRリンクを付与（イベント表インライン + Sources末尾の両方）
+    - **複数銘柄を同一行で並記する場合も、各ティッカーごとにIR URLが必要。満たせない場合は行を分割する**
+    - Bad: "3/19 BABA BMO / ACN BMO / FDX AMC" → IRリンクなし、どれがどの時間帯かも不明
+    - Good: 各銘柄を独立行にし、各行に `[IR](https://investors.xxx.com/)` を付与
+    - Reason: 決算日付をアクション前提にする場合、公式IRページで裏取りしないと日付・BMO/AMC間違いのリスクがある
+
 ---
 
 ### Step 5 (Required): Iterative Quality Assurance — 3-Round Review
@@ -441,6 +460,9 @@ Save final review to reports/2026-02-23/strategy-review.md with round count.
 - **Instrument Notation**: ETF/futures scale consistency (Issue #8)
 - **Trigger Precision**: Time criteria, probability basis, source URLs (Issue #8)
 - **Intra-Article Consistency**: Base policy vs scenario actions (Issue #8)
+- **JST Timezone Conversion**: 夜・早朝チェックの全イベントにJST時刻が記載されているか (Known Issues: JST Timezone)
+- **Fed Event Verification**: 非FOMC Fedイベントが公式カレンダーで裏取りされているか (Known Issues: Fed Event Verification)
+- **Earnings IR Links**: High Impact決算に公式IRリンクが付与されているか (Known Issues: Earnings IR URLs)
 
 **Important**: This step is **required**. Always run before publishing blog post.
 The Uptrend Ratio oversight issue can be detected by this review.
@@ -640,7 +662,9 @@ reports/YYYY-MM-DD/
 - **Skills**: market-news-analyst, economic-calendar-fetcher, earnings-calendar
 - **Analysis Targets**: Past 10 days news, Next 7 days events
 - **Output Format**: Markdown, Event scenarios
-- **Critical**: FOMC/CPI/PCE dates MUST be WebSearch verified (see Known Issues #1)
+- **Critical**: Economic event dates MUST be WebSearch verified (Known Issues: Date Verification)
+- **Critical**: Non-FOMC Fed events MUST be verified against both `https://www.federalreserve.gov/newsevents/YYYY-month.htm` and `https://www.federalreserve.gov/newsevents/speech/YYYY-speeches.htm` (Known Issues: Fed Event Verification)
+- **Critical**: High Impact earnings MUST include IR links with BMO/AMC verification (Known Issues: Earnings IR URLs)
 
 ### weekly-trade-blog-writer
 - **Input**: Above 3 reports + Previous week's blog
@@ -652,9 +676,9 @@ reports/YYYY-MM-DD/
 - **Role**: Third-party quality assurance review
 - **Input**: All chart images (re-read), All reports, Blog post, Previous week's blog
 - **Output Format**: Markdown, PASS/PASS WITH NOTES/REVISION REQUIRED judgment
-- **Verification Items**: Data accuracy, Uptrend Ratio confirmation, Allocation calculation, Scenario consistency, Continuity, **Economic event dates (see Known Issues #1)**
+- **Verification Items**: Data accuracy, Uptrend Ratio confirmation, Allocation calculation, Scenario consistency, Continuity, **Economic event dates (Known Issues: Date Verification)**, **JST timezone conversion (Known Issues: JST Timezone)**, **Fed event verification (Known Issues: Fed Event Verification)**, **Earnings IR links (Known Issues: Earnings IR URLs)**
 - **Important**: **Must run** before publishing blog. Uptrend Ratio oversight can be detected by this review
-- **Critical**: MUST cross-check FOMC dates with previous week's blog AND Fed official calendar
+- **Critical**: MUST cross-check FOMC dates with previous week's blog AND Fed official calendar. Non-FOMC Fed events must be verified against both `https://www.federalreserve.gov/newsevents/YYYY-month.htm` and `https://www.federalreserve.gov/newsevents/speech/YYYY-speeches.htm`.
 
 ### druckenmiller-strategy-planner (Optional)
 - **Skills**: stanley-druckenmiller-investment
@@ -709,7 +733,7 @@ OpenCV scripts (`detect_breadth_values.py`, `detect_uptrend_ratio.py`) are **DEP
 
 ## Known Issues & Lessons Learned
 
-Countermeasures for Issues #1-#7 are implemented in each agent `.md` file. This section consolidates the Prevention Rules.
+Countermeasures for Issues #1-#13 are implemented in each agent `.md` file. This section consolidates the Prevention Rules.
 
 ### Economic Event Date Verification (Issues #1, #2)
 
@@ -844,12 +868,54 @@ python3 scripts/fetch_market_close.py --json
 | Dow | 47,740.79 | 47,740.80 | ✓ exact |
 | WTI | 83.67 (spot) | 87 (user) | △ spot vs futures |
 
+### JST Timezone in Actionable Sections (Issue #11)
+
+2026-03-16: 夜チェックセクションがET日付のみで記載され、JST読者が「いつ確認すべきか」を誤認するリスクが発覚。
+
+**Root Cause**: weekly-trade-blog-writerの出力テンプレにJST変換指示がなく、ET時刻のみで生成。日本在住の兼業トレーダーはJST基準で生活しているため、ET表記だけでは行動タイミングを間違える。
+
+**Rules**:
+- 夜・早朝チェックの全イベントにJST時刻を明記（Monty Style Rule 17）
+- 変換は`zoneinfo`ベース（手動offset禁止）: DST境界・分単位時刻の正確な処理のため
+- 典型例はあくまで参考。必ず公式発表時刻からpython3で変換して検算
+- Reviewer: JST時刻が欠落しているイベントがあれば → REVISION REQUIRED
+
+### Fed Event Verification (Issue #12)
+
+2026-03-16: パウエル講演がブログに記載されていたが、公式カレンダーで裏取りできなかった。
+
+**Root Cause**: FOMCは`fomccalendars.htm`で検証するルールがあったが、非FOMC Fedイベント（講演、証言等）の検証ルールが未整備だった。
+
+**Official Sources for Non-FOMC Fed Events**:
+| Source | URL | Content |
+|--------|-----|---------|
+| Monthly Calendar | `https://www.federalreserve.gov/newsevents/YYYY-month.htm` | 月次イベント一覧 |
+| Speeches | `https://www.federalreserve.gov/newsevents/speech/YYYY-speeches.htm` | 講演一覧 |
+
+**Rules**:
+- パウエル講演・Fed理事講演など非FOMCのFedイベントは、上記**両方**で検証必須
+- 未検証のFedイベントはブログに記載禁止
+- market-news-analyzerが上流で検証し、strategy-reviewerが独立検証する二重チェック体制
+- Reviewer: 未検証Fedイベントを検出 → REVISION REQUIRED
+
+### Earnings IR URLs (Issue #13)
+
+2026-03-16: High Impact決算のIRリンクが欠落し、決算日付・BMO/AMC情報の正確性が検証不能だった。
+
+**Root Cause**: market-news-analyzerの出力テンプレにIRリンク要件がなく、weekly-trade-blog-writerも補完しなかった。決算日付をアクション前提にする場合、公式IRページで裏取りしないと日付・タイミング間違いのリスクがある。
+
+**Rules**:
+- High Impact決算には公式IRリンク必須（イベント表インライン + Sources末尾の両方）（Monty Style Rule 18）
+- **複数銘柄を同一行で並記する場合、各ティッカーにIR URLが必要。付けられない場合は行を分割**
+- market-news-analyzerが上流でIRリンクを付与し、downstream（writer/reviewer）での再調査を不要にする
+- Reviewer: High Impact決算にIRリンクが欠落 → REVISION REQUIRED
+
 ---
 
 ## Version Control
 
-- **Project Version**: 2.2
-- **Last Updated**: 2026-03-09
+- **Project Version**: 2.3
+- **Last Updated**: 2026-03-14
 - **Maintenance**: Update this document regularly
 
 ---

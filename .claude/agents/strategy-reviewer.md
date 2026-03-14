@@ -108,6 +108,15 @@ Fix: CSV data is now PRIMARY source; reviewer MUST independently verify
   - Example: Bull "crude oil pullback" premise → XLE addition is contradiction
 - [ ] Scenario allocation has ETF-level numerical breakdown (not just category totals)
 
+**2.4b Earnings IR Source Verification (Known Issues: Earnings IR URLs)**
+- [ ] All "High Impact" earnings in the event table have inline IR links
+- [ ] IR links are valid URLs pointing to official investor relations pages
+- [ ] IR links also appear in the Sources section at the bottom of the blog
+- [ ] **Per-ticker completeness**: 複数銘柄を同一行で並記している場合、各ティッカーにIR URLが付いているか確認
+  - 一部ティッカーのみIR付き（例: "BABA BMO / ACN BMO / FDX AMC" で FDX IRのみ）→ **REVISION REQUIRED**
+  - 全ティッカーにIR付き、または各銘柄が独立行 → PASS
+- [ ] No earnings action items reference dates without official IR verification
+
 **2.5 Trigger Precision & Attribution Check (Issue #8)**
 - [ ] All triggers have time criteria (closing/intraday × immediate/2-day consecutive) specified
   - Search for ambiguous words: "定着", "持続", "超" → flag if no time definition
@@ -172,7 +181,11 @@ Fix: CSV data is now PRIMARY source; reviewer MUST independently verify
 2. **WebFetch or WebSearch** to verify the URL/date is correct
 3. **Compare with previous week's blog** - dates must be consistent
 4. **Check for holiday adjustments** - especially around New Year, Thanksgiving
-5. **If ANY discrepancy → REVISION REQUIRED**
+5. **Non-FOMC Fed events** (speeches, testimony): Verify against BOTH:
+   - `https://www.federalreserve.gov/newsevents/YYYY-month.htm` (monthly calendar)
+   - `https://www.federalreserve.gov/newsevents/speech/YYYY-speeches.htm` (speech listing)
+   - If event NOT found on either → **REVISION REQUIRED**
+6. **If ANY discrepancy → REVISION REQUIRED**
 
 ### Known Error Patterns
 
@@ -351,6 +364,35 @@ If the blog contains:
 - "1/XX（月）" and "1/XX（火）" for the same XX → **REVISION REQUIRED**
 - Holiday date that doesn't match rule calculation → **REVISION REQUIRED**
 
+**4.8 JST Timezone Conversion Verification (MANDATORY - Added Issue #11)**
+
+⚠️ **This check was added after evening check section used ET dates only, misleading JST readers (2026-03-16)**
+
+### Verification Steps (MANDATORY)
+
+1. **Locate "夜・早朝チェック" or "夜チェック" section in the blog**
+2. **For each event listed**:
+   - [ ] JST time is explicitly stated (not just ET)
+   - [ ] JST conversion is correct (verify with zoneinfo if needed):
+     ```bash
+     python3 -c "from datetime import datetime; from zoneinfo import ZoneInfo; dt=datetime(YYYY,M,D,HH,MM,tzinfo=ZoneInfo('America/New_York')); print(dt.astimezone(ZoneInfo('Asia/Tokyo')))"
+     ```
+   - [ ] DST status is correct for the date (EDT Mar-Nov, EST Nov-Mar)
+3. **Check for common errors**:
+   - ET-only notation without JST → **REVISION REQUIRED**
+   - Wrong JST offset (e.g., +13h during EST period or +14h during EDT period) → **REVISION REQUIRED**
+   - AMC earnings listed as "evening check" without specifying "翌朝 JST" → Flag
+
+### Known Error Pattern (Issue #11)
+
+```
+Date: 2026-03-16
+Error: Evening check listed "FOMC結果確認（ET 14:00）" without JST
+Impact: JST reader doesn't know when to check (answer: 翌日3:00 JST)
+Cause: Blog template did not require JST conversion
+Fix: All events in evening/early-morning check must include JST time
+```
+
 ## Output Format
 
 Generate a review report with the following structure:
@@ -508,6 +550,17 @@ Based on historical issues, pay special attention to:
    - Bad: "Probability 40%" → Based on what?
    - Bad: "CNN/Reuters" → No URL
    - Fix: All triggers need time criteria, all probabilities need basis, all sources need URLs
+10. **JST Timezone Missing in Evening Check** (Issue #11):
+    - Bad: "夜チェック: FOMC結果確認（ET 14:00）" → JST reader doesn't know when
+    - Good: "夜チェック: FOMC結果確認（**3/20(木) 3:00 JST** = ET 14:00）"
+    - Fix: All events in 夜・早朝チェック must include JST time, verified with zoneinfo
+11. **Unverified Non-FOMC Fed Events** (Issue #12):
+    - Bad: "パウエル議長講演（3/20）" without official source verification
+    - Fix: Verify against both `https://www.federalreserve.gov/newsevents/YYYY-month.htm` and `https://www.federalreserve.gov/newsevents/speech/YYYY-speeches.htm`. Unverified → REVISION REQUIRED
+12. **Missing Earnings IR Links** (Issue #13):
+    - Bad: "3/19 BABA BMO / ACN BMO / FDX AMC" → No IR links, BMO/AMC unverified
+    - Bad: "FDX AMC [IR](url)" but BABA/ACN have no IR → partial coverage, REVISION REQUIRED
+    - Fix: Each High Impact ticker needs its own IR link. If multiple tickers on one line, each must have IR URL or split into separate lines
 
 ## Quality Standards
 
