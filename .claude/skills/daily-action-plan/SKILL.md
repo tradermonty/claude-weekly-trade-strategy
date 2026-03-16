@@ -109,6 +109,8 @@ mkdir -p reports/YYYY-MM-DD
 
 Save to: `reports/YYYY-MM-DD/daily-action-plan-{pre|post}.md`
 
+**IMPORTANT: Do NOT send email or call `send_dap_email.py`.** Email notification is handled by the wrapper script (`run_daily_action_plan.sh`) after this skill completes. Calling it here would cause duplicate emails.
+
 ## Output Format
 
 See `assets/action_plan_template.md` for the full template.
