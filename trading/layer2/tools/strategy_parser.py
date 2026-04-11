@@ -277,13 +277,22 @@ _SCENARIO_HEADER_D = re.compile(
     r".+?--\s*筆者推定\s*(\d+)\s*%",
 )
 
+# Inline Tail Risk note embedded in scenario blocks:
+# "*Tail Risk（5%）: ... コア10%・防御21%(-2%)・テーマ17%・現金52%(+10%).*"
+_TAIL_RISK_INLINE = re.compile(
+    r"\*Tail Risk[（(]\s*(\d+)\s*%?\s*[）)]\s*[:：]"
+)
+_TAIL_RISK_CAT_ALLOC = re.compile(
+    r"コア\s*(\d+)%[^・]*・\s*防御\s*(\d+)%[^・]*・\s*テーマ\s*(\d+)%[^・]*・\s*現金\s*(\d+)%"
+)
+
 # Inline ETF detail in scenario blocks:
-# "SPY 12%→20%" → 20, "QQQ 2%(復帰)" → 2, "DIA 8%維持" → 8
+# "SPY 12%→20%" → 20, "SPY 12%->20%" → 20, "QQQ 2%(復帰)" → 2, "DIA 8%維持" → 8
 _SCENARIO_ETF_INLINE = re.compile(
     r"(" + "|".join(_VALID_ETFS) + r")"
     r"\s+"
-    r"(?:\d+(?:\.\d+)?%?\s*→\s*)?"   # optional: current% →
-    r"(\d+(?:\.\d+)?)\s*%"           # target percentage
+    r"(?:\d+(?:\.\d+)?%?\s*(?:→|->)\s*)?"   # optional: current% → or ->
+    r"(\d+(?:\.\d+)?)\s*%"                   # target percentage
 )
 
 
@@ -313,10 +322,15 @@ def _parse_scenario_cash_pct(text: str) -> Optional[float]:
     for line in text.splitlines():
         if "現金" not in line:
             continue
-        # Prefer value after → (target)
-        arrow_m = re.search(r"→\s*\*?\*?\s*(\d+(?:\.\d+)?)\s*%", line)
+        # Prefer value after → or -> near 現金 (target)
+        # Restrict arrow search to text near 現金 to avoid matching
+        # unrelated arrows later in the line (e.g., "コア23→25%")
+        arrow_m = re.search(
+            r"現金.*?(\d+(?:\.\d+)?)\s*%\s*(?:→|->)\s*\*?\*?\s*(\d+(?:\.\d+)?)\s*%",
+            line,
+        )
         if arrow_m:
-            return float(arrow_m.group(1))
+            return float(arrow_m.group(2))
         # No arrow — take first percentage after 現金
         plain_m = re.search(r"現金.*?(\d+(?:\.\d+)?)\s*%", line)
         if plain_m:
@@ -325,9 +339,23 @@ def _parse_scenario_cash_pct(text: str) -> Optional[float]:
 
 
 def _parse_scenario_etf_detail(block: str) -> dict[str, float]:
-    """Extract explicit ETF percentages from scenario action lines."""
+    """Extract explicit ETF percentages from scenario action lines.
+
+    Restricts search to the action bullet-point section only (before the first
+    blank line after the action header, or before *Tail Risk / --- markers).
+    This prevents ETF mentions in later sections from overwriting correct values.
+    """
     etf_alloc: dict[str, float] = {}
-    action_section = block.split("**アクション")[1] if "**アクション" in block else block
+    if "**アクション" in block:
+        action_section = block.split("**アクション")[1]
+        # Limit to action bullets only: stop at first blank line, Tail Risk note, or ---
+        for end_marker in ("\n\n", "\n*Tail Risk", "\n*シナリオ確率", "\n---", "\n##"):
+            pos = action_section.find(end_marker)
+            if pos != -1:
+                action_section = action_section[:pos]
+                break
+    else:
+        action_section = block
     for m in _SCENARIO_ETF_INLINE.finditer(action_section):
         etf_alloc[m.group(1)] = float(m.group(2))
     # Map "現金 X%" to BIL if BIL not already found
@@ -380,6 +408,29 @@ def _parse_scenarios(text: str) -> dict[str, ScenarioSpec]:
                 name=name, probability=probability,
                 triggers=triggers, allocation=alloc,
             )
+
+        # Check for inline Tail Risk note (embedded as *Tail Risk（5%）:...*)
+        if "tail_risk" not in scenarios:
+            tail_m = _TAIL_RISK_INLINE.search(text)
+            if tail_m:
+                tail_prob = int(tail_m.group(1))
+                tail_line = text[tail_m.start(): text.find("\n", tail_m.start()) + 1]
+                cat_m = _TAIL_RISK_CAT_ALLOC.search(tail_line)
+                if cat_m:
+                    tail_cat = {
+                        "core": int(cat_m.group(1)),
+                        "defensive": int(cat_m.group(2)),
+                        "theme": int(cat_m.group(3)),
+                        "cash": int(cat_m.group(4)),
+                    }
+                    tail_alloc = _distribute_to_etfs(tail_cat, etf_ratios)
+                else:
+                    tail_alloc = dict(current)
+                scenarios["tail_risk"] = ScenarioSpec(
+                    name="tail_risk", probability=tail_prob,
+                    triggers=[], allocation=tail_alloc,
+                )
+
         return scenarios
 
     # Try EN headers (Format A and B)

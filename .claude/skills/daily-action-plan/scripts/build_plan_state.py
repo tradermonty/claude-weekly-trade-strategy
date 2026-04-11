@@ -247,13 +247,21 @@ def _parse_trigger_metadata(trigger: str) -> dict:
     if days_m:
         meta["required_days"] = int(days_m.group(1))
 
-    # Direction: below / above
+    # Direction: below / above / range
     if re.search(r"(下回|以下|割れ)", trigger):
         meta["direction"] = "below"
-    elif re.search(r"(超え|超$|超（|以上|超\s)", trigger):
+    elif re.search(r"(超え|超[を（\s]|超$|以上)", trigger):
         meta["direction"] = "above"
     elif "維持" in trigger:
         meta["direction"] = "above"
+    elif "レンジ" in trigger or re.search(r"\d+[-–]\$?\d+", trigger):
+        meta["direction"] = "range"
+        range_m = re.search(r"(\d+(?:\.\d+)?)[-–]\$?(\d+(?:\.\d+)?)", trigger)
+        if not range_m:
+            range_m = re.search(r"\$(\d+(?:\.\d+)?)[-–]\$?(\d+(?:\.\d+)?)", trigger)
+        if range_m:
+            meta["range_low"] = float(range_m.group(1))
+            meta["range_high"] = float(range_m.group(2))
 
     # Non-price triggers
     if any(kw in trigger for kw in ("停戦", "報道", "合意", "再開")):
@@ -262,12 +270,14 @@ def _parse_trigger_metadata(trigger: str) -> dict:
     return meta
 
 
-def _check_condition_met(value: float, target: float, direction: str) -> bool:
+def _check_condition_met(value: float, target: float, direction: str, range_high: float = None) -> bool:
     """Check if value meets condition relative to target."""
     if direction == "below":
         return value < target
     elif direction == "above":
         return value >= target
+    elif direction == "range" and range_high is not None:
+        return target <= value <= range_high
     return False
 
 
@@ -351,20 +361,21 @@ def _enrich_trigger_entry(
     current_val = entry["current"]
 
     if meta["is_price_trigger"] and meta["direction"]:
+        range_high = meta.get("range_high")
         prev_val = market.get(indicator_key, {}).get("prev_close")
         entry["met_prev"] = (
-            _check_condition_met(prev_val, target, meta["direction"])
+            _check_condition_met(prev_val, target, meta["direction"], range_high)
             if prev_val is not None else None
         )
         if is_official:
             entry["met_close"] = _check_condition_met(
-                current_val, target, meta["direction"],
+                current_val, target, meta["direction"], range_high,
             )
             entry["met_current_quote"] = None
         else:
             entry["met_close"] = None
             entry["met_current_quote"] = _check_condition_met(
-                current_val, target, meta["direction"],
+                current_val, target, meta["direction"], range_high,
             )
     else:
         entry["met_close"] = None
