@@ -260,6 +260,32 @@ class AlpacaClient:
             logger.error("Alpaca list_open_stop_orders error: %s", exc)
             return []
 
+    def list_closed_orders(self) -> list[dict]:
+        """List closed orders (filled, canceled, expired, etc.)."""
+        try:
+            req = GetOrdersRequest(status=QueryOrderStatus.CLOSED)
+            orders = self._trading.get_orders(req)
+            return [_order_to_dict(o) for o in orders]
+        except APIError as exc:
+            logger.error("Alpaca list_closed_orders error: %s", exc)
+            return []
+
+    def get_order_by_client_id(self, client_order_id: str) -> Optional[dict]:
+        """Find an order by client_order_id across all statuses."""
+        try:
+            req = GetOrdersRequest(status=QueryOrderStatus.ALL)
+            orders = self._trading.get_orders(req)
+            for o in orders:
+                if o.client_order_id == client_order_id:
+                    return _order_to_dict(o)
+            return None
+        except APIError as exc:
+            logger.error(
+                "Alpaca get_order_by_client_id(%s) error: %s",
+                client_order_id, exc,
+            )
+            return None
+
 
 # ------------------------------------------------------------------
 # Helpers
@@ -276,17 +302,24 @@ def _parse_tif(tif_str: str) -> TimeInForce:
 
 
 def _order_to_dict(order) -> dict:
-    """Convert an alpaca-py order object to a plain dict."""
+    """Convert an alpaca-py order object to a plain dict.
+
+    Enum fields (side, order_type, status) use ``.value`` to guarantee
+    plain lowercase strings (e.g. ``"stop"``, ``"filled"``, ``"canceled"``).
+    ``str()`` on Python 3.11+ Enum returns ``"EnumClass.MEMBER"`` which
+    breaks downstream string comparisons.
+    """
     return {
         "id": str(order.id),
         "client_order_id": order.client_order_id,
         "symbol": order.symbol,
-        "side": str(order.side),
+        "side": order.side.value,
         "qty": str(order.qty) if order.qty else None,
-        "order_type": str(order.order_type),
-        "status": str(order.status),
+        "order_type": order.order_type.value,
+        "status": order.status.value,
         "limit_price": str(order.limit_price) if order.limit_price else None,
         "stop_price": str(order.stop_price) if order.stop_price else None,
         "filled_avg_price": str(order.filled_avg_price) if order.filled_avg_price else None,
         "created_at": str(order.created_at) if order.created_at else None,
+        "filled_at": str(order.filled_at) if order.filled_at else None,
     }

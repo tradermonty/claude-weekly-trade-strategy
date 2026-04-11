@@ -369,3 +369,126 @@ class TestApiFailureAlert:
         # Re-occurrence
         tmp_db.set_state("consecutive_api_failures", "3")
         assert engine.api_failure_alert_needed() is True
+
+
+# ===================================================================
+# RuleEngine.drift_exceeded() — allocation guard
+# ===================================================================
+
+
+def _make_strategy_spec_with_alloc(alloc: dict[str, float]) -> StrategySpec:
+    """Create a minimal StrategySpec with a given current_allocation."""
+    return StrategySpec(
+        blog_date="2026-04-11",
+        current_allocation=alloc,
+        scenarios={},
+        trading_levels={},
+        stop_losses={},
+        vix_triggers={},
+        yield_triggers={},
+    )
+
+
+class TestDriftAllocationGuard:
+    """Bug 3 fix: drift check skips incomplete allocations."""
+
+    def test_drift_skipped_when_allocation_incomplete(self, config, tmp_db):
+        engine = _make_engine(config, tmp_db)
+        portfolio = Portfolio(account_value=100000, cash=50000, positions={
+            "SPY": Position("SPY", 100, 50000, 45000, 500.0),
+        })
+        spec = _make_strategy_spec_with_alloc({"SPY": 15.0, "BIL": 30.0})  # sum=45%
+        assert engine.drift_exceeded(portfolio, spec) is False
+
+    def test_drift_skipped_when_allocation_empty(self, config, tmp_db):
+        engine = _make_engine(config, tmp_db)
+        portfolio = Portfolio(account_value=100000, cash=50000, positions={
+            "SPY": Position("SPY", 100, 50000, 45000, 500.0),
+        })
+        spec = _make_strategy_spec_with_alloc({})  # sum=0%
+        assert engine.drift_exceeded(portfolio, spec) is False
+
+    def test_drift_normal_with_complete_allocation(self, config, tmp_db):
+        engine = _make_engine(config, tmp_db)
+        # Portfolio matches target exactly — no drift
+        portfolio = Portfolio(account_value=100000, cash=0, positions={
+            "SPY": Position("SPY", 100, 50000, 45000, 500.0),
+            "BIL": Position("BIL", 500, 50000, 50000, 100.0),
+        })
+        spec = _make_strategy_spec_with_alloc({"SPY": 50.0, "BIL": 50.0})  # sum=100%
+        assert engine.drift_exceeded(portfolio, spec) is False
+
+    def test_drift_accepted_at_boundary(self, config, tmp_db):
+        engine = _make_engine(config, tmp_db)
+        # Portfolio differs significantly from target — should detect drift
+        portfolio = Portfolio(account_value=100000, cash=50000, positions={
+            "SPY": Position("SPY", 100, 50000, 45000, 500.0),
+        })
+        # sum=90% — passes the guard (>= 90)
+        spec = _make_strategy_spec_with_alloc({"SPY": 10.0, "BIL": 80.0})
+        # SPY actual=50%, target=10% → drift of 40%
+        assert engine.drift_exceeded(portfolio, spec) is True
+
+
+# ===================================================================
+# RuleEngine.check_stop_order_fills() — encapsulation fix
+# ===================================================================
+
+
+class TestCheckStopOrderFills:
+    """Bug 4 fix: uses AlpacaClient public API, not _trading."""
+
+    def test_filled_stop_detected(self, config, tmp_db):
+        engine = _make_engine(config, tmp_db)
+        engine._alpaca = MagicMock()
+        engine._alpaca.list_closed_orders.return_value = [
+            {
+                "order_type": "stop",
+                "client_order_id": "stop-SPY-001",
+                "status": "filled",
+                "symbol": "SPY",
+                "filled_avg_price": "449.50",
+                "qty": "10",
+            },
+        ]
+
+        result = engine.check_stop_order_fills()
+        assert result is not None
+        assert result["symbol"] == "SPY"
+        assert result["filled_price"] == 449.50
+        assert result["order_id"] == "stop-SPY-001"
+
+    def test_already_processed_stop_skipped(self, config, tmp_db):
+        engine = _make_engine(config, tmp_db)
+        tmp_db.set_state("stop_fill_processed_stop-SPY-001", "1")
+        engine._alpaca = MagicMock()
+        engine._alpaca.list_closed_orders.return_value = [
+            {
+                "order_type": "stop",
+                "client_order_id": "stop-SPY-001",
+                "status": "filled",
+                "symbol": "SPY",
+                "filled_avg_price": "449.50",
+                "qty": "10",
+            },
+        ]
+
+        result = engine.check_stop_order_fills()
+        assert result is None
+
+    def test_non_stop_orders_ignored(self, config, tmp_db):
+        engine = _make_engine(config, tmp_db)
+        engine._alpaca = MagicMock()
+        engine._alpaca.list_closed_orders.return_value = [
+            {
+                "order_type": "limit",
+                "client_order_id": "limit-SPY-001",
+                "status": "filled",
+                "symbol": "SPY",
+                "filled_avg_price": "500.00",
+                "qty": "5",
+            },
+        ]
+
+        result = engine.check_stop_order_fills()
+        assert result is None

@@ -14,6 +14,11 @@ from trading.services.alpaca_client import AlpacaClient
 
 logger = logging.getLogger(__name__)
 
+# Alpaca terminal order statuses (American English: "canceled", not "cancelled").
+# Used by wait_for_fills() and imported by main.py for decision logging.
+TERMINAL_STATUSES = frozenset({"filled", "canceled", "expired", "failed", "rejected"})
+FAILURE_STATUSES = TERMINAL_STATUSES - {"filled"}
+
 
 class OrderExecutor:
     """Executes orders via Alpaca and logs results to the database.
@@ -128,7 +133,7 @@ class OrderExecutor:
             order.client_order_id,
             status,
             filled_price=filled_price,
-            filled_at=result.get("created_at"),
+            filled_at=result.get("filled_at"),
         )
 
         return {
@@ -153,32 +158,32 @@ class OrderExecutor:
         """
         client = self._get_client()
 
-        # Alpaca's get_order expects their internal ID, but we use client_order_id.
-        # We search through recent orders.
         try:
-            from alpaca.trading.requests import GetOrdersRequest
-            from alpaca.trading.enums import QueryOrderStatus
+            order_dict = client.get_order_by_client_id(client_order_id)
+            if order_dict is not None:
+                filled_price_str = order_dict.get("filled_avg_price")
+                filled_price = (
+                    float(filled_price_str) if filled_price_str else None
+                )
+                status = order_dict.get("status", "unknown")
 
-            req = GetOrdersRequest(status=QueryOrderStatus.ALL)
-            orders = client._trading.get_orders(req)
-            for o in orders:
-                if o.client_order_id == client_order_id:
-                    filled_price = float(o.filled_avg_price) if o.filled_avg_price else None
-                    status = str(o.status)
+                # Update DB for any terminal status (not just fills).
+                if status in TERMINAL_STATUSES:
+                    self._db.update_trade_status(
+                        client_order_id,
+                        status,
+                        filled_price=filled_price,
+                        filled_at=(
+                            order_dict.get("filled_at")
+                            if filled_price else None
+                        ),
+                    )
 
-                    if filled_price is not None:
-                        self._db.update_trade_status(
-                            client_order_id,
-                            status,
-                            filled_price=filled_price,
-                            filled_at=str(o.filled_at) if o.filled_at else None,
-                        )
-
-                    return {
-                        "client_order_id": client_order_id,
-                        "status": status,
-                        "filled_price": filled_price,
-                    }
+                return {
+                    "client_order_id": client_order_id,
+                    "status": status,
+                    "filled_price": filled_price,
+                }
         except Exception:
             logger.exception("Error checking fill status for %s", client_order_id)
 
@@ -215,7 +220,7 @@ class OrderExecutor:
             for oid in list(pending):
                 status = self.check_fill_status(oid)
                 results[oid] = status
-                if status["status"] in ("filled", "cancelled", "expired", "failed", "rejected"):
+                if status["status"] in TERMINAL_STATUSES:
                     pending.discard(oid)
 
             if pending:

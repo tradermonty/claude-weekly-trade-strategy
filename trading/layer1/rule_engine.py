@@ -160,6 +160,18 @@ class RuleEngine:
         """Check if any position deviates more than threshold% from target."""
         target_alloc = strategy_spec.current_allocation
 
+        # Guard: skip drift check if allocation is incomplete (sum < 90%).
+        # A partial allocation from the parser would flag every unlisted
+        # position as drift, causing infinite agent triggers every 15 min.
+        alloc_total = sum(target_alloc.values())
+        if alloc_total < 90.0:
+            logger.warning(
+                "Skipping drift check: allocation total %.1f%% < 90%% "
+                "(incomplete parse)",
+                alloc_total,
+            )
+            return False
+
         for symbol, target_pct in target_alloc.items():
             actual_pct = portfolio.get_position_pct(symbol)
             if abs(actual_pct - target_pct) > threshold:
@@ -188,19 +200,15 @@ class RuleEngine:
         Returns fill details dict if a stop was filled, None otherwise.
         """
         try:
-            from alpaca.trading.requests import GetOrdersRequest
-            from alpaca.trading.enums import QueryOrderStatus, OrderType
+            closed_orders = self._alpaca.list_closed_orders()
 
-            req = GetOrdersRequest(status=QueryOrderStatus.CLOSED)
-            orders = self._alpaca._trading.get_orders(req)
-
-            for o in orders:
-                if o.order_type != OrderType.STOP:
+            for o in closed_orders:
+                if o.get("order_type") != "stop":
                     continue
-                cid = o.client_order_id or ""
+                cid = o.get("client_order_id", "")
                 if not cid.startswith("stop-"):
                     continue
-                if str(o.status) != "filled":
+                if o.get("status") != "filled":
                     continue
 
                 state_key = f"stop_fill_processed_{cid}"
@@ -208,16 +216,19 @@ class RuleEngine:
                     continue
 
                 self._db.set_state(state_key, "1")
-                filled_price = float(o.filled_avg_price) if o.filled_avg_price else None
+                filled_price = (
+                    float(o["filled_avg_price"])
+                    if o.get("filled_avg_price") else None
+                )
                 logger.info(
                     "Stop order filled: %s %s at %s",
-                    o.symbol, cid, filled_price,
+                    o.get("symbol"), cid, filled_price,
                 )
                 return {
-                    "symbol": o.symbol,
+                    "symbol": o.get("symbol"),
                     "order_id": cid,
                     "filled_price": filled_price,
-                    "qty": str(o.qty) if o.qty else None,
+                    "qty": o.get("qty"),
                 }
         except Exception:
             logger.exception("Failed to check stop order fills")

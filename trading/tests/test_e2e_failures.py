@@ -33,7 +33,7 @@ from trading.layer1.kill_switch import KillSwitch
 from trading.layer1.loss_calculator import LossCalculator
 from trading.layer3.order_validator import OrderValidator
 from trading.layer3.order_generator import OrderGenerator
-from trading.layer3.order_executor import OrderExecutor
+from trading.layer3.order_executor import FAILURE_STATUSES, OrderExecutor
 from trading.services.email_notifier import EmailNotifier
 
 
@@ -1123,3 +1123,274 @@ class TestProcessCrashRecovery:
             "Should acquire lock after simulated crash (OS fd close)"
         )
         guard2.release()
+
+
+# ---------------------------------------------------------------------------
+# Pipeline decision logging tests (Bug 2 & Bug 1 fixes)
+# ---------------------------------------------------------------------------
+
+def _make_pipeline_system(config, tmp_db):
+    """Create a TradingSystem with all external services mocked."""
+    with patch("trading.main.MarketMonitor"), \
+         patch("trading.main.RuleEngine"), \
+         patch("trading.main.StopLossManager"), \
+         patch("trading.main.AgentRunner"), \
+         patch("trading.main.OrderValidator"), \
+         patch("trading.main.OrderGenerator"), \
+         patch("trading.main.OrderExecutor"), \
+         patch("trading.main.EmailNotifier"), \
+         patch("trading.main.LossCalculator"):
+        from trading.main import TradingSystem
+        system = TradingSystem(config)
+    # Replace db with the test db
+    system._db = tmp_db
+    system._notifier = MagicMock()
+    return system
+
+
+def _make_test_intent(scenario="base"):
+    return StrategyIntent(
+        run_id="test-run-001",
+        scenario=scenario,
+        rationale="test rationale",
+        target_allocation={"SPY": 50.0, "BIL": 50.0},
+        priority_actions=[],
+        confidence="high",
+        blog_reference="test-blog",
+    )
+
+
+class TestDecisionResultLogging:
+    """Bug 2 fix: decision result reflects actual execution outcomes."""
+
+    def _run_with_statuses(self, config, tmp_db, statuses):
+        system = _make_pipeline_system(config, tmp_db)
+        intent = _make_test_intent()
+        system._agent = MagicMock(run=MagicMock(return_value=intent))
+        system._validator = MagicMock()
+        system._validator.validate.return_value = ValidationResult.APPROVED()
+        system._generator = MagicMock()
+        system._generator.generate.return_value = [MagicMock()] * len(statuses)
+        system._executor = MagicMock()
+        system._executor.execute.return_value = [
+            {"client_order_id": f"o{i}", "status": s, "filled_price": None}
+            for i, s in enumerate(statuses)
+        ]
+        system._monitor = MagicMock(fetch_portfolio=MagicMock(return_value=None))
+        # Mock log_decision to capture the result arg
+        system._db.log_decision = MagicMock()
+
+        system._run_agent_pipeline(
+            "test_trigger", MagicMock(), MagicMock(), MagicMock(),
+        )
+        return system._db.log_decision.call_args
+
+    def test_all_orders_succeed_logs_approved(self, config, tmp_db):
+        call_args = self._run_with_statuses(config, tmp_db, ["submitted"])
+        assert call_args.kwargs["result"] == "APPROVED"
+
+    def test_all_orders_fail_logs_failed(self, config, tmp_db):
+        call_args = self._run_with_statuses(config, tmp_db, ["failed", "rejected"])
+        assert call_args.kwargs["result"] == "FAILED"
+
+    def test_partial_failure_logs_partial(self, config, tmp_db):
+        call_args = self._run_with_statuses(config, tmp_db, ["submitted", "failed"])
+        assert call_args.kwargs["result"] == "PARTIAL_FAILURE"
+
+    def test_canceled_order_counted_as_failure(self, config, tmp_db):
+        call_args = self._run_with_statuses(config, tmp_db, ["canceled"])
+        assert call_args.kwargs["result"] == "FAILED"
+
+    def test_dry_run_orders_logged_as_approved(self, config, tmp_db):
+        call_args = self._run_with_statuses(config, tmp_db, ["dry_run"])
+        assert call_args.kwargs["result"] == "APPROVED"
+
+
+class TestCurrentScenarioPersistence:
+    """Bug 1 fix: current_scenario is persisted to DB for pre-event freeze."""
+
+    def test_scenario_persisted_after_successful_execution(self, config, tmp_db):
+        system = _make_pipeline_system(config, tmp_db)
+        intent = _make_test_intent(scenario="bear")
+        system._agent = MagicMock(run=MagicMock(return_value=intent))
+        system._validator = MagicMock()
+        system._validator.validate.return_value = ValidationResult.APPROVED()
+        system._generator = MagicMock()
+        system._generator.generate.return_value = [MagicMock()]
+        system._executor = MagicMock()
+        system._executor.execute.return_value = [
+            {"client_order_id": "o1", "status": "submitted", "filled_price": None},
+        ]
+        system._monitor = MagicMock(fetch_portfolio=MagicMock(return_value=None))
+
+        system._run_agent_pipeline(
+            "test_trigger", MagicMock(), MagicMock(), MagicMock(),
+        )
+
+        assert tmp_db.get_state("current_scenario", "base") == "bear"
+
+    def test_scenario_not_persisted_when_all_fail(self, config, tmp_db):
+        system = _make_pipeline_system(config, tmp_db)
+        intent = _make_test_intent(scenario="bear")
+        system._agent = MagicMock(run=MagicMock(return_value=intent))
+        system._validator = MagicMock()
+        system._validator.validate.return_value = ValidationResult.APPROVED()
+        system._generator = MagicMock()
+        system._generator.generate.return_value = [MagicMock()]
+        system._executor = MagicMock()
+        system._executor.execute.return_value = [
+            {"client_order_id": "o1", "status": "failed", "filled_price": None},
+        ]
+        system._monitor = MagicMock(fetch_portfolio=MagicMock(return_value=None))
+
+        system._run_agent_pipeline(
+            "test_trigger", MagicMock(), MagicMock(), MagicMock(),
+        )
+
+        assert tmp_db.get_state("current_scenario", "base") == "base"
+
+    def test_scenario_persisted_on_partial_failure(self, config, tmp_db):
+        system = _make_pipeline_system(config, tmp_db)
+        intent = _make_test_intent(scenario="bear")
+        system._agent = MagicMock(run=MagicMock(return_value=intent))
+        system._validator = MagicMock()
+        system._validator.validate.return_value = ValidationResult.APPROVED()
+        system._generator = MagicMock()
+        system._generator.generate.return_value = [MagicMock(), MagicMock()]
+        system._executor = MagicMock()
+        system._executor.execute.return_value = [
+            {"client_order_id": "o1", "status": "submitted", "filled_price": None},
+            {"client_order_id": "o2", "status": "failed", "filled_price": None},
+        ]
+        system._monitor = MagicMock(fetch_portfolio=MagicMock(return_value=None))
+
+        system._run_agent_pipeline(
+            "test_trigger", MagicMock(), MagicMock(), MagicMock(),
+        )
+
+        assert tmp_db.get_state("current_scenario", "base") == "bear"
+
+    def test_scenario_persisted_when_no_orders_generated(self, config, tmp_db):
+        system = _make_pipeline_system(config, tmp_db)
+        intent = _make_test_intent(scenario="bear")
+        system._agent = MagicMock(run=MagicMock(return_value=intent))
+        system._validator = MagicMock()
+        system._validator.validate.return_value = ValidationResult.APPROVED()
+        system._generator = MagicMock()
+        system._generator.generate.return_value = []  # No orders needed
+        system._monitor = MagicMock(fetch_portfolio=MagicMock(return_value=None))
+
+        system._run_agent_pipeline(
+            "test_trigger", MagicMock(), MagicMock(), MagicMock(),
+        )
+
+        assert tmp_db.get_state("current_scenario", "base") == "bear"
+
+
+class TestLiveModeDecisionAfterFills:
+    """Verify decision_result and current_scenario use *final* fill outcomes,
+    not the initial submission statuses."""
+
+    @staticmethod
+    def _make_live_config(tmp_path):
+        return TradingConfig(
+            dry_run=False,
+            db_path=tmp_path / "test.db",
+            lock_file=tmp_path / ".scheduler.lock",
+            log_dir=tmp_path / "logs",
+            blogs_dir=tmp_path / "blogs",
+        )
+
+    def _run_live(self, tmp_path, tmp_db, execute_results, fill_results):
+        config = self._make_live_config(tmp_path)
+        system = _make_pipeline_system(config, tmp_db)
+        intent = _make_test_intent(scenario="bear")
+        system._agent = MagicMock(run=MagicMock(return_value=intent))
+        system._validator = MagicMock()
+        system._validator.validate.return_value = ValidationResult.APPROVED()
+        system._generator = MagicMock()
+        system._generator.generate.return_value = [MagicMock()] * len(execute_results)
+        system._executor = MagicMock()
+        system._executor.execute.return_value = execute_results
+        system._executor.wait_for_fills.return_value = fill_results
+        system._monitor = MagicMock(fetch_portfolio=MagicMock(return_value=None))
+        system._db.log_decision = MagicMock()
+
+        system._run_agent_pipeline(
+            "test_trigger", MagicMock(), MagicMock(), MagicMock(),
+        )
+        return system
+
+    def test_submitted_then_filled_logs_approved(self, tmp_path, tmp_db):
+        system = self._run_live(
+            tmp_path, tmp_db,
+            execute_results=[
+                {"client_order_id": "o1", "status": "accepted", "filled_price": None},
+            ],
+            fill_results=[
+                {"client_order_id": "o1", "status": "filled", "filled_price": 450.0},
+            ],
+        )
+        call_args = system._db.log_decision.call_args
+        assert call_args.kwargs["result"] == "APPROVED"
+        assert tmp_db.get_state("current_scenario", "base") == "bear"
+
+    def test_submitted_then_canceled_logs_failed(self, tmp_path, tmp_db):
+        system = self._run_live(
+            tmp_path, tmp_db,
+            execute_results=[
+                {"client_order_id": "o1", "status": "accepted", "filled_price": None},
+            ],
+            fill_results=[
+                {"client_order_id": "o1", "status": "canceled", "filled_price": None},
+            ],
+        )
+        call_args = system._db.log_decision.call_args
+        assert call_args.kwargs["result"] == "FAILED"
+        assert tmp_db.get_state("current_scenario", "base") == "base"
+
+    def test_mixed_fill_and_rejected_logs_partial(self, tmp_path, tmp_db):
+        system = self._run_live(
+            tmp_path, tmp_db,
+            execute_results=[
+                {"client_order_id": "o1", "status": "accepted", "filled_price": None},
+                {"client_order_id": "o2", "status": "accepted", "filled_price": None},
+            ],
+            fill_results=[
+                {"client_order_id": "o1", "status": "filled", "filled_price": 450.0},
+                {"client_order_id": "o2", "status": "rejected", "filled_price": None},
+            ],
+        )
+        call_args = system._db.log_decision.call_args
+        assert call_args.kwargs["result"] == "PARTIAL_FAILURE"
+        assert tmp_db.get_state("current_scenario", "base") == "bear"
+
+    def test_immediate_fail_plus_later_cancel_all_failed(self, tmp_path, tmp_db):
+        system = self._run_live(
+            tmp_path, tmp_db,
+            execute_results=[
+                {"client_order_id": "o1", "status": "failed", "filled_price": None},
+                {"client_order_id": "o2", "status": "accepted", "filled_price": None},
+            ],
+            fill_results=[
+                {"client_order_id": "o2", "status": "canceled", "filled_price": None},
+            ],
+        )
+        call_args = system._db.log_decision.call_args
+        assert call_args.kwargs["result"] == "FAILED"
+        assert tmp_db.get_state("current_scenario", "base") == "base"
+
+    def test_timeout_treated_as_non_failure(self, tmp_path, tmp_db):
+        """Orders that time out keep 'timeout' status, which is NOT in
+        FAILURE_STATUSES, so they count as non-failure (ambiguous)."""
+        system = self._run_live(
+            tmp_path, tmp_db,
+            execute_results=[
+                {"client_order_id": "o1", "status": "accepted", "filled_price": None},
+            ],
+            fill_results=[
+                {"client_order_id": "o1", "status": "timeout", "filled_price": None},
+            ],
+        )
+        call_args = system._db.log_decision.call_args
+        assert call_args.kwargs["result"] == "APPROVED"

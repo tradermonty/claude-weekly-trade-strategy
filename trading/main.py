@@ -35,7 +35,7 @@ from trading.layer1.rule_engine import RuleEngine
 from trading.layer1.stop_loss_manager import StopLossManager
 from trading.layer2.agent_runner import AgentRunner
 from trading.layer2.tools.strategy_parser import find_latest_blog, parse_blog
-from trading.layer3.order_executor import OrderExecutor
+from trading.layer3.order_executor import FAILURE_STATUSES, OrderExecutor
 from trading.layer3.order_generator import OrderGenerator
 from trading.layer3.order_validator import OrderValidator
 from trading.services.email_notifier import EmailNotifier
@@ -261,31 +261,33 @@ class TradingSystem:
                 scenario=intent.scenario,
                 rationale="Approved but no orders needed (within thresholds)",
             )
+            self._db.set_state("current_scenario", intent.scenario)
             return
 
         # Layer 3: Execute
         logger.info("Executing %d orders for scenario=%s", len(orders), intent.scenario)
         results = self._executor.execute(orders)
 
-        # Log the decision
-        self._db.log_decision(
-            timestamp=datetime.now(timezone.utc).isoformat(),
-            run_id=intent.run_id,
-            trigger_type=trigger_reason,
-            result="APPROVED",
-            scenario=intent.scenario,
-            rationale=intent.rationale,
-        )
-
-        # Wait for fills (skip in dry-run)
+        # Wait for fills in live mode so we record the *final* outcome,
+        # not just the submission status.
+        final_results = list(results)  # copy; may be updated below
         if not self._config.dry_run:
             submitted_ids = [
                 r["client_order_id"] for r in results
-                if r.get("status") not in ("dry_run", "failed")
+                if r.get("status") not in FAILURE_STATUSES
+                and r.get("status") != "dry_run"
             ]
             if submitted_ids:
                 fill_results = self._executor.wait_for_fills(submitted_ids)
                 logger.info("Fill results: %s", fill_results)
+
+                # Merge final statuses back into the result list
+                fill_map = {
+                    r["client_order_id"]: r for r in fill_results
+                }
+                final_results = [
+                    fill_map.get(r["client_order_id"], r) for r in results
+                ]
 
                 # Re-sync stop orders after fills
                 refreshed_portfolio = self._monitor.fetch_portfolio()
@@ -294,9 +296,33 @@ class TradingSystem:
                         refreshed_portfolio, strategy_spec,
                     )
 
+        # Determine decision result from *final* execution outcomes
+        failed_count = sum(
+            1 for r in final_results if r.get("status") in FAILURE_STATUSES
+        )
+        if failed_count == len(final_results):
+            decision_result = "FAILED"
+        elif failed_count > 0:
+            decision_result = "PARTIAL_FAILURE"
+        else:
+            decision_result = "APPROVED"
+
+        self._db.log_decision(
+            timestamp=datetime.now(timezone.utc).isoformat(),
+            run_id=intent.run_id,
+            trigger_type=trigger_reason,
+            result=decision_result,
+            scenario=intent.scenario,
+            rationale=intent.rationale,
+        )
+
+        # Persist current scenario (skip if all orders failed — no real transition)
+        if decision_result != "FAILED":
+            self._db.set_state("current_scenario", intent.scenario)
+
         # Notify
         order_summary = ", ".join(
-            f"{r['client_order_id']}={r['status']}" for r in results
+            f"{r['client_order_id']}={r['status']}" for r in final_results
         )
         self._notifier.info(
             f"Orders executed (scenario={intent.scenario}): {order_summary}"
