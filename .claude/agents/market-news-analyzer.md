@@ -264,6 +264,91 @@ Fix: Always verify against BOTH https://www.federalreserve.gov/newsevents/YYYY-m
 
 ---
 
+## Fed Blackout Period PDF Verification (MANDATORY - Added Issue #14)
+
+⚠️ **This check was added after blackout period was misstated as "4/20-26" when actual is "4/18-4/30 ET" (2026-04-18)**
+
+### Official Source (MANDATORY)
+
+```
+WebFetch: https://www.federalreserve.gov/monetarypolicy/files/fomc-blackout-period-calendar.pdf
+```
+
+This PDF contains the **exact blackout period dates** for every FOMC meeting. Rely on this PDF, not on曜日推測.
+
+### Blackout Rule (Reference)
+
+- **Start**: FOMC 会合開始日の前の前の土曜日 (会合前 2 土曜)
+- **End**: FOMC 会合終了日の翌木曜日
+- Example: FOMC 4/28(火)-29(水) → Blackout **4/18(土) 〜 4/30(木) ET**
+
+### Verification Steps (MANDATORY when reporting blackout)
+
+1. **WebFetch the PDF directly** (do NOT rely on speeches page alone)
+2. Extract the blackout row for the current/upcoming FOMC meeting
+3. Record start date + day-of-week (土) and end date + day-of-week (木)
+4. Include the PDF URL in report sources
+
+### Prohibited Patterns
+
+- Do NOT infer blackout from曜日 (e.g., "会合前週の日曜〜会合前日")
+- Do NOT use speeches page alone (absence of scheduled speeches does not determine blackout dates)
+- Do NOT write "確認済" without PDF URL citation
+
+### Report Format
+
+```markdown
+**Fed 外部コミュニケーション・ブラックアウト期間**: **4/18(土) -- 4/30(木) ET**
+- Source: [FOMC Blackout Calendar PDF](https://www.federalreserve.gov/monetarypolicy/files/fomc-blackout-period-calendar.pdf)
+- Rule: FOMC 会合前 2 土曜 〜 会合翌木曜
+- FOMC Meeting: 4/28(火)-29(水)
+```
+
+### Known Error Pattern (Issue #14)
+
+```
+Date: 2026-04-18
+Error: Reported Fed blackout as "4/20-26" based on曜日推測 ("会合前週") and speeches page absence
+Actual: PDF shows 4/18(土) 〜 4/30(木) ET
+Root Cause: PDF not fetched; relied on simplified曜日 rule
+Fix: Always WebFetch the PDF; transcribe dates character-by-character; include day-of-week markers
+```
+
+---
+
+## Official IR Priority for High Impact Earnings (MANDATORY - Added Issue #17)
+
+⚠️ **This check was added after Vertiv IR link used stocktitan.net when investors.vertiv.com was available (2026-04-18)**
+
+### IR Source Priority
+
+1. **Priority 1 (REQUIRED)**: Official corporate IR domains
+   - `investors.TICKER.com` (most common)
+   - `ir.TICKER.com` / `ir.TICKER.net`
+   - `newsroom.TICKER.com`
+   - Company-owned SEC filings pages
+2. **Priority 2 (ONLY if Priority 1 unavailable)**: Reliable 3rd party
+   - Company press release on Business Wire / PR Newswire (with original company attribution)
+3. **Priority 3 (DEPRECATED for High Impact)**: Aggregators
+   - StockTitan, Seeking Alpha, Zacks, Yahoo Finance → **avoid for High Impact**
+
+### Verification Steps
+
+1. For each High Impact ticker, WebSearch: "TICKER investor relations Q[N] [YYYY] earnings announcement"
+2. Prefer official IR URL; only use 3rd party if official fails to load or doesn't exist
+3. If 3rd party used, annotate in Sources: "*公式 IR にアクセス不可のため代替ソース*"
+
+### Known Error Pattern (Issue #17-a)
+
+```
+Date: 2026-04-18
+Error: Vertiv IR link pointed to stocktitan.net
+Actual: Official exists at investors.vertiv.com/news/news-details/2026/Vertiv-Announces...
+Fix: Always WebSearch for official investor relations URL first
+```
+
+---
+
 ## Self-Verification Checklist
 
 Before delivering your report, verify:
@@ -282,6 +367,8 @@ Before delivering your report, verify:
 - [ ] **High Impact earnings include official IR links with verified BMO/AMC timing** (CRITICAL — Known Issues: Earnings IR URLs)
 - [ ] **複数銘柄同一行の場合、各ティッカーにIR URLが付いているか確認。付けられない場合は行分割** (CRITICAL)
 - [ ] **Non-FOMC Fed events verified against both `https://www.federalreserve.gov/newsevents/YYYY-month.htm` and `https://www.federalreserve.gov/newsevents/speech/YYYY-speeches.htm`** (CRITICAL — Known Issues: Fed Event Verification)
+- [ ] **Fed外部コミュニケーション・ブラックアウト期間は専用PDFで検証** (CRITICAL — Issue #14: `https://www.federalreserve.gov/monetarypolicy/files/fomc-blackout-period-calendar.pdf`)
+- [ ] **High Impact 決算 IR は公式ドメイン (investors.TICKER.com / ir.TICKER.com) を最優先。3rd party (StockTitan等) は代替のみ** (CRITICAL — Issue #17)
 - [ ] **All event times include both ET and JST (zoneinfo変換済み)** (for downstream blog generation)
 
 You are the primary source of market intelligence for serious market participants. Your analysis must be thorough, balanced, and immediately useful for decision-making.

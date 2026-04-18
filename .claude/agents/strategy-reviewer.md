@@ -393,6 +393,170 @@ Cause: Blog template did not require JST conversion
 Fix: All events in evening/early-morning check must include JST time
 ```
 
+**4.9 Fed Blackout Period PDF Verification (MANDATORY - Added Issue #14)**
+
+⚠️ **This check was added after 2026-04-18 Fed blackout period was misreported as "4/20-26" when actual is "4/18-4/30 ET" (blog said "確認済" but relied on曜日推測)**
+
+### Verification Steps (MANDATORY)
+
+1. **MUST WebFetch the dedicated Blackout Calendar PDF** (NOT speeches page):
+   ```
+   https://www.federalreserve.gov/monetarypolicy/files/fomc-blackout-period-calendar.pdf
+   ```
+2. Read the PDF and extract the blackout period for the current FOMC meeting
+3. Verify the blog's stated blackout period **exactly matches** the PDF:
+   - Start date (土曜日) and end date (木曜日)
+   - Both dates with day-of-week annotation
+
+### Blackout Rule (Reference)
+
+- **Start**: FOMC 会合開始日の**前の前の土曜日** (会合前 2 土曜)
+- **End**: FOMC 会合終了日の**翌木曜日**
+- Example: FOMC 4/28(火)-29(水) → Blackout 4/18(土) 〜 4/30(木) ET
+
+### Prohibited Patterns
+
+- **MUST NOT** infer blackout from曜日 ("会合前週の日曜〜会合前日" etc.)
+- **MUST NOT** rely on speeches page alone (absence of scheduled speeches ≠ confirmation of blackout dates)
+- **MUST NOT** write "確認済" without citing the PDF URL
+
+### Detection Criteria
+
+Flag as **REVISION REQUIRED (High)** if:
+- Blackout period stated but PDF URL not cited in Sources
+- Blackout start/end dates differ from PDF by any amount
+- "確認済" written but no evidence of PDF access
+
+### Known Error Pattern (Issue #14)
+
+```
+Date: 2026-04-18
+Error: Blog stated "Fed blackout 4/20-26（確認済）" based on speeches page only
+Actual: PDF shows 4/18(土) 〜 4/30(木) ET
+Root Cause: Used曜日推測 ("会合前週") instead of reading PDF
+Reviewer Miss: Did not independently fetch PDF; accepted "確認済" at face value
+Fix: Always WebFetch the PDF and compare dates character-by-character
+```
+
+**4.10 Data Freshness Disclosure Verification (MANDATORY - Added Issue #15)**
+
+⚠️ **Uptrend Ratio CSV lags Breadth CSV by ~1 week. Freshness must be disclosed prominently.**
+
+### Verification Steps (MANDATORY)
+
+1. Check the **3 mandatory disclosure locations** for data freshness:
+   - [ ] 3-line summary (冒頭) — e.g., "Uptrend Ratio 33.13% GREEN **(4/10 時点、CSV 約1週遅行)**"
+   - [ ] ロット管理 section opening — e.g., "(価格データ 4/17 終値、Uptrend Ratio は 4/10 時点・遅行指標)"
+   - [ ] マーケット状況 table row for Uptrend Ratio — e.g., "33.13% GREEN **(4/10 時点、CSV 約 1 週遅行)**"
+2. Verify price data date (FMP, typically latest close) and CSV dates are **stated in parallel** when mixed
+
+### Data Update Frequencies (Reference)
+
+| Source | Update Frequency | Typical Lag |
+|--------|-----------------|-------------|
+| Market Breadth CSV | 毎営業日 | 0-1 営業日 |
+| Uptrend Ratio CSV | 週次（通常金曜） | 最大 5-6 営業日 |
+| FMP API (price) | リアルタイム | 0 営業日 |
+
+### Detection Criteria
+
+Flag as **REVISION REQUIRED (Medium)** if:
+- 3-line summary or ロット管理 opening lacks freshness annotation while Uptrend Ratio is used as a judgment driver
+- Price data (4/17) and CSV data (4/10) mixed without explicit date parallelism
+- Uptrend CSV dated identical or newer than Breadth CSV (suspicious—typically Uptrend lags)
+
+### Known Error Pattern (Issue #15)
+
+```
+Date: 2026-04-18
+Error: Blog cited Uptrend Ratio 33.13% as current judgment material in 3-line summary without freshness note
+Actual: CSV last row dated 4/10, 1 week behind 4/17 price data
+Fix: Mandatory freshness disclosure at 3 locations (summary / lot-mgmt / indicator table)
+```
+
+**4.11 Disclaimer & Execution Tone Consistency (MANDATORY - Added Issue #16)**
+
+⚠️ **Blog contains execution instructions ("月曜寄りで実行") that conflict with generic "情報提供のみ" disclaimer. Model portfolio framing required.**
+
+### Verification Steps (MANDATORY)
+
+1. Check for **5 required elements** in the final disclaimer:
+   - [ ] Stated as "**モデル配分例・分析**" (not individual advice)
+   - [ ] Execution phrases ("月曜寄りで実行" etc.) labeled as **モデルポートフォリオの想定執行**
+   - [ ] Reader's own risk/tax consideration required
+   - [ ] Qualified advisor consultation recommended when appropriate
+   - [ ] Scenario probabilities labeled as **筆者個人の推定値**
+2. Check ロット管理 section opening for "**注: 以下はモデル配分例**" preamble
+
+### Detection Criteria
+
+Flag as **REVISION REQUIRED (Medium)** if:
+- Generic "情報提供のみ" disclaimer present but no model portfolio framing
+- Execution phrases present without "モデル想定執行" clarification
+- Scenario probabilities presented as facts without 筆者推定 labeling
+- Any of 5 disclaimer elements missing
+
+### Known Error Pattern (Issue #16)
+
+```
+Date: 2026-04-18
+Error: Blog had "月曜寄りで実行" + "成行で実行" throughout but only generic "情報提供のみ" disclaimer
+Risk: Reader may interpret as individual investment advice
+Fix: 5-element strong disclaimer + "モデル配分例" preamble in lot management
+```
+
+**4.12 Official IR Priority & Source Attribution Check (MANDATORY - Added Issue #17)**
+
+⚠️ **High Impact earnings IR must use official investor relations URL. Scenario probabilities must be separated from news sources.**
+
+### Verification Steps (MANDATORY)
+
+**A. Official IR Preference**
+
+1. For each High Impact earnings ticker, check if the IR link is official:
+   - **Preferred domains**: `investors.TICKER.com`, `ir.TICKER.com`, `ir.TICKER.net`, `newsroom.TICKER.com` (company-owned)
+   - **3rd party (DEPRECATED)**: StockTitan, Seeking Alpha, Zacks, Yahoo Finance, Benzinga
+2. If 3rd party used, try WebSearch "TICKER investor relations Q1 YYYY earnings announcement" to find official URL
+3. If official IR exists but 3rd party used → flag for replacement
+
+**A-2. Intra-Article IR URL Consistency (MANDATORY)**
+
+**Same ticker MUST use the same IR URL across ALL locations** (event table, evening/early-morning check, Sources section, body text).
+
+- **Run this grep check**: `grep -nE "TICKER|investors\.TICKER|ir\.TICKER" blog.md`
+- For each High Impact ticker, verify **all occurrences point to the same IR URL**
+- Partial replacement (e.g., event table updated but evening check still uses old 3rd party URL) → **REVISION REQUIRED (Low)**
+- This catches regressions from incomplete IR URL replacements
+
+Example pattern to avoid:
+```
+Line 80 (event table): Vertiv [IR](https://investors.vertiv.com/...)     ← updated
+Line 201 (evening check): Vertiv [IR](https://www.stocktitan.net/...)    ← forgotten!
+Line 279 (Sources): Vertiv [IR](https://investors.vertiv.com/...)        ← updated
+```
+
+**B. Probability vs. News Source Separation**
+
+1. Check all scenario probability statements (e.g., "延長45%/崩壊20%")
+2. If immediately followed by a news source link, verify separation:
+   - Bad: `延長 (45%) / 崩壊 (20%) [Bloomberg](url)` ← implies Bloomberg published the probability
+   - Good: `筆者推定の分岐確率: 延長 (45%) / 崩壊 (20%)。報道ソース: [Bloomberg](url) (確率は筆者推定)`
+
+### Detection Criteria
+
+Flag as **REVISION REQUIRED** if:
+- High Impact ticker uses 3rd party IR while official exists (Medium severity)
+- Scenario probability presented with news link without 筆者推定 separation (Low severity)
+
+### Known Error Pattern (Issue #17)
+
+```
+Date: 2026-04-18
+Error 1: Vertiv IR link used stocktitan.net (3rd party) — official exists at investors.vertiv.com
+Error 2: "延長(45%)/崩壊(20%) [Bloomberg]" implied Bloomberg produced probabilities
+Fix: Prefer official IR; separate 筆者推定 from 報道ソース explicitly
+```
+
 ## Output Format
 
 Generate a review report with the following structure:
@@ -561,6 +725,20 @@ Based on historical issues, pay special attention to:
     - Bad: "3/19 BABA BMO / ACN BMO / FDX AMC" → No IR links, BMO/AMC unverified
     - Bad: "FDX AMC [IR](url)" but BABA/ACN have no IR → partial coverage, REVISION REQUIRED
     - Fix: Each High Impact ticker needs its own IR link. If multiple tickers on one line, each must have IR URL or split into separate lines
+13. **Fed Blackout Period PDF Not Checked** (Issue #14):
+    - Bad: "Fed ブラックアウト 4/20-26 (確認済)" based on曜日推測 or speeches page only
+    - Good: "Fed ブラックアウト 4/18(土)-4/30(木) ET [PDF](fomc-blackout-period-calendar.pdf)"
+    - Fix: WebFetch the PDF directly; do not infer from曜日 or speech absence. Any date mismatch with PDF → REVISION REQUIRED (High)
+14. **Data Freshness Not Disclosed in 3 Mandatory Locations** (Issue #15):
+    - Bad: Uptrend Ratio used as judgment driver in 3行まとめ without "(4/10 時点、約1週遅行)" annotation
+    - Fix: Disclose freshness at 3 locations (3行まとめ / ロット管理冒頭 / マーケット状況表). Mixed price/CSV dates must be parallel
+15. **Weak Disclaimer vs. Execution Tone Mismatch** (Issue #16):
+    - Bad: "月曜寄りで実行" + "成行で実行" throughout + generic "情報提供のみ" footer
+    - Fix: 5-element disclaimer (モデル配分例 / モデル想定執行 / 各自判断 / アドバイザー推奨 / 筆者推定確率) + "注: 以下はモデル配分例" preamble in lot management
+16. **3rd Party IR & Source/Probability Conflation** (Issue #17):
+    - Bad: Vertiv IR → stocktitan.net when investors.vertiv.com exists
+    - Bad: "延長(45%)/崩壊(20%) [Bloomberg](url)" ← Bloomberg implied to produce probabilities
+    - Fix: Prefer official IR; explicitly separate 筆者推定確率 from 報道ソース URL
 
 ## Quality Standards
 

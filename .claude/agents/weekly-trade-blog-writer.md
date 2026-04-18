@@ -229,7 +229,31 @@ Create the blog post with these sections:
 - [ ] **Fed公式カレンダー照合**: パウエル講演・Fed理事講演など非FOMCのFedイベントは以下の両方で検証。未検証イベントは記載禁止:
     (1) `https://www.federalreserve.gov/newsevents/YYYY-month.htm`（月次カレンダー）
     (2) `https://www.federalreserve.gov/newsevents/speech/YYYY-speeches.htm`（講演一覧）
+- [ ] **Fedブラックアウト期間PDF検証 (Issue #14)**: 外部コミュニケーション・ブラックアウト期間は必ず専用PDFで検証:
+    `https://www.federalreserve.gov/monetarypolicy/files/fomc-blackout-period-calendar.pdf`
+    - **曜日ベースの推測は禁止** (「会合前週の日曜〜会合前日」等)
+    - ルール: FOMC 会合前 2 土曜 〜 会合翌木曜 ET
+    - 記載例: `Fed 外部コミュニケーション・ブラックアウト期間: **4/18(土) -- 4/30(木) ET** [PDF](...) で確認済`
+    - 曜日マーカー（土/木）と PDF URL は Sources にも必ず記載
 - [ ] **決算IRリンク**: High Impact決算に公式IRリンクを付与（イベント表インライン + Sources末尾の両方）。**複数銘柄を同一行で並記する場合も、各ティッカーごとにIR URLが必要。満たせない場合は行を分割する**
+- [ ] **公式IR優先 (Issue #17)**: IRドメインは `investors.TICKER.com` / `ir.TICKER.com` / `newsroom.TICKER.com` を最優先。3rd party (StockTitan, Seeking Alpha, Zacks等) は公式が存在しない場合の代替のみ。代替使用時は Sources に「公式IRにアクセス不可のため代替ソース」と明記
+- [ ] **データ鮮度明示 (Monty Style Rule 19, Issue #15)**: Uptrend Ratio CSVはBreadth CSVより約1週遅行するため、以下**3箇所で鮮度を明示**:
+    1. 3行まとめ（冒頭）
+    2. ロット管理セクション冒頭
+    3. マーケット状況表のUptrend Ratio行
+    - 記載例: `Uptrend Ratio 33.13% GREEN (**4/10 時点、CSV 約 1 週遅行**)`
+    - 価格データ (FMP 4/17 終値) と CSV データ (4/10) が混在する場合、**両方の日付を並記**
+- [ ] **モデル配分例プリアンブル (Monty Style Rule 20, Issue #16)**: ロット管理セクション冒頭に必ず以下を記載:
+    `**注**: 以下はモデル配分例。実際の執行判断・ロットは各自のリスク許容度・ポートフォリオ事情・税務状況を踏まえてご判断ください (記事末尾の免責参照)。`
+- [ ] **5要素強化免責**: 記事末尾の免責に以下5要素を**全て含める**:
+    1. 「**モデル配分例・分析**」であり個別投資助言ではない旨
+    2. 「月曜寄りで実行」「成行で実行」等は**モデルポートフォリオでの想定執行**である旨
+    3. リスク許容度・税務状況を踏まえた各自判断の要請
+    4. 必要に応じ**資格あるアドバイザー**への相談推奨
+    5. **シナリオ確率は筆者個人の推定値**である旨
+- [ ] **筆者推定と報道ソースの分離 (Monty Style Rule 21, Issue #17)**: シナリオ確率とニュースURLを併記する場合、**分離表記が必須**:
+    - Bad: `延長 (45%) / 崩壊 (20%) [Bloomberg](url)` ← Bloomberg が確率を出したように誤読
+    - Good: `筆者推定の分岐確率: 延長 (45%) / 崩壊 (20%)。報道ソース: [Bloomberg](url) (Bloomberg は事実報道、確率は筆者推定)`
 
 ## Output Requirements
 

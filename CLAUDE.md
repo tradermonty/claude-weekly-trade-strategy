@@ -910,12 +910,102 @@ python3 scripts/fetch_market_close.py --json
 - market-news-analyzerが上流でIRリンクを付与し、downstream（writer/reviewer）での再調査を不要にする
 - Reviewer: High Impact決算にIRリンクが欠落 → REVISION REQUIRED
 
+### Fed Blackout Period - Dedicated PDF Calendar (Issue #14)
+
+2026-04-18: 4/20週ブログで Fed 外部コミュニケーション・ブラックアウト期間を **「4/20-26」と誤記** (実際は **4/18-4/30 ET**)。strategy-reviewerを含む全工程で検出できず、記事内に「確認済」と書かれた状態でPASS判定されていた。
+
+**Root Cause**:
+- market-news-analyzer / writer / reviewer いずれも `fomccalendars.htm` と `speeches/YYYY-speeches.htm` のみ参照
+- 専用ブラックアウト カレンダー (PDF) は未参照
+- 「FOMC 4/28-29 → ブラックアウトは 4/20-26」という**曜日ベースの簡易推測**で誤った期間を生成
+- 実際のルールは「**FOMC 会合前 2 土曜日 〜 会合翌木曜日**」で、4/28-29 会合なら **4/18 (土) 〜 4/30 (木) ET**
+
+**Official Source (MANDATORY)**:
+| Resource | URL |
+|----------|-----|
+| **FOMC Blackout Calendar (PDF)** | `https://www.federalreserve.gov/monetarypolicy/files/fomc-blackout-period-calendar.pdf` |
+| Monthly events | `https://www.federalreserve.gov/newsevents/YYYY-month.htm` |
+| Speeches | `https://www.federalreserve.gov/newsevents/speech/YYYY-speeches.htm` |
+
+**Blackout Rule** (覚書):
+- **開始**: FOMC 会合開始日の**前の前の土曜日** (会合前 2 土曜)
+- **終了**: FOMC 会合終了日の**翌木曜日** (会合終了翌日が木曜)
+- 期間中、Fed理事・地区連銀総裁は外部向け講演・メディア出演を自粛
+- 例: FOMC 4/28(火)-29(水) → Blackout 4/18(土) 〜 4/30(木) ET
+
+**Rules**:
+- market-news-analyzer / strategy-reviewer は必ず **PDF を WebFetch で直接取得**し期間を特定する (WebSearch による間接推測禁止)
+- 曜日ベース推測（「会合前週の日曜〜会合前日」等）は**禁止**
+- ブラックアウト期間は PDF の記載そのまま転写し、曜日（土/木）も明記
+- writer / reviewer 双方で独立検証する
+- 誤ったブラックアウト期間 → **REVISION REQUIRED (High severity)**
+
+### Data Freshness Disclosure (Issue #15)
+
+2026-04-18: Uptrend Ratio CSV が Market Breadth CSV より約1週遅れで更新される事実が、ブログ冒頭（3行まとめ）で明示されず、読者が最新データと誤認するリスクがあった。
+
+**Root Cause**:
+- writer が「4/10 時点、CSV最新」という注釈を本文中盤（Line 164付近）にしか書かず、前半の判断根拠セクションでは鮮度を明示せず
+- reviewer もこの点を Round 1 で指摘したが「中盤に書いてあるから OK」と判断
+- データソース間の更新頻度差（Breadth CSV 毎営業日更新 vs Uptrend CSV 週次更新）がプロジェクト内で文書化されていない
+
+**Data Update Frequencies**:
+| Source | Update Frequency | Typical Lag |
+|--------|-----------------|-------------|
+| Market Breadth CSV | 毎営業日 | 0-1 営業日 |
+| Uptrend Ratio CSV | 週次（通常金曜更新） | 最大 5-6 営業日 |
+| FMP API (price) | リアルタイム | 0 営業日 |
+| Sector Summary CSV | 週次 | 最大 5-6 営業日 |
+
+**Rules (Monty Style Rule 19)**:
+- 3行まとめ・ロット管理冒頭・マーケット状況表の**3箇所で必ず鮮度を明示**
+  - 例: 「Uptrend Ratio 33.13% GREEN (**4/10 時点、CSV 約 1 週遅行**)」
+- 異なる更新頻度のデータが混在する場合、表や本文で**日付を並べて表記**
+  - 例: 「価格データは 4/17 終値、Uptrend Ratio は 4/10 時点」
+- reviewer は「3行まとめ」「ロット管理セクション冒頭」の2か所で鮮度明示がない場合 → REVISION REQUIRED (Medium severity)
+
+### Disclaimer & Execution Tone Consistency (Issue #16)
+
+2026-04-18: 「月曜寄りで実行」「成行で実行」等の具体的執行指示が本文多数にある一方、末尾免責は「情報提供のみ」のみで、モデル配分例であることが不明瞭だった。公開記事として読者が個別助言と誤認するリスク。
+
+**Root Cause**:
+- writer テンプレートが「モデル配分例」明示を含んでいなかった
+- 免責も画一的なテンプレ文のみで、本文トーン（具体的執行指示）との整合性を取る記述がなかった
+
+**Rules (Monty Style Rule 20)**:
+- ロット管理セクション冒頭に「**注: 以下はモデル配分例。実際の執行判断・ロットは各自のリスク許容度・ポートフォリオ事情・税務状況を踏まえてご判断ください**」を**必ず記載**
+- 末尾免責に以下要素を**全て含める**:
+  1. 「**モデル配分例・分析**」であり個別投資助言ではない旨
+  2. 「月曜寄りで実行」等は**モデルポートフォリオでの想定執行**である旨
+  3. リスク許容度・税務状況を踏まえた各自判断の要請
+  4. 必要に応じ**資格あるアドバイザー**への相談推奨
+  5. **シナリオ確率は筆者個人の推定値**である旨
+- reviewer は上記5要素が揃っているか確認、欠落 → REVISION REQUIRED (Medium severity)
+
+### Official IR Priority & Source Attribution (Issue #17)
+
+2026-04-18: (1) Vertiv IR リンクが StockTitan (3rd party press release aggregator) で公式 IR URL (`investors.vertiv.com`) が使われていなかった (2) イラン停戦シナリオ確率 (筆者推定) と Bloomberg 報道リンクが併記され、Bloomberg が確率を出したように誤読できる状態だった。
+
+**Root Cause**:
+- market-news-analyzer が IR リンク収集時に「検証可能な URL」優先で 3rd party を許容
+- writer が筆者推定とソースリンクの分離表記ルールを持っていなかった
+
+**Rules (Monty Style Rule 21)**:
+- **IR リンクは公式 (`investors.TICKER.com` / `ir.TICKER.com` / `ir.TICKER.net` / 企業の `newsroom.TICKER.com`) を最優先**
+  - 3rd party (StockTitan, Seeking Alpha, Zacks, Yahoo 等) は**公式 IR が存在しない・アクセス不可の場合のみ代替として使用**
+  - 3rd party 使用時は Sources 末尾で「公式 IR にアクセスできなかったため代替ソース」と明記
+- **筆者推定と報道ソースの分離表記**:
+  - Bad: `延長 (45%) / 崩壊 (20%) [Bloomberg](url)` ← Bloomberg が確率を出したと誤読
+  - Good: `筆者推定の分岐確率: 延長 (45%) / 崩壊 (20%)。報道ソース: [Bloomberg](url) (Bloomberg は事実報道、確率は筆者推定)`
+- reviewer: 公式 IR 存在が確認できるのに 3rd party 使用 → REVISION REQUIRED (Low severity、ただし High Impact銘柄は Medium)
+- reviewer: 確率と報道ソースが併記され分離表記がない → REVISION REQUIRED (Low severity)
+
 ---
 
 ## Version Control
 
-- **Project Version**: 2.3
-- **Last Updated**: 2026-03-14
+- **Project Version**: 2.4
+- **Last Updated**: 2026-04-18
 - **Maintenance**: Update this document regularly
 
 ---
