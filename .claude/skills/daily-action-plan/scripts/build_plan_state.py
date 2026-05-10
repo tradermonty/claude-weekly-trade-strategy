@@ -248,20 +248,30 @@ def _parse_trigger_metadata(trigger: str) -> dict:
         meta["required_days"] = int(days_m.group(1))
 
     # Direction: below / above / range
-    if re.search(r"(下回|以下|割れ)", trigger):
+    if re.search(r"(下回|以下|割れ|未満)", trigger) or re.search(r"<\s*\d", trigger):
         meta["direction"] = "below"
-    elif re.search(r"(超え|超[を（\s]|超$|以上)", trigger):
+    elif re.search(r"(超え|超[を（\s]|超$|以上)", trigger) or re.search(r">\s*\d", trigger):
         meta["direction"] = "above"
     elif "維持" in trigger:
         meta["direction"] = "above"
-    elif "レンジ" in trigger or re.search(r"\d+[-–]\$?\d+", trigger):
+    elif "レンジ" in trigger or re.search(r"[\d,]+[-–]\$?[\d,]+", trigger):
         meta["direction"] = "range"
-        range_m = re.search(r"(\d+(?:\.\d+)?)[-–]\$?(\d+(?:\.\d+)?)", trigger)
-        if not range_m:
-            range_m = re.search(r"\$(\d+(?:\.\d+)?)[-–]\$?(\d+(?:\.\d+)?)", trigger)
+        # Allow commas as thousands separators (e.g. "7,018-7,300")
+        range_m = re.search(
+            r"\$?([\d,]+(?:\.\d+)?)[-–]\$?([\d,]+(?:\.\d+)?)", trigger,
+        )
         if range_m:
-            meta["range_low"] = float(range_m.group(1))
-            meta["range_high"] = float(range_m.group(2))
+            meta["range_low"] = float(range_m.group(1).replace(",", ""))
+            meta["range_high"] = float(range_m.group(2).replace(",", ""))
+
+    # Fallback: bare "$X 終値 (N日連続)" without explicit direction marker
+    # → assume "above" (continuation pattern: stronger level on same side)
+    if (
+        meta["direction"] is None
+        and "終値" in trigger
+        and re.search(r"\$\d", trigger)
+    ):
+        meta["direction"] = "above"
 
     # Non-price triggers
     if any(kw in trigger for kw in ("停戦", "報道", "合意", "再開")):

@@ -273,8 +273,8 @@ _BEAR_KEYWORDS = frozenset({
 
 
 _SCENARIO_HEADER_D = re.compile(
-    r"###\s+シナリオ\d+[（(]\s*(.+?)\s*[）)][：:]\s*"
-    r".+?--\s*筆者推定\s*(\d+)\s*%",
+    r"###\s+シナリオ\s*\d+\s*[（(]\s*(.+?)\s*[）)][：:]\s*"
+    r".+?--\s*筆者推定\s*\*{0,2}\s*(\d+)\s*%?\s*\*{0,2}",
 )
 
 # Inline Tail Risk note embedded in scenario blocks:
@@ -497,16 +497,47 @@ def _parse_scenarios(text: str) -> dict[str, ScenarioSpec]:
     return scenarios
 
 
+_INDICATOR_KEYWORDS = (
+    "VIX", "S&P", "原油", "Breadth", "Uptrend", "10Y",
+    "Nasdaq", "Dow", "ゴールド", "Gold", "WTI", "Core PCE", "PCE", "GDP",
+)
+
+
+def _has_indicator_keyword(text: str) -> bool:
+    return any(kw in text for kw in _INDICATOR_KEYWORDS)
+
+
 def _parse_trigger_list(block: str) -> list[str]:
-    """Extract trigger strings from a scenario block."""
+    """Extract trigger strings from a scenario block.
+
+    Splits on `+`, `or`, `、` boundaries while requiring whitespace around `+` and
+    `or` to avoid splitting words like "Core" or numbers like "+0.3%". For bare
+    price/number fragments (e.g. "$105 終値 2 日連続"), inherits the indicator
+    name from the previous fragment so downstream consumers can identify the
+    underlying asset.
+    """
     trigger_match = _SCENARIO_TRIGGER.search(block)
     triggers: list[str] = []
-    if trigger_match:
-        raw = trigger_match.group(1).strip()
-        for part in re.split(r"\s*(?:\+|or|、)\s*", raw):
-            cleaned = re.sub(r"\*\*", "", part).strip()
-            if cleaned:
-                triggers.append(cleaned)
+    if not trigger_match:
+        return triggers
+    raw = trigger_match.group(1).strip()
+    parts = re.split(r"\s+\+\s+|\s+or\s+|、", raw)
+    prev_indicator: str | None = None
+    for part in parts:
+        cleaned = re.sub(r"\*\*", "", part).strip()
+        if not cleaned:
+            continue
+        if (
+            prev_indicator
+            and not _has_indicator_keyword(cleaned)
+            and re.match(r"^[\$\d]", cleaned)
+        ):
+            cleaned = f"{prev_indicator} {cleaned}"
+        triggers.append(cleaned)
+        for kw in _INDICATOR_KEYWORDS:
+            if kw in cleaned:
+                prev_indicator = kw
+                break
     return triggers
 
 
@@ -781,17 +812,36 @@ _VIX_THRESHOLDS = re.compile(
     r"\*?\*?(\d+(?:\.\d+)?)\*?\*?\s*\(Stress\)"
 )
 
+# Fallback: slash-separated values without labels, optional bold/decorator text
+# Format: | **VIX** | current | 17 / 20 / 23 / 26 | note
+# Or: 17 / **20突破** / **23** / 26 (bold + suffix text allowed)
+_VIX_THRESHOLDS_SLASH = re.compile(
+    r"\*?\*?VIX\*?\*?\s*\|[^|]*\|\s*"
+    r"\*?\*?(\d+(?:\.\d+)?)[^/|]*?/\s*"
+    r"\*?\*?(\d+(?:\.\d+)?)[^/|]*?/\s*"
+    r"\*?\*?(\d+(?:\.\d+)?)[^/|]*?/\s*"
+    r"\*?\*?(\d+(?:\.\d+)?)"
+)
+
 
 def _parse_vix_triggers(text: str) -> dict[str, float]:
     """Parse VIX trigger levels from the マーケット状況 table."""
     m = _VIX_THRESHOLDS.search(text)
-    if not m:
-        return {}
-    return {
-        "risk_on": float(m.group(1)),
-        "caution": float(m.group(2)),
-        "stress": float(m.group(3)),
-    }
+    if m:
+        return {
+            "risk_on": float(m.group(1)),
+            "caution": float(m.group(2)),
+            "stress": float(m.group(3)),
+        }
+    m2 = _VIX_THRESHOLDS_SLASH.search(text)
+    if m2:
+        return {
+            "risk_on": float(m2.group(1)),
+            "caution": float(m2.group(2)),
+            "stress": float(m2.group(3)),
+            "panic": float(m2.group(4)),
+        }
+    return {}
 
 
 # --- Yield triggers -------------------------------------------------------
@@ -803,17 +853,36 @@ _YIELD_THRESHOLDS = re.compile(
     r"(\d+\.\d+)%?\s*\(赤\)"
 )
 
+# Fallback: slash-separated values without labels, with optional space in "10Y 利回り"
+# Format: | **10Y 利回り** | current | 4.11% / 4.36% / 4.50% / 4.60% | note
+# Bold/decorator text between values is tolerated, e.g. "4.11% / **4.36%突破** / **4.50%** / 4.60%"
+_YIELD_THRESHOLDS_SLASH = re.compile(
+    r"\*?\*?10Y\s*利回り\*?\*?\s*\|[^|]*\|\s*"
+    r"\*?\*?(\d+\.\d+)%?[^/|]*?/\s*"
+    r"\*?\*?(\d+\.\d+)%?[^/|]*?/\s*"
+    r"\*?\*?(\d+\.\d+)%?[^/|]*?/\s*"
+    r"\*?\*?(\d+\.\d+)%?"
+)
+
 
 def _parse_yield_triggers(text: str) -> dict[str, float]:
     """Parse yield trigger levels from the マーケット状況 table."""
     m = _YIELD_THRESHOLDS.search(text)
-    if not m:
-        return {}
-    return {
-        "lower": float(m.group(1)),
-        "warning": float(m.group(2)),
-        "red_line": float(m.group(3)),
-    }
+    if m:
+        return {
+            "lower": float(m.group(1)),
+            "warning": float(m.group(2)),
+            "red_line": float(m.group(3)),
+        }
+    m2 = _YIELD_THRESHOLDS_SLASH.search(text)
+    if m2:
+        return {
+            "lower": float(m2.group(1)),
+            "warning": float(m2.group(2)),
+            "red_line": float(m2.group(3)),
+            "extreme": float(m2.group(4)),
+        }
+    return {}
 
 
 # --- Breadth / Uptrend ----------------------------------------------------
