@@ -479,3 +479,104 @@ Actual: MLK Day is 1/19（月）, January 3rd Monday
 Cause: Did not verify with calendar tool, assumed date
 Fix: Always run calendar.month() and calculate holiday from rule
 ```
+
+## Earnings IR Time Verification & Manifest (MANDATORY - Issue #20)
+
+Beyond the markdown report, you MUST emit a structured `reports/YYYY-MM-DD/ir_events.yaml` manifest that the writer and postflight check consume.
+
+### Why a Separate Manifest
+
+In Round 2-4 incidents (2026-05-09), the writer transcribed estimated earnings call times into the blog body because:
+1. The markdown report mixed release timing (BMO/AMC) with call times
+2. There was no machine-readable cross-check between report and blog body
+
+The YAML manifest provides:
+- Strict schema (release / call / webcast separated as distinct items)
+- `time_et: null` + `time_note` requirement when official IR doesn't specify a time
+- `official_ir_url` mandatory per ticker
+- Postflight script can validate body against this YAML
+
+### Generation Workflow
+
+```bash
+# Step 1: market-news-analyzer (this agent) generates the template via:
+python3 scripts/ir_facts_manifest.py --date YYYY-MM-DD --generate --force
+
+# Step 2: this agent fills in verified IR times by visiting each official IR page
+#         and writes the result back to reports/YYYY-MM-DD/ir_events.yaml
+
+# Step 3: validate before downstream consumption
+python3 scripts/ir_facts_manifest.py --date YYYY-MM-DD --validate
+```
+
+### Per-Ticker Verification Steps
+
+For every High-Impact earning in the next 7 days:
+
+1. **Visit official IR events page** (NOT a 3rd party aggregator) via WebFetch.
+2. **Extract three time fields separately**:
+   - `release` → BMO / AMC + (time if stated, else null + time_note)
+   - `call` → conference call time in ET (most companies state this explicitly)
+   - `webcast` → if separate from call (e.g., Petrobras: webcast next morning at 10:30 ET)
+3. **Convert to JST via zoneinfo** (do NOT use manual ET+13/14 offsets):
+
+```python
+from datetime import datetime
+from zoneinfo import ZoneInfo
+et = datetime(2026, 5, 13, 7, 30, tzinfo=ZoneInfo("America/New_York"))
+jst = et.astimezone(ZoneInfo("Asia/Tokyo"))
+# 2026-05-13 20:30 JST
+```
+
+4. **Forbidden patterns**: 推定, approx, ~ET — if you cannot find the time on official IR, use `time_et: null` + `time_note: "Official IR does not specify time"` instead of guessing.
+
+### Schema Example
+
+```yaml
+target_week_start: 2026-05-11
+events:
+  - ticker: BABA
+    company: Alibaba Group
+    market_cap_usd_b: 325.1
+    impact: high
+    official_ir_url: "https://www.alibabagroup.com/en-US/ir-events"
+    source_type: official    # or "third_party" if official inaccessible
+    items:
+      - type: release
+        date_et: "2026-05-13"
+        timing: BMO
+        time_et: null
+        time_note: "Official IR: 'before U.S. market open'"
+      - type: call
+        date_et: "2026-05-13"
+        time_et: "07:30"
+        time_jst: "20:30"
+        verified_via: "Alibaba IR Events page"
+```
+
+### Known Error Patterns (Issue #20, Round 2-4 incidents 2026-05-09)
+
+```
+Error 1 (BABA): Wrote "5/13 BMO 6:00 ET 推定"
+  Actual: Conference call is 7:30 ET (公式 IR Events page で確認可能)
+  Cause: Inferred time from BMO timing, did not check IR
+
+Error 2 (CEG): Wrote "5/11 BMO 8:00 ET"
+  Actual: Conference call is 10:00 ET (公式 IR で明示)
+  Cause: Treated BMO release as call time
+
+Error 3 (PBR): Wrote "5/11 AMC 16:30 ET"
+  Actual: Official says only "after markets close", time NOT specified
+  Cause: Assumed standard 16:30 close-of-day timing
+```
+
+**Prevention**: this manifest forces verified-only times per ticker, with `time_et: null` as the safe default when official IR is silent.
+
+### Pipeline Position
+
+```
+market-news-analyzer (this agent)
+  ├─ reports/YYYY-MM-DD/market-news-analysis.md  (existing)
+  └─ reports/YYYY-MM-DD/ir_events.yaml           (NEW, Issue #20)
+       └─ consumed by: weekly-trade-blog-writer + postflight_blog_check.py
+```

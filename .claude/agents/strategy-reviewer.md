@@ -557,6 +557,114 @@ Error 2: "延長(45%)/崩壊(20%) [Bloomberg]" implied Bloomberg produced probab
 Fix: Prefer official IR; separate 筆者推定 from 報道ソース explicitly
 ```
 
+## Phase 5: Mechanical Verification via Postflight (MANDATORY, Issues #18-#21)
+
+Before starting Phase 1-4 logical review, **run the postflight script** to detect mechanical regression of past bug categories.
+
+### Step 0: Run Postflight Pipeline
+
+```bash
+# Required prerequisites (must exist in reports/YYYY-MM-DD/):
+# - facts_snapshot.json (from preflight_blog_facts.py)
+# - ir_events.yaml (from market-news-analyzer)
+
+python3 scripts/postflight_blog_check.py blogs/YYYY-MM-DD-weekly-strategy.md
+```
+
+If postflight returns exit code 1 (FAIL), the reviewer MUST treat all HIGH findings as REVISION REQUIRED before proceeding to logical review. If postflight returns exit code 2 (ERROR), missing prerequisites must be generated first.
+
+### Postflight Coverage (Automated Checks)
+
+| Check | Issue | Severity |
+|-------|-------|----------|
+| ETF spot price (SPY/QQQ/GLD) appears verbatim in body | #18 | High |
+| OTM% recalculated from spot/strike (±0.3% tolerance) | #18 | High |
+| Option expiry matches Cboe / VIX calendar (holiday-shifted) | #19 | High |
+| Forbidden patterns absent (Powell 退任, Panic Mode, Wikipedia, "6/19 満期", "5/21 満期", "5/8 最終更新", `推定 ET`) | #21 | Medium |
+| Day-of-week matches `calendar.month()` | #6 | Medium |
+| IR call times in body match ir_events.yaml | #20 | Medium |
+
+### ETF Spot Price (Issue #18)
+
+Beyond the postflight automated check, the reviewer must verify:
+
+- **GC/GLD ratio**: facts_snapshot.json shows the actual ratio (e.g., 10.91 for 2026-05). Body must NOT use shortcut conversions like "GLD ≈ GC/10".
+- **Strike-to-spot ratio**: For each option mentioned (QQQ/SPY/GLD/etc.), the OTM% in body must match `(strike/spot - 1) * 100` within ±0.3%.
+- **Buy/sell levels using ETF tickers**: must use ETF spot scale, not derived from futures via shortcut division.
+
+**Detection**: Postflight catches automatically. Reviewer adds context: was this a math error (one-off) or systemic (multiple options affected)?
+
+### Option Expiry Holiday Shifts (Issue #19)
+
+Reviewer must independently verify against `option_expiries` in facts_snapshot.json:
+
+- **Equity/ETF June 2026 monthly**: 6/18 (Thu, Juneteenth shift), NOT 6/19
+- **VIX May 2026 monthly**: 5/19 (Tue, connected shift), NOT 5/21
+- **2026 holiday-shifted months** to watch: April (Good Friday), June (Juneteenth), December (Christmas)
+
+**Detection Steps**:
+1. Read `reports/YYYY-MM-DD/facts_snapshot.json` → `option_expiries.equity_etf_standard`, `option_expiries.vix_standard`
+2. Cross-check every "X/YY 満期" / "M/DD expiry" mention in body
+3. If mismatch → **REVISION REQUIRED (High severity)**
+
+### IR Call Time Verification (Issue #20)
+
+Reviewer must independently verify against `ir_events.yaml`:
+
+- Every earnings call time in body must match `ir_events.yaml` `items[].type=call`.`time_et`
+- "推定" / "approx" / "~ET" patterns are forbidden (postflight catches; reviewer flags any miss)
+- release / call / webcast must be **separate rows** in event tables
+
+**Common Error Patterns (Round 2 incidents 2026-05-09)**:
+- BABA "5/13 6:00 ET 推定" (actual: 7:30 ET call)
+- CEG "5/11 8:00 ET" (actual: 10:00 ET call)
+- PBR "5/11 16:30 ET"断定 (official: time not specified)
+
+**Detection**: If postflight detects mismatch OR the body has any "推定 ET" pattern → **REVISION REQUIRED (Medium)**
+
+### Standard Terminology Dictionary (Issue #21)
+
+Reviewer must scan body for forbidden terms (postflight catches the obvious ones, reviewer catches paraphrases):
+
+| Forbidden | Required | Why |
+|-----------|----------|-----|
+| Powell 退任 | Powell 議長任期終了 | Powell remains as governor |
+| Panic Mode | Tail Risk Defensive Mode | Avoid advice tone |
+| 即時実行 | モデル上ザラ場で即時リスク削減を検討 | Avoid advice tone |
+| 完全撤退 | モデル上は一時的にゼロへ縮小 | Avoid advice tone |
+| Wikipedia link | AP/Reuters/WSJ/Bloomberg/FT | Primary sources only |
+| Fed 静寂週 | (列挙: "5/14 Barr のみ" 等) | Force enumeration |
+
+**Detection**: Postflight handles regex match. Reviewer flags semantic equivalents.
+
+### Source Type Separation (Issue #21)
+
+Sources section must have **two distinct blocks**:
+
+1. **公式スケジュール URL** (BLS, Census, Fed, official IR) — for date/time verification
+2. **市場コンセンサス出典** (FactSet, Investing.com, FMP, Trading Economics) — for forecast values
+
+If forecast values (e.g., "Core CPI +0.3% 予想") are written without consensus source separation → **REVISION REQUIRED (Low)**
+
+### Known Error Patterns (Issues #18-#21, Round 2-4 incidents 2026-05-09)
+
+```
+Round 2 Incidents:
+- GLD ≈ GC/10 shortcut → GLD body $473 vs actual $433.77 (Issue #18)
+- BABA call estimated 6:00 ET → actual 7:30 ET (Issue #20)
+- CEG call estimated 8:00 ET → actual 10:00 ET (Issue #20)
+- 5/14 (金) → actually Thursday (Issue #6)
+- "Powell 退任" used (Issue #21)
+
+Round 3 Incidents:
+- QQQ/SPY/GLD 6/19 満期 → actual 6/18 (Juneteenth, Issue #19)
+- VIX 5/21 → actual 5/19 (connected shift, Issue #19)
+- PBR 16:30 ET 断定 → official未明示 (Issue #20)
+- "Panic Mode" used (Issue #21)
+
+Prevention: postflight pipeline catches all of these mechanically.
+```
+
 ## Output Format
 
 Generate a review report with the following structure:

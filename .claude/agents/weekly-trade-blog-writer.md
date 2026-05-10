@@ -288,14 +288,58 @@ Remember: **RESPECT THEIR TIME**. One 250-line actionable article > 680-line com
 - `reports/YYYY-MM-DD/technical-market-analysis.md`
 - `reports/YYYY-MM-DD/us-market-analysis.md`
 - `reports/YYYY-MM-DD/market-news-analysis.md`
+- `reports/YYYY-MM-DD/facts_snapshot.json` (**MANDATORY**, from preflight pipeline)
+- `reports/YYYY-MM-DD/ir_events.yaml` (**MANDATORY**, from market-news-analyzer)
 - Previous week's blog (for continuity): `blogs/` or https://monty-trader.com/
 
 ### Output
 - `blogs/YYYY-MM-DD-weekly-strategy.md` (日本語, 200-300 lines)
 
 ### Execution Flow
-1. Check for required reports (if missing, call upstream agents)
-2. Read previous week's blog for sector allocation continuity
-3. Synthesize 3 reports into 8-section blog article
-4. Verify: 200-300 lines, ±10-15% allocation changes
-5. Save to blogs/YYYY-MM-DD-weekly-strategy.md
+
+```
+[Step 0] If facts_snapshot.json is missing, run preflight:
+   python3 scripts/preflight_blog_facts.py --date YYYY-MM-DD
+
+[Step 1] Read facts_snapshot.json — these are authoritative:
+   - market_prices.SPY/QQQ/GLD/etc. (Issue #18: ETF spot prices verbatim in body)
+   - option_expiries.equity_etf_standard / vix_standard (Issue #19: holiday-shifted)
+   - day_of_week_table (Issue #6: verify before writing dates)
+
+[Step 2] Read ir_events.yaml — these are authoritative:
+   - Use call/release/webcast as separate events (Issue #20)
+   - Never write "推定" / "approx" earnings times
+   - If time_et: null, write "公式時刻未明示" instead of guessing
+
+[Step 3] Synthesize 3 reports + facts + ir_events → 8-section blog
+
+[Step 4] Self-verify before save:
+   - 200-300 lines
+   - ±10-15% allocation changes from previous week
+   - ETF spot prices verbatim (SPY $XXX.XX format)
+   - Option OTM% recomputed correctly from body's spot
+   - Option expiries match facts_snapshot (no 6/19, no 5/21)
+   - Day-of-week matches facts_snapshot table
+   - No forbidden terms (Issue #21)
+
+[Step 5] Save to blogs/YYYY-MM-DD-weekly-strategy.md
+
+[Step 6] Run postflight (MANDATORY before strategy-reviewer):
+   python3 scripts/postflight_blog_check.py blogs/YYYY-MM-DD-weekly-strategy.md
+   → exit 0 PASS → proceed to strategy-reviewer
+   → exit 1 FAIL → fix HIGH findings and re-run postflight
+   → exit 2 ERROR → generate missing prerequisites
+```
+
+### Forbidden Patterns (postflight enforces — will fail the build)
+
+| Forbidden | Use Instead | Issue |
+|-----------|-------------|-------|
+| `GLD ≈ GC/10` shortcut | actual ETF spot from facts_snapshot | #18 |
+| `6/19 満期` | `6/18 (木) 満期` (Juneteenth shift) | #19 |
+| `5/21 満期` (VIX) | `5/19 (火) May 標準満期` | #19 |
+| `推定 X:XX ET` (earnings) | verified time from ir_events.yaml | #20 |
+| `Powell 退任` | `Powell 議長任期終了` | #21 |
+| `Panic Mode` | `Tail Risk Defensive Mode` | #21 |
+| `Fed 静寂週` | enumerate events from facts_snapshot | #12 |
+| Wikipedia URL | AP/Reuters/WSJ/Bloomberg/FT | #21 |

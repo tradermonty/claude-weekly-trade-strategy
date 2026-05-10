@@ -168,6 +168,30 @@ and save to reports/2025-11-03/market-news-analysis.md.
 
 ---
 
+### Step 3.5 (NEW, MANDATORY since v2.5): Preflight Facts Generation
+
+**Purpose**: Generate machine-readable `facts_snapshot.json` and `ir_events.yaml` so the writer cannot drift from authoritative data.
+
+**Scripts**:
+```bash
+# Step 3.5a: Generate facts_snapshot.json (ETF prices, option expiries, holidays, day-of-week)
+python3 scripts/preflight_blog_facts.py --date YYYY-MM-DD
+
+# Step 3.5b: Generate ir_events.yaml template (then market-news-analyzer fills it in)
+python3 scripts/ir_facts_manifest.py --date YYYY-MM-DD --generate
+
+# Step 3.5c: Validate ir_events.yaml schema after fill-in
+python3 scripts/ir_facts_manifest.py --date YYYY-MM-DD --validate
+```
+
+**Output**:
+- `reports/YYYY-MM-DD/facts_snapshot.json` (Issue #18, #19, #6)
+- `reports/YYYY-MM-DD/ir_events.yaml` (Issue #20)
+
+**Why mandatory**: Round 2-4 incidents on 2026-05-09 demonstrated that 5+ High-severity bugs (ETF spot mismatch, Juneteenth-shifted expiries, estimated earnings times, day-of-week errors) recurred even with reviewer in place because writer transcribed from rough analyst output. The structured snapshot + manifest + postflight pipeline catches these mechanically.
+
+---
+
 ### Step 4: Weekly Blog Generation
 
 **Purpose**: Integrate three reports and generate weekly strategy blog for part-time traders
@@ -384,6 +408,32 @@ Follow these rules to maintain the established "Monty Style" in blog posts:
     - Bad: "3/19 BABA BMO / ACN BMO / FDX AMC" → IRリンクなし、どれがどの時間帯かも不明
     - Good: 各銘柄を独立行にし、各行に `[IR](https://investors.xxx.com/)` を付与
     - Reason: 決算日付をアクション前提にする場合、公式IRページで裏取りしないと日付・BMO/AMC間違いのリスクがある
+
+---
+
+### Step 4.5 (NEW, MANDATORY since v2.5): Postflight Mechanical Lint
+
+**Purpose**: Mechanically verify the draft against `facts_snapshot.json` and `ir_events.yaml` before logical review. Catches Round 2-4 bug categories at near-zero marginal cost.
+
+**Script**:
+```bash
+python3 scripts/postflight_blog_check.py blogs/YYYY-MM-DD-weekly-strategy.md
+```
+
+**Behavior**:
+- exit 0 (PASS) → proceed to Step 5 (strategy-reviewer)
+- exit 1 (FAIL) → fix HIGH findings, re-run postflight until PASS
+- exit 2 (ERROR) → prerequisite (facts_snapshot.json / ir_events.yaml) missing
+
+**Coverage**:
+- ETF spot prices (SPY/QQQ/GLD) appear verbatim (Issue #18)
+- Option OTM% auto-recomputed within ±0.3% (Issue #18)
+- Option expiries match Cboe/VIX calendar with holiday shifts (Issue #19)
+- Forbidden terms absent: `Powell 退任`, `Panic Mode`, `Wikipedia`, `6/19 満期`, `5/21 満期`, `5/8 最終更新`, `推定 X:XX ET` (Issue #21)
+- Day-of-week matches `calendar.month()` (Issue #6)
+- IR call times match `ir_events.yaml` (Issue #20)
+
+**Mandatory**: must PASS before invoking strategy-reviewer.
 
 ---
 
@@ -1000,12 +1050,145 @@ python3 scripts/fetch_market_close.py --json
 - reviewer: 公式 IR 存在が確認できるのに 3rd party 使用 → REVISION REQUIRED (Low severity、ただし High Impact銘柄は Medium)
 - reviewer: 確率と報道ソースが併記され分離表記がない → REVISION REQUIRED (Low severity)
 
+### ETF Spot Price Mandatory (Issue #18)
+
+2026-05-09: GLD ≈ GC/10 の単純換算で本文を生成し、GLD $473 と表記 (実勢 $433.77、誤差 9.3%)。同時に QQQ 現値も $687 と誤認 (実勢 $711.23)。これによりオプション戦略の OTM% が全箇所誤算となり、$640 QQQ プットが「-6.8% OTM」(実際は -10.0%)、$490 GLD コールが「+3.6% OTM」(実際は +13.0%) と表記された。
+
+**Root Cause**:
+- writer が `fetch_market_close.py` を実行しても、ETF 価格を本文に明示転記せず、先物価格 ÷ 10 などの暗算換算で記述
+- GC/GLD 比率は実勢 10.9 倍 (GC $4,730.7 / GLD $433.77 で算出)、単純 ÷10 では誤差が累積
+- オプション OTM% は ETF 実勢価格でしか正しく算出できないが、検算プロセスが未整備
+
+**Rules**:
+- ブログ本文・買い売りレベル・オプション戦略で ETF を扱う場合、必ず **FMP API で取得した ETF 実勢価格** を使用
+- **禁止**: GLD ≈ GC/10、SPY ≈ SPX/10 等の固定比率換算
+- 必須: GC/GLD 比率を実勢から算出し本文表記 (例: GC/GLD 10.9 倍)
+- オプション OTM% は spot price と strike から `(strike/spot - 1) * 100` で再計算
+- preflight `facts_snapshot.json` に ETF spot を出力し、postflight で本文と照合 (誤差 ±0.3%)
+- Reviewer: ETF オプション OTM% を実勢比で再計算検証 → 誤差 1%+ で REVISION REQUIRED (High)
+- Reviewer: GLD/SPY/QQQ の値が ETF 実勢と乖離 → REVISION REQUIRED (High)
+
+### Option Expiry Holiday Shift (Issue #19)
+
+2026-05-09: 5/11 週ブログでオプション戦略の満期を 6/19 と表記したが、2026/6/19 は **Juneteenth (連邦祝日)** で取引所休場。Equity/ETF の標準月次満期は **6/18 (木)** に前倒し、VIX May 標準満期も 5/19 (火) に連動前倒しされていた。
+
+**Root Cause**:
+- 「標準満期 = 第3金曜」という固定ルールで生成、米祝日カレンダー未参照
+- VIX 月次満期は SPX 月次満期の30日前 (水曜日) に設定されるが、SPX が前倒しなら VIX も連動前倒し
+- writer がオプション戦略を書く際、Cboe / OCC 公式カレンダーを未確認
+
+**Official Sources (MANDATORY)**:
+| Resource | URL |
+|----------|-----|
+| Cboe 2026 Options Calendar | https://cdn.cboe.com/resources/options/Cboe2026OPTIONSCalendar.pdf |
+| Macroption VIX Expiration | https://www.macroption.com/vix-expiration-calendar/ |
+| OCC Expiration Calendar | https://www.optionseducation.org/referencelibrary/expiration-calendar |
+
+**US Federal Holidays Affecting Options (key dates)**:
+| Holiday | 2026 Date | Affected |
+|---------|-----------|----------|
+| Good Friday | 4/3 (Fri) | April monthly: 4/2 (Thu) |
+| Juneteenth | 6/19 (Fri) | **June monthly: 6/18 (Thu)、VIX May: 5/19 (Tue)** |
+| Independence Day | 7/3 (Fri、observed) | July monthly: 7/16 (Thu) を確認 |
+| Thanksgiving Friday | 11/27 (early close) | 通常通り |
+| Christmas | 12/25 (Fri) | December monthly: 12/24 (Thu)、VIX Nov 連動 |
+
+**Rules**:
+- writer がオプション戦略を書く際、必ず **preflight で生成した `option_expiries` を参照**
+- preflight script は `holidays` パッケージ + Cboe ハードコード基準で前倒し判定
+- VIX 連動シフト規則: SPX 月次満期 - 30日 (水曜) → SPX 前倒しなら VIX も連動
+- Reviewer: 満期日を Cboe / VIX カレンダーと突合 → 誤りで REVISION REQUIRED (High)
+
+### Earnings Call Time IR Verification (Issue #20)
+
+2026-05-09: BABA を「BMO 6:00 ET 推定」、CEG を「BMO 8:00 ET」と表記したが、公式 IR 確認では BABA は **call 7:30 ET**、CEG は **call 10:00 ET**。release 時刻と earnings call 時刻が別物である点を区別せず、「BMO/AMC」表記から推定で時刻を生成していた。PBR は公式が「after markets close」のみ明示なのに「16:30 ET」と断定。
+
+**Root Cause**:
+- market-news-analyzer が決算情報を集める際、release 時刻と call 時刻を混同
+- 「BMO」=「市場開始前」までは正しいが、call は通常 release から 1-3 時間後で別途確認が必要
+- writer が IR 公式を再確認せず、analyzer の出力をそのまま転記
+- 公式が時刻未明示の場合 (PBR 等) でも writer が "16:30 ET" と推定値を書いてしまう
+
+**Rules**:
+- 決算 release 時刻と call 時刻 / webcast 時刻は **別行で分離記載**
+  - Bad: `BABA 5/13 BMO 6:00 ET` (release と call を混同、しかも推定値)
+  - Good: `BABA 5/13 BMO release (時刻未明示) / call 5/13 7:30 ET` (公式 IR で確認)
+- **「推定」「approx」「~ET」表記は禁止**
+- 公式が時刻未明示の場合は「公式時刻未明示」と明記し、推定値を書かない
+- market-news-analyzer は **`reports/YYYY-MM-DD/ir_events.yaml`** を生成し、各社の release/call/webcast 時刻と公式 IR URL を構造化記録
+- writer は ir_events.yaml のみを参照し、推定での時刻記述を禁止
+- Reviewer: 「推定」「approx」検出 → REVISION REQUIRED (Medium)
+- Reviewer: release/call が同一行に並記 → REVISION REQUIRED (Medium)
+- Reviewer: 公式 IR で時刻未明示なのに時刻が書かれている → REVISION REQUIRED (Medium)
+
+### Standard Terminology Dictionary & Source Separation (Issue #21)
+
+2026-05-09: ブログ内に「Powell 退任」「Panic Mode」「即時実行」「完全撤退」等の助言色強い表現や、Wikipedia ソース、予想値の出典混在 (公式スケジュール URL と市場コンセンサス出典が同列) が残っていた。
+
+**Standard Terminology Dictionary** (writer/reviewer 双方で適用):
+
+| NG 表現 | 推奨表現 | 理由 |
+|---------|----------|------|
+| Powell 退任 | Powell 議長任期終了 / Fed chair transition | Powell は board 残留意向 (Reuters 2026-04-29) |
+| Panic Mode | Tail Risk Defensive Mode | 助言色を抑える、専門用語へ |
+| 即時実行 | モデル上ザラ場で即時リスク削減を検討 | 助言色を抑える |
+| 完全撤退 | モデル上は一時的にゼロへ縮小 | 助言色を抑える |
+| 即時ヘッジ追加 | ヘッジ追加を優先検討 | 助言色を抑える |
+| 推奨戦略 | モデル方針 | 助言色を抑える |
+| 月曜寄りで実行 | モデルでは月曜寄り想定 | 助言色を抑える |
+
+**Source Type Separation Rules**:
+1. **公式スケジュール URL** (BLS, Census, Fed, IR 等) は「日付・時刻の確定用」
+2. **市場コンセンサス出典** (FactSet, Investing.com, FMP, Trading Economics) は「予想値の確定用」
+3. 両者を Sources セクションで **別ブロック** にし、混同を防ぐ
+4. **Wikipedia は原則禁止** (背景リンク以外、報道は AP/Reuters/WSJ/Bloomberg/FT 優先)
+
+**Rules**:
+- writer は本文生成時に NG 表現を含まない (postflight で正規表現検出)
+- writer は予想値を記載する際、必ず「(コンセンサス: FactSet/Investing.com 等)」を併記
+- Reviewer: NG 表現検出 → REVISION REQUIRED (Low、複数箇所なら Medium)
+- Reviewer: Wikipedia ソース検出 → REVISION REQUIRED (Low)
+- Reviewer: 予想値の出典分離なし → REVISION REQUIRED (Low)
+
+---
+
+## Pre-flight / Post-flight Verification Pipeline (2026-05-09 新設)
+
+ブログ生成事故の根本対策として、CI 型のチェックパイプラインを導入。
+
+```
+[Step 1-3] reports/* 生成
+  ↓
+[Pre-flight] scripts/preflight_blog_facts.py --date YYYY-MM-DD
+  → reports/YYYY-MM-DD/facts_snapshot.json (ETF spot, option expiries, holidays, day-of-week, Fed events)
+  → reports/YYYY-MM-DD/ir_events.yaml      (earnings release/call/webcast times, official IR URLs)
+  ↓
+[Step 4] writer がfactsを参照してドラフト生成
+  ↓
+[Post-flight] scripts/postflight_blog_check.py blogs/YYYY-MM-DD-weekly-strategy.md
+  → ETF spot 一致、OTM% 自動再計算 (±0.3%)、満期日カレンダー照合、禁止語検出
+  → exit 0 = PASS / exit 1 = FAIL
+  ↓
+[Step 5] strategy-reviewer (論理レビュー、postflight が PASS したもののみ)
+```
+
+**PASS 条件 (postflight)**:
+- ETF spot price が本文と facts_snapshot で一致 (±0.3%)
+- OTM% が spot/strike から自動再計算され誤差 ±0.3% 以内
+- option expiry が Cboe / OCC calendar と一致
+- VIX expiry が Cboe / VIX calendar と一致
+- IR release / call / webcast が分離され、source_url がある
+- Fed speaker/FOMC events と statistical releases が分離されている
+- ET/JST 変換と曜日が zoneinfo で一致
+- 禁止語 (Powell 退任、Panic Mode、Wikipedia 等) がゼロ
+- 公式スケジュール出典と市場コンセンサス出典が分離されている
+
 ---
 
 ## Version Control
 
-- **Project Version**: 2.4
-- **Last Updated**: 2026-04-18
+- **Project Version**: 2.5
+- **Last Updated**: 2026-05-09 (Issue #18-#21 + Pre/Post-flight Pipeline 追加)
 - **Maintenance**: Update this document regularly
 
 ---
