@@ -237,12 +237,14 @@ Create the blog post with these sections:
     - 曜日マーカー（土/木）と PDF URL は Sources にも必ず記載
 - [ ] **決算IRリンク**: High Impact決算に公式IRリンクを付与（イベント表インライン + Sources末尾の両方）。**複数銘柄を同一行で並記する場合も、各ティッカーごとにIR URLが必要。満たせない場合は行を分割する**
 - [ ] **公式IR優先 (Issue #17)**: IRドメインは `investors.TICKER.com` / `ir.TICKER.com` / `newsroom.TICKER.com` を最優先。3rd party (StockTitan, Seeking Alpha, Zacks等) は公式が存在しない場合の代替のみ。代替使用時は Sources に「公式IRにアクセス不可のため代替ソース」と明記
-- [ ] **データ鮮度明示 (Monty Style Rule 19, Issue #15)**: Uptrend Ratio CSVはBreadth CSVより約1週遅行するため、以下**3箇所で鮮度を明示**:
+- [ ] **データ鮮度明示 (Monty Style Rule 19, Issue #15)**: Uptrend Ratio CSV / Breadth CSV は**両方とも日次更新 (lag 1-2 営業日)**。以下**3箇所で鮮度を明示**:
     1. 3行まとめ（冒頭）
     2. ロット管理セクション冒頭
     3. マーケット状況表のUptrend Ratio行
-    - 記載例: `Uptrend Ratio 33.13% GREEN (**4/10 時点、CSV 約 1 週遅行**)`
-    - 価格データ (FMP 4/17 終値) と CSV データ (4/10) が混在する場合、**両方の日付を並記**
+    - 記載例: `Uptrend Ratio 25.31% RED (**5/7 CSV、日次更新**)`
+    - **「週次更新」「1週遅行」と書くのは誤り (リグレッション)**。両 CSV とも日次更新で lag は 1-2 営業日のみ
+    - 価格データ (FMP 5/8 終値) と CSV データ (5/7) が混在する場合、**両方の日付を並記**: `(価格 5/8 終値、Breadth/Uptrend は 5/7 CSV、いずれも日次更新)`
+    - 検証: `curl -s https://raw.githubusercontent.com/tradermonty/uptrend-dashboard/main/data/uptrend_ratio_timeseries.csv | awk -F',' '$1=="all"' | tail -3` で CSV 最新日付を毎回確認
 - [ ] **モデル配分例プリアンブル (Monty Style Rule 20, Issue #16)**: ロット管理セクション冒頭に必ず以下を記載:
     `**注**: 以下はモデル配分例。実際の執行判断・ロットは各自のリスク許容度・ポートフォリオ事情・税務状況を踏まえてご判断ください (記事末尾の免責参照)。`
 - [ ] **5要素強化免責**: 記事末尾の免責に以下5要素を**全て含める**:
@@ -293,7 +295,19 @@ Remember: **RESPECT THEIR TIME**. One 250-line actionable article > 680-line com
 - Previous week's blog (for continuity): `blogs/` or https://monty-trader.com/
 
 ### Output
-- `blogs/YYYY-MM-DD-weekly-strategy.md` (日本語, 200-300 lines)
+- `blogs/YYYY-MM-DD-weekly-strategy.md` (日本語, 200-330 lines)
+
+**重要 (Step 5.5 連携)**: このファイルは **詳細版 = source of truth (中間生成物・内部監査資料)** として位置付けられる。読者向けの公開版は別途 `blog-publisher` エージェント (Step 5.5) が `blogs/published/YYYY-MM-DD-weekly-strategy.md` に生成する。
+
+そのため writer は以下を最優先とする (公開版での簡略化は publisher が担当):
+- 数値の厳密性 (ETF spot/OTM%/満期日/トリガー閾値の verbatim 一致)
+- IR URL・公式 URL の網羅
+- トリガー時間基準の明記 (`終値2日連続` 等)
+- 鮮度注釈の明示 (Sources 集約は publisher が行う)
+- 4 シナリオ構造 + 各シナリオの trigger/action 完全記述
+- 免責 4 要素 (モデル配分例 / 個別投資助言ではない / 各自判断 / 筆者推定)
+
+詳細版を編集すると公開版の sha256 が不一致になり postflight が FAIL するため、再生成が強制される (Step 5.6)。
 
 ### Execution Flow
 

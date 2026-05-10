@@ -445,25 +445,32 @@ Fix: Always WebFetch the PDF and compare dates character-by-character
 ### Verification Steps (MANDATORY)
 
 1. Check the **3 mandatory disclosure locations** for data freshness:
-   - [ ] 3-line summary (冒頭) — e.g., "Uptrend Ratio 33.13% GREEN **(4/10 時点、CSV 約1週遅行)**"
-   - [ ] ロット管理 section opening — e.g., "(価格データ 4/17 終値、Uptrend Ratio は 4/10 時点・遅行指標)"
-   - [ ] マーケット状況 table row for Uptrend Ratio — e.g., "33.13% GREEN **(4/10 時点、CSV 約 1 週遅行)**"
+   - [ ] 3-line summary (冒頭) — e.g., "Uptrend Ratio 25.31% RED **(5/7 CSV、日次更新)**"
+   - [ ] ロット管理 section opening — e.g., "(価格 5/8 終値 FMP、Breadth/Uptrend は 5/7 CSV、いずれも日次更新)"
+   - [ ] マーケット状況 table row for Uptrend Ratio — e.g., "25.31% RED **(5/7 CSV、日次更新)**"
 2. Verify price data date (FMP, typically latest close) and CSV dates are **stated in parallel** when mixed
+3. **CSV 最新日付を独立検証**:
+   ```bash
+   curl -s https://raw.githubusercontent.com/tradermonty/uptrend-dashboard/main/data/uptrend_ratio_timeseries.csv | awk -F',' '$1=="all"' | tail -3
+   ```
 
-### Data Update Frequencies (Reference)
+### Data Update Frequencies (2026-05-10 実 CSV 検証済み)
 
 | Source | Update Frequency | Typical Lag |
 |--------|-----------------|-------------|
-| Market Breadth CSV | 毎営業日 | 0-1 営業日 |
-| Uptrend Ratio CSV | 週次（通常金曜） | 最大 5-6 営業日 |
+| Market Breadth CSV | **毎営業日 (日次)** | 0-1 営業日 |
+| Uptrend Ratio CSV | **毎営業日 (日次)** | 1-2 営業日 (週末は2日) |
 | FMP API (price) | リアルタイム | 0 営業日 |
+
+**重要**: 過去ドキュメントに「Uptrend Ratio CSV: 週次 (通常金曜更新)」と記載があったが**誤り**。両 CSV とも日次更新。
 
 ### Detection Criteria
 
 Flag as **REVISION REQUIRED (Medium)** if:
 - 3-line summary or ロット管理 opening lacks freshness annotation while Uptrend Ratio is used as a judgment driver
-- Price data (4/17) and CSV data (4/10) mixed without explicit date parallelism
-- Uptrend CSV dated identical or newer than Breadth CSV (suspicious—typically Uptrend lags)
+- Price data and CSV data dates mixed without explicit date parallelism
+- **「週次更新」「1週遅行」「週遅行」表記を Uptrend/Breadth CSV に対して使用 (リグレッション検出)**
+- Uptrend CSV 最新日付が直近営業日の 2 日以上前 (CSV 取得失敗の疑い、独立検証必須)
 
 ### Known Error Pattern (Issue #15)
 
@@ -838,8 +845,9 @@ Based on historical issues, pay special attention to:
     - Good: "Fed ブラックアウト 4/18(土)-4/30(木) ET [PDF](fomc-blackout-period-calendar.pdf)"
     - Fix: WebFetch the PDF directly; do not infer from曜日 or speech absence. Any date mismatch with PDF → REVISION REQUIRED (High)
 14. **Data Freshness Not Disclosed in 3 Mandatory Locations** (Issue #15):
-    - Bad: Uptrend Ratio used as judgment driver in 3行まとめ without "(4/10 時点、約1週遅行)" annotation
-    - Fix: Disclose freshness at 3 locations (3行まとめ / ロット管理冒頭 / マーケット状況表). Mixed price/CSV dates must be parallel
+    - Bad: Uptrend Ratio used as judgment driver in 3行まとめ without "(5/7 CSV、日次更新)" annotation
+    - Bad: 「週次更新」「1週遅行」表記を Uptrend/Breadth CSV に対して使用 (両 CSV とも実は日次更新、リグレッション)
+    - Fix: Disclose freshness at 3 locations (3行まとめ / ロット管理冒頭 / マーケット状況表). Mixed price/CSV dates must be parallel. CSV の更新頻度は「日次更新」と表記
 15. **Weak Disclaimer vs. Execution Tone Mismatch** (Issue #16):
     - Bad: "月曜寄りで実行" + "成行で実行" throughout + generic "情報提供のみ" footer
     - Fix: 5-element disclaimer (モデル配分例 / モデル想定執行 / 各自判断 / アドバイザー推奨 / 筆者推定確率) + "注: 以下はモデル配分例" preamble in lot management

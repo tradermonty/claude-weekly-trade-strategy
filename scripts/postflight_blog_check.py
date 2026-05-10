@@ -19,6 +19,7 @@ Reference: CLAUDE.md Issues #18 (ETF spot), #19 (option expiry), #20 (IR times),
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import re
 import sys
@@ -523,6 +524,13 @@ NON_TICKERS = {
     "NY", "LA", "SF", "DC", "UK", "EU", "US", "USA", "JP", "CN", "DE", "FR", "JFK", "SFO",
     # IR is investor relations (link text)
     "IR",
+    # Non-earnings ETFs (commodity/bullion, treasury, sector SPDR, broad index)
+    # These ETFs do not report earnings; "TICKER call/put" refers to options.
+    "SPY", "QQQ", "DIA", "IWM", "MDY", "RSP",  # broad index ETFs
+    "GLD", "SLV", "USO", "IBIT", "URA", "COPX",  # commodity/bullion/crypto/miner ETFs
+    "BIL", "TLT", "IEF", "SHY", "AGG", "BND",  # treasury/bond ETFs
+    "XLE", "XLF", "XLV", "XLP", "XLI", "XLY", "XLB", "XLK", "XLU", "XLRE", "XLC",  # sector SPDR
+    "SH", "SDS",  # inverse ETFs
     # Common English words that look like tickers
     "CLOSE", "OPEN", "HIGH", "LOW", "SELL", "BUY", "HOLD", "BEAR", "BULL",
     "BASE", "PEAK", "PRE", "POST", "NEW", "OLD", "VS", "ROW", "NEXT", "LAST",
@@ -611,7 +619,95 @@ def check_snapshot_completeness(snapshot: dict) -> list[Finding]:
     return findings
 
 
-def collect(text: str, snapshot: dict, ir_yaml: str | None) -> list[Finding]:
+_PUBLISHED_FRONTMATTER_RE = re.compile(
+    r"<!--\s*DO NOT EDIT MANUALLY.*?source:\s*(?P<source>\S+).*?source_sha256:\s*(?P<sha>[a-f0-9]{64})",
+    re.DOTALL | re.IGNORECASE,
+)
+
+
+def check_published_frontmatter(blog_path: Path, text: str) -> list[Finding]:
+    """Step 5.6 (published version only): verify HTML comment frontmatter.
+
+    Triggered only when blog_path is under blogs/published/. Validates:
+    1. Frontmatter exists with `source` and `source_sha256` fields
+    2. `source` path is under PROJECT_ROOT/blogs/ (no path traversal)
+    3. `source` does not contain `../`
+    4. `source_sha256` matches the current detailed version SHA256
+    """
+    findings: list[Finding] = []
+    try:
+        rel_to_published = blog_path.resolve().relative_to(PROJECT_ROOT / "blogs" / "published")
+    except ValueError:
+        return findings  # not a published blog; skip
+
+    m = _PUBLISHED_FRONTMATTER_RE.search(text[:2000])
+    if not m:
+        findings.append(Finding(
+            severity="high",
+            category="Published Frontmatter Missing",
+            message="Published blog must start with HTML comment frontmatter containing 'source' and 'source_sha256'. Re-generate via blog-publisher.",
+            line=1,
+        ))
+        return findings
+
+    source_str = m.group("source")
+    declared_sha = m.group("sha").lower()
+
+    # Path traversal protection
+    if ".." in Path(source_str).parts:
+        findings.append(Finding(
+            severity="high",
+            category="Published Frontmatter Path Traversal",
+            message=f"source path contains '..': {source_str}. Use relative path under blogs/.",
+            line=1,
+        ))
+        return findings
+
+    source_path = (PROJECT_ROOT / source_str).resolve()
+    try:
+        source_path.relative_to(PROJECT_ROOT / "blogs")
+    except ValueError:
+        findings.append(Finding(
+            severity="high",
+            category="Published Frontmatter Source Outside Blogs",
+            message=f"source path must be under blogs/: {source_str}",
+            line=1,
+        ))
+        return findings
+
+    if source_path.parent.name == "published":
+        findings.append(Finding(
+            severity="high",
+            category="Published Frontmatter Source Self-Reference",
+            message=f"source path must point to detailed version (blogs/), not blogs/published/: {source_str}",
+            line=1,
+        ))
+        return findings
+
+    if not source_path.exists():
+        findings.append(Finding(
+            severity="high",
+            category="Published Frontmatter Source Missing",
+            message=f"source detailed blog not found: {source_path}",
+            line=1,
+        ))
+        return findings
+
+    actual_sha = hashlib.sha256(source_path.read_bytes()).hexdigest().lower()
+    if actual_sha != declared_sha:
+        findings.append(Finding(
+            severity="high",
+            category="Published Frontmatter SHA256 Mismatch",
+            message=(
+                f"declared source_sha256={declared_sha[:16]}... but detailed version is "
+                f"{actual_sha[:16]}.... Detailed version was edited; re-generate published version."
+            ),
+            line=1,
+        ))
+    return findings
+
+
+def collect(text: str, snapshot: dict, ir_yaml: str | None, blog_path: Path | None = None) -> list[Finding]:
     findings: list[Finding] = []
     findings.extend(check_snapshot_completeness(snapshot))
     findings.extend(check_forbidden_terms(text))
@@ -621,6 +717,8 @@ def collect(text: str, snapshot: dict, ir_yaml: str | None) -> list[Finding]:
     findings.extend(check_day_of_week(text, snapshot))
     findings.extend(check_ir_times_against_yaml(text, ir_yaml))
     findings.extend(check_ir_manifest_completeness(text, ir_yaml))
+    if blog_path is not None:
+        findings.extend(check_published_frontmatter(blog_path, text))
     return findings
 
 
@@ -646,7 +744,7 @@ def main() -> int:
     ir_yaml = load_ir_yaml_text(target_date)
     text = blog.read_text()
 
-    findings = collect(text, snapshot, ir_yaml)
+    findings = collect(text, snapshot, ir_yaml, blog_path=blog)
     high = [f for f in findings if f.severity == "high"]
     medium = [f for f in findings if f.severity == "medium"]
     low = [f for f in findings if f.severity == "low"]
