@@ -19,11 +19,17 @@
       "Bash(git add:*)",
       "Bash(git commit:*)",
       "Bash(git log:*)",
-      "Bash(echo $FMP_API_KEY)",
       "WebFetch(domain:pypi.org)",
       "WebFetch(domain:github.com)"
     ],
-    "deny": [],
+    "deny": [
+      "Bash(echo $FMP_API_KEY)",
+      "Bash(echo $*_KEY)",
+      "Bash(echo $*_SECRET)",
+      "Bash(echo $*_TOKEN)",
+      "Bash(printenv:*)",
+      "Bash(env:*)"
+    ],
     "ask": []
   }
 }

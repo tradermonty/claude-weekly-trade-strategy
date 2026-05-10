@@ -1,0 +1,51 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  postflight-tests:
+    name: Postflight smoke tests (Issues #18-#21)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install dev dependencies
+        run: |
+          python -m pip install -U pip
+          pip install pytest pytest-asyncio pytest-mock
+      - name: Run postflight smoke tests (no third-party deps required)
+        run: python scripts/tests/test_postflight_blog_check.py
+
+  ir-manifest-validator:
+    name: IR manifest schema validator
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Validate generator template produces a valid manifest
+        run: |
+          python scripts/ir_facts_manifest.py --date 2026-05-11 --generate --force
+          python scripts/ir_facts_manifest.py --date 2026-05-11 --validate
+
+  trading-tests:
+    name: Trading system tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install package + dev deps
+        run: |
+          python -m pip install -U pip
+          pip install -e ".[dev]"
+      - name: Run trading tests
+        run: pytest trading/tests -q

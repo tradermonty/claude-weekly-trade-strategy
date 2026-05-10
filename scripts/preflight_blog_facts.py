@@ -216,13 +216,32 @@ def jst_table(events_et: list[tuple[str, int, int, int, int, int]]) -> list[dict
     return out
 
 
-def build_snapshot(target_date: date) -> dict[str, Any]:
+def build_snapshot(target_date: date, allow_empty_prices: bool = False) -> dict[str, Any]:
     api_key = get_fmp_api_key()
     if not api_key:
-        print("WARNING: FMP_API_KEY not found. Market prices will be empty.", file=sys.stderr)
+        if not allow_empty_prices:
+            print(
+                "ERROR: FMP_API_KEY not found. ETF spot verification would be disabled.\n"
+                "  Set FMP_API_KEY env var or add to .env.\n"
+                "  Override with --allow-empty-prices ONLY for offline/testing scenarios.",
+                file=sys.stderr,
+            )
+            sys.exit(2)
+        print("WARNING: FMP_API_KEY not found and --allow-empty-prices set. Market prices will be empty.", file=sys.stderr)
         prices = {}
     else:
         prices = get_market_prices(api_key)
+        # Verify required tickers actually came back from API
+        required = {"SPY", "QQQ", "GLD"}
+        missing = [s for s in required if s not in prices or prices[s].get("price") is None]
+        if missing and not allow_empty_prices:
+            print(
+                f"ERROR: FMP API returned no price for required tickers: {missing}.\n"
+                "  Without these, ETF spot verification (Issue #18) is disabled.\n"
+                "  Override with --allow-empty-prices ONLY for offline/testing scenarios.",
+                file=sys.stderr,
+            )
+            sys.exit(2)
 
     # 7-day window starting from target_date (Mon-Sun)
     start = target_date
@@ -259,10 +278,12 @@ def main() -> int:
     p = argparse.ArgumentParser(description="Preflight blog facts snapshot generator")
     p.add_argument("--date", required=True, help="Target week start date (YYYY-MM-DD, e.g. 2026-05-11)")
     p.add_argument("--out", default=None, help="Output path (default: reports/<date>/facts_snapshot.json)")
+    p.add_argument("--allow-empty-prices", action="store_true",
+                   help="Permit empty market_prices (offline/test only). NOT for production runs.")
     args = p.parse_args()
 
     target_date = date.fromisoformat(args.date)
-    snapshot = build_snapshot(target_date)
+    snapshot = build_snapshot(target_date, allow_empty_prices=args.allow_empty_prices)
 
     out_path = Path(args.out) if args.out else PROJECT_ROOT / "reports" / args.date / "facts_snapshot.json"
     out_path.parent.mkdir(parents=True, exist_ok=True)

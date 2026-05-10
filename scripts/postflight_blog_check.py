@@ -67,10 +67,28 @@ def load_snapshot(target_date: str) -> dict:
     return json.loads(path.read_text())
 
 
-def load_ir_yaml_text(target_date: str) -> str | None:
+def load_ir_yaml_text(target_date: str) -> str:
+    """Load ir_events.yaml; missing file is a prerequisite error (exit 2).
+
+    P0-2 (Round 7): IR manifest is mandatory. The previous behavior of
+    treating missing manifest as a Medium finding allowed runs to PASS in
+    default mode, which silently disabled the IR cross-check.
+    """
     path = PROJECT_ROOT / "reports" / target_date / "ir_events.yaml"
     if not path.exists():
-        return None
+        print(
+            f"ERROR: ir_events.yaml not found at {path.relative_to(PROJECT_ROOT)}",
+            file=sys.stderr,
+        )
+        print(
+            f"  Run: python3 scripts/ir_facts_manifest.py --date {target_date} --generate",
+            file=sys.stderr,
+        )
+        print(
+            "  Then have market-news-analyzer fill verified IR times.",
+            file=sys.stderr,
+        )
+        sys.exit(2)
     return path.read_text()
 
 
@@ -79,11 +97,18 @@ def line_of(text: str, idx: int) -> int:
 
 
 def check_forbidden_terms(text: str) -> list[Finding]:
+    """All forbidden term hits are High severity (P0-3, Round 7).
+
+    Previously Issue #21 patterns (Powell 退任, Panic Mode, Wikipedia, Fed
+    静寂週, "5/8 最終更新") were Medium and required `--strict` to fail.
+    The writer agent docs already promised these would "fail the build",
+    so we promote them to High to align spec and implementation.
+    """
     findings: list[Finding] = []
     for pat, reason in FORBIDDEN_PATTERNS:
         for m in re.finditer(pat, text):
             findings.append(Finding(
-                severity="high" if "Issue #19" in reason or "Issue #18" in reason else "medium",
+                severity="high",
                 category="Forbidden Term",
                 message=f"Match '{m.group()}' — {reason}",
                 line=line_of(text, m.start()),
@@ -376,13 +401,13 @@ def check_ir_times_against_yaml(text: str, ir_yaml: str | None) -> list[Finding]
     - body has explicit ET time when yaml says time_et: null (Issue #20)
     - body's ET time differs from yaml time_et (Issue #20)
     - body's JST time differs from yaml time_jst (Issue #20 + JST validation)
+
+    Note: when called with ir_yaml=None (test fixture only), checks are
+    skipped silently. The runtime path through main() always provides a
+    non-None ir_yaml because load_ir_yaml_text() exits 2 on missing file.
     """
     if ir_yaml is None:
-        return [Finding(
-            severity="medium",
-            category="IR Manifest (Issue #20)",
-            message="ir_events.yaml not found — earnings times cannot be cross-checked",
-        )]
+        return []
 
     findings: list[Finding] = []
     parsed = _parse_ir_yaml(ir_yaml)
@@ -569,8 +594,26 @@ def check_ir_manifest_completeness(text: str, ir_yaml: str | None) -> list[Findi
     return findings
 
 
+def check_snapshot_completeness(snapshot: dict) -> list[Finding]:
+    """P0-4 (Round 7): facts_snapshot.json must contain price for SPY/QQQ/GLD;
+    otherwise ETF spot verification (Issue #18) is silently disabled.
+    """
+    findings: list[Finding] = []
+    prices = snapshot.get("market_prices", {})
+    for sym in ("SPY", "QQQ", "GLD"):
+        row = prices.get(sym)
+        if not row or row.get("price") is None:
+            findings.append(Finding(
+                severity="high",
+                category="Snapshot Completeness (Issue #18)",
+                message=f"{sym} price missing from facts_snapshot.json — ETF spot verification disabled. Re-run preflight with FMP_API_KEY set.",
+            ))
+    return findings
+
+
 def collect(text: str, snapshot: dict, ir_yaml: str | None) -> list[Finding]:
     findings: list[Finding] = []
+    findings.extend(check_snapshot_completeness(snapshot))
     findings.extend(check_forbidden_terms(text))
     findings.extend(check_etf_spot_prices(text, snapshot))
     findings.extend(check_option_otm(text, snapshot))

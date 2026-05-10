@@ -118,12 +118,16 @@ graph TB
     style S9 fill:#e0f2f1
 ```
 
-**Workflow Overview:**
+**Workflow Overview (v2.5):**
 1. **Step 1**: `technical-market-analyst` analyzes charts using 2 skills → `technical-market-analysis.md`
 2. **Step 2**: `us-market-analyst` evaluates market environment using 3 skills (including breadth-chart-analyst) → `us-market-analysis.md`
 3. **Step 3**: `market-news-analyzer` analyzes news/events using 3 skills → `market-news-analysis.md`
-4. **Step 4**: `weekly-trade-blog-writer` synthesizes all reports + previous week's blog → Weekly strategy blog
-5. **Step 5**: `strategy-reviewer` verifies chart readings and strategy consistency → Quality assurance before publication
+4. **Step 3.5 (NEW, MANDATORY)**: `scripts/preflight_blog_facts.py` → `facts_snapshot.json` (ETF spot, option expiries with holiday shifts, day-of-week, US holidays). `scripts/ir_facts_manifest.py` → `ir_events.yaml` (IR release/call/webcast separation, no estimated times)
+5. **Step 4**: `weekly-trade-blog-writer` synthesizes all reports + facts_snapshot + ir_events + previous week's blog → Weekly strategy blog
+6. **Step 4.5 (NEW, MANDATORY)**: `scripts/postflight_blog_check.py --strict` mechanically verifies the draft against facts/manifest (9 checks: ETF spot, OTM%, expiry, forbidden terms, day-of-week, IR times, manifest completeness). Must PASS before Step 5.
+7. **Step 5**: `strategy-reviewer` verifies chart readings and strategy consistency → Quality assurance before publication
+
+See [CLAUDE.md](./CLAUDE.md) Issues #18-#21 and the *Pre-flight / Post-flight Verification Pipeline* section for the full mandate.
 
 ### Prerequisites
 
@@ -140,8 +144,8 @@ graph TB
 
 1. **Clone the repository**
 ```bash
-git clone https://github.com/tradermonty/weekly-trade-strategy.git
-cd weekly-trade-strategy
+git clone https://github.com/tradermonty/claude-weekly-trade-strategy.git
+cd claude-weekly-trade-strategy
 ```
 
 2. **Set up environment variables (Optional)**
@@ -572,8 +576,8 @@ graph TB
 1. **リポジトリのクローン**
 
 ```bash
-git clone https://github.com/tradermonty/weekly-trade-strategy.git
-cd weekly-trade-strategy
+git clone https://github.com/tradermonty/claude-weekly-trade-strategy.git
+cd claude-weekly-trade-strategy
 ```
 
 2. **環境変数の設定（オプション）**
