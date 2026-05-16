@@ -258,7 +258,11 @@ This eliminates the v1.0 issue where readers see the same allocation logic twice
 
 ### R13. 3-Line Summary Word Cap
 
-Each of the 3 summary items: **2 sentences max, 120 characters max**. Move detailed numerical readouts to the マーケット状況 table.
+Each of the 3 summary items: bold headline + **≤ 2 sentences**. Move detailed numerical readouts to the マーケット状況 table.
+
+**Two distinct numbers — do not conflate them:**
+- **Authoring target ≈ 120 chars/item** — what you aim for when writing. Concise orientation, not data dump.
+- **Postflight HARD GATE = 200 chars/item (HIGH FAIL)** — `check_published_readability` (`_R13_ITEM_CHAR_CAP`) fails the build in default mode (no `--strict` needed) if any item exceeds 200. This is the mechanical enforcement of R13's MANDATORY status. Gold standard `2026-05-11-clean.md` measures max 146; live v1.1 output ≤ 95; the v1.0 regression was 400+. Staying near the ~120 target keeps you comfortably clear of the 200 gate.
 
 **Bad (too dense)**:
 > SPX は 7,398.93、NDX は 29,224 と ATH 圏。ただし Breadth 200MA は 60.01%、Uptrend Ratio は 25.31% RED。指数の強さに対して、参加銘柄の広がりはかなり細い。
@@ -332,7 +336,7 @@ Before writing the final file, verify:
 - [ ] Sources section has consolidated データソース block
 - [ ] **R11**: English jargon Japanese-ized (ETF/company/event names kept as-is)
 - [ ] **R12**: Single merged allocation table (no duplicate category + ETF tables)
-- [ ] **R13**: Each 3-line summary item = bold headline + ≤ 2 plain sentences, ≤ ~120 chars (defer numbers to マーケット状況 table)
+- [ ] **R13**: Each 3-line summary item = bold headline + ≤ 2 plain sentences, ~120 char target (postflight HARD-FAILs >200 chars, HIGH; defer numbers to マーケット状況 table)
 - [ ] **R14**: 夜・早朝チェック ≤ 7 items, no event description duplicated from 重要イベント table
 - [ ] **Reader-body forbidden tokens absent**: `grep -nE "Issue #[0-9]|slope\s*-?0?\.[0-9]|narrow_rally|週次更新|1週遅行"` on the output returns nothing
 - [ ] Draft is **no denser than `scripts/tests/fixtures/publish/2026-05-11-clean.md`** (gold standard)

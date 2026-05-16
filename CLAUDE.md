@@ -590,7 +590,7 @@ python3 scripts/postflight_blog_check.py blogs/published/YYYY-MM-DD-weekly-strat
     - `generator` must be `v1.1`+ — `v1.0` → **HIGH FAIL** (R11-R14 skipped)
     - reader-body internal-QA token leak (`Issue #N` / `slope -0.x` / `narrow_rally` / `週次更新` / `1週遅行`) → **HIGH FAIL**
     - soft jargon (`Risk Budget` / `バブルスコア` / `複合判定`) → MEDIUM
-    - 3行まとめ item > 220 chars (R13) → MEDIUM
+    - 3行まとめ item > 200 chars (R13、執筆目標~120字とは別のハードゲート値) → **HIGH** (default mode で fail、R13 を真の MANDATORY ゲート化)
   - **Detailed source is exempt** (gate triggers only for `blogs/published/` paths; these tokens are legitimate in the source of truth)
 - exit 0 (PASS) → proceed to Step 5.7
 - exit 1 (FAIL) → re-run Step 5.5 (max 2 retries), then halt
@@ -1278,7 +1278,7 @@ curl -s https://raw.githubusercontent.com/tradermonty/uptrend-dashboard/main/dat
 
 **Fix (多層防御)**:
 1. **agent 定義**: v1.0→v1.1 既定、R11-R14 を「MANDATORY」に格上げ＋Step 4 処理ループ＆統合チェックリストに組込、`scripts/tests/fixtures/publish/2026-05-11-clean.md` を明示的ゴールドスタンダード化、Reader-Body Forbidden Tokens 表追記
-2. **postflight 機械ゲート** (`check_published_readability`、`blogs/published/` 専用): generator v1.0 = HIGH / 内部QA語漏れ (`Issue #N` / `slope -0.x` / `narrow_rally` / `週次更新` / `1週遅行`) = HIGH / ソフトjargon (`Risk Budget` / `バブルスコア` / `複合判定`) = MEDIUM / 3行まとめ >220字 = MEDIUM。詳細版は exempt
+2. **postflight 機械ゲート** (`check_published_readability`、`blogs/published/` 専用): generator v1.0 = HIGH / 内部QA語漏れ (`Issue #N` / `slope -0.x` / `narrow_rally` / `週次更新` / `1週遅行`) = HIGH / 3行まとめ >200字 (R13、執筆目標~120字とは別のハードゲート) = **HIGH** (default mode で fail) / ソフトjargon (`Risk Budget` / `バブルスコア` / `複合判定`) = MEDIUM。詳細版は exempt
 3. **CI テスト**: `scripts/tests/test_postflight_blog_check.py` に v1.0却下・トークン漏れ検知・詳細版exempt・実公開版PASS のテスト追加
 
 **Rules**:
@@ -1333,7 +1333,7 @@ curl -s https://raw.githubusercontent.com/tradermonty/uptrend-dashboard/main/dat
 - 禁止語 (Powell 退任、Panic Mode、Wikipedia 等) がゼロ
 - 公式スケジュール出典と市場コンセンサス出典が分離されている
 - (公開版のみ) HTML コメント frontmatter に source/source_sha256 が存在し、現在の詳細版 SHA256 と一致
-- (公開版のみ、Issue #22) `generator: blog-publisher v1.1`+ である / 内部QA語 (`Issue #N` / `slope -0.x` / `narrow_rally` / `週次更新` / `1週遅行`) が reader body に不在 / 3行まとめ各項目 ≤220字 (R13)
+- (公開版のみ、Issue #22) `generator: blog-publisher v1.1`+ である / 内部QA語 (`Issue #N` / `slope -0.x` / `narrow_rally` / `週次更新` / `1週遅行`) が reader body に不在 / 3行まとめ各項目 ≤200字 (R13 ハードゲート、執筆目標~120字、いずれも HIGH で default fail)
 
 **PASS 条件 (publish_blog_diff.py, Phase 1)**:
 - ETF/index spot (SPY/QQQ/GLD/SPX/NDX/VIX/WTI/GC) が公開版に存在

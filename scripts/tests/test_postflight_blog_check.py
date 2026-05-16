@@ -349,14 +349,27 @@ def test_readability_jargon_leak_medium():
     assert med and all(f.severity == "medium" for f in med)
 
 
-def test_readability_3line_too_dense_medium():
+def test_readability_3line_too_dense_high_blocks_default():
+    """M1 fix: R13 is MANDATORY, so an over-dense 3-line item must be HIGH
+    (blocks default-mode Step 5.6, no --strict needed). 240 > 200 gate."""
     dense = "あ" * 240
     text = _GOOD_FRONTMATTER + f"\n## 3行まとめ\n\n1. **x** {dense}\n2. **y** ok\n3. **z** ok\n\n## 次\n"
     findings = check_published_readability(_PUBLISHED_PATH, text)
     assert any(
-        f.category == "Readability 3-Line Summary Too Dense" and f.severity == "medium"
+        f.category == "Readability 3-Line Summary Too Dense" and f.severity == "high"
         for f in findings
-    )
+    ), f"R13 over-dense must be HIGH, got {[(f.severity, f.category) for f in findings]}"
+
+
+def test_readability_3line_just_under_gate_passes():
+    """Calibration guard: an item at the gold-standard scale (~146) must
+    NOT trip the 200 hard gate (zero false positives)."""
+    ok = "あ" * 146
+    text = _GOOD_FRONTMATTER + f"\n## 3行まとめ\n\n1. **x** {ok}\n2. **y** ok\n3. **z** ok\n\n## 次\n"
+    findings = check_published_readability(_PUBLISHED_PATH, text)
+    assert not any(
+        f.category == "Readability 3-Line Summary Too Dense" for f in findings
+    ), f"146-char item must pass 200 gate, got {[f.render() for f in findings]}"
 
 
 def test_readability_detailed_path_exempt():
@@ -365,8 +378,54 @@ def test_readability_detailed_path_exempt():
     assert check_published_readability(_DETAILED_PATH, bad) == []
 
 
+_CLEAN_FIXTURE = (
+    _PROJECT_ROOT / "scripts" / "tests" / "fixtures" / "publish" / "2026-05-11-clean.md"
+)
+
+
+def test_readability_tracked_gold_fixture_passes():
+    """CI-safe deterministic guarantee (L1 fix): the tracked gold-standard
+    clean body + a valid v1.1 frontmatter must pass the readability gate.
+    Unlike test_readability_real_published_files_pass this does NOT depend
+    on gitignored blogs/published/ artifacts, so it runs (not silently
+    skipped) on a clean checkout / CI."""
+    assert _CLEAN_FIXTURE.exists(), (
+        f"tracked gold fixture missing: {_CLEAN_FIXTURE} — required for the "
+        "CI-safe readability guarantee (do not gitignore it)"
+    )
+    text = _GOOD_FRONTMATTER + "\n" + _CLEAN_FIXTURE.read_text(encoding="utf-8")
+    findings = check_published_readability(_PUBLISHED_PATH, text)
+    assert findings == [], (
+        "gold-standard clean body + v1.1 frontmatter must pass the gate, "
+        f"got {[f.render() for f in findings]}"
+    )
+
+
+def test_readability_gold_fixture_within_r13_gate():
+    """Threshold regression guard: every 3-line item in the user-approved
+    gold standard must sit within the R13 hard gate, with margin. If a
+    future edit lowers _R13_ITEM_CHAR_CAP below the approved style this
+    fails loudly instead of silently rejecting good output."""
+    import re as _re
+    body = _CLEAN_FIXTURE.read_text(encoding="utf-8")
+    sm = _re.search(r"##\s*3\s*行まとめ(.*?)(?=\n##\s)", body, _re.DOTALL)
+    assert sm, "gold fixture has no parseable 3行まとめ section"
+    items = _re.findall(r"^\s*\d+\.\s+(.*?)(?=^\s*\d+\.\s|\Z)", sm.group(1), _re.DOTALL | _re.MULTILINE)
+    assert items, "no 3行まとめ items parsed from gold fixture"
+    for i, item in enumerate(items, 1):
+        clean = _re.sub(r"\s+", " ", _re.sub(r"[*_`>#-]", "", item)).strip()
+        assert len(clean) <= module._R13_ITEM_CHAR_CAP, (
+            f"gold fixture item {i} is {len(clean)} chars > gate "
+            f"{module._R13_ITEM_CHAR_CAP}: the hard gate must never reject "
+            "the user-approved gold standard"
+        )
+
+
 def test_readability_real_published_files_pass():
-    # The actual regenerated v1.1 published files are the live gold standard
+    # Best-effort live check against regenerated v1.1 published files.
+    # NOTE: blogs/published/ is gitignored, so this is skipped on a clean
+    # checkout — the CI-safe guarantee is test_readability_tracked_gold_
+    # fixture_passes above (L1 fix).
     for date in ("2026-05-11", "2026-05-18"):
         p = _PROJECT_ROOT / "blogs" / "published" / f"{date}-weekly-strategy.md"
         if not p.exists():

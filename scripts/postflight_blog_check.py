@@ -724,10 +724,17 @@ _READABILITY_MEDIUM_TOKENS: list[tuple[str, str]] = [
     (r"複合判定", "internal methodology jargon; rephrase in plain reader language (R11)"),
 ]
 _GENERATOR_RE = re.compile(r"generator:\s*blog-publisher\s*v(\d+)\.(\d+)", re.IGNORECASE)
-# 3-line summary item length cap (R13). Gold standard 2026-05-11-clean.md
-# items measure ≤150 chars; the v1.0 regression item was ~400+. 220 gives
-# generous margin (zero false positives on calibrated good versions).
-_R13_ITEM_CHAR_CAP = 220
+# R13 hard-gate threshold (HIGH). Distinct from the *authoring target*
+# (~120 chars, blog-publisher.md): that is a writing aim, this is the
+# mechanical fail line. Calibration (exact gate logic):
+#   gold standard 2026-05-11-clean.md ... max 146
+#   live v1.1 published (5/11 / 5/18) ... max 92 / 93
+#   v1.0 regression / detailed source .. 400-490
+# 200 = 37% margin above the user-approved 146, far below the ~400+
+# regression. Zero false positives on every calibrated good version.
+# Severity is HIGH so default-mode Step 5.6 (high-only fail) actually
+# blocks the regression — making R13 a true MANDATORY gate (M1 fix).
+_R13_ITEM_CHAR_CAP = 200
 
 
 def _strip_frontmatter(text: str) -> str:
@@ -745,7 +752,9 @@ def check_published_readability(blog_path: Path, text: str) -> list[Finding]:
     without per-run instruction:
       1. generator must be v1.1+ (v1.0 = R11-R14 skipped → HIGH)
       2. internal-QA tokens absent from reader body (HIGH / MEDIUM)
-      3. each 3-line summary item within the R13 char cap (MEDIUM)
+      3. each 3-line summary item ≤ _R13_ITEM_CHAR_CAP (HIGH — R13 is
+         MANDATORY, so it must block default-mode Step 5.6; soft jargon
+         in #2 stays MEDIUM as it is rephrase-recommended, not a regression)
     """
     findings: list[Finding] = []
     try:
@@ -807,10 +816,11 @@ def check_published_readability(blog_path: Path, text: str) -> list[Finding]:
             clean = re.sub(r"\s+", " ", re.sub(r"[*_`>#-]", "", item)).strip()
             if len(clean) > _R13_ITEM_CHAR_CAP:
                 findings.append(Finding(
-                    severity="medium",
+                    severity="high",
                     category="Readability 3-Line Summary Too Dense",
                     message=(
-                        f"3行まとめ item {i} is {len(clean)} chars (R13 cap {_R13_ITEM_CHAR_CAP}). "
+                        f"3行まとめ item {i} is {len(clean)} chars (R13 hard gate {_R13_ITEM_CHAR_CAP}; "
+                        "authoring target ~120). v1.0-style dense summary regression. "
                         "Use a bold headline + ≤2 plain sentences; defer numbers to マーケット状況."
                     ),
                     line=line_of(text, text.find(item[:20])) if item[:20] else None,
