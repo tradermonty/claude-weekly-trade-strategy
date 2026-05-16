@@ -707,6 +707,117 @@ def check_published_frontmatter(blog_path: Path, text: str) -> list[Finding]:
     return findings
 
 
+# Step 5.6 readability gate (published version only) — prevents the
+# 2026-05-18 v1.0 regression (R11-R14 skipped → "読みづらい" complaint).
+# These tokens are legitimate in the detailed source of truth but must
+# NEVER reach the reader-facing published body (R1/R7/R11).
+_READABILITY_HIGH_TOKENS: list[tuple[str, str]] = [
+    (r"Issue #[0-9]", "internal issue-tracker reference must not appear in reader body (R7)"),
+    (r"slope\s*[-−]?\s*0?\.[0-9]", "raw slope jargon must be plain Japanese e.g. '下降が加速' (R11)"),
+    (r"narrow_rally", "raw CSV enum label must be 'ナローラリー' / plain Japanese (R11)"),
+    (r"週次更新", "Breadth/Uptrend CSVs are daily; '週次更新' is wrong and internal-rule wording (R1)"),
+    (r"1\s*週遅行", "Breadth/Uptrend CSVs lag 1-2 trading days, not '1週遅行' (R1)"),
+]
+_READABILITY_MEDIUM_TOKENS: list[tuple[str, str]] = [
+    (r"Risk Budget", "internal scoring jargon; omit or rephrase for readers (R11)"),
+    (r"バブルスコア", "internal scoring jargon (P2); omit or rephrase for readers (R11)"),
+    (r"複合判定", "internal methodology jargon; rephrase in plain reader language (R11)"),
+]
+_GENERATOR_RE = re.compile(r"generator:\s*blog-publisher\s*v(\d+)\.(\d+)", re.IGNORECASE)
+# 3-line summary item length cap (R13). Gold standard 2026-05-11-clean.md
+# items measure ≤150 chars; the v1.0 regression item was ~400+. 220 gives
+# generous margin (zero false positives on calibrated good versions).
+_R13_ITEM_CHAR_CAP = 220
+
+
+def _strip_frontmatter(text: str) -> str:
+    """Remove the leading HTML comment frontmatter so reader-body scans
+    do not match tokens inside the (legitimate) generator comment."""
+    m = re.match(r"\s*<!--.*?-->", text, re.DOTALL)
+    return text[m.end():] if m else text
+
+
+def check_published_readability(blog_path: Path, text: str) -> list[Finding]:
+    """Step 5.6 readability gate — published version only.
+
+    Triggered only when blog_path is under blogs/published/. Enforces the
+    v1.1 contract so future weeks stay at the 2026-05-11 readability level
+    without per-run instruction:
+      1. generator must be v1.1+ (v1.0 = R11-R14 skipped → HIGH)
+      2. internal-QA tokens absent from reader body (HIGH / MEDIUM)
+      3. each 3-line summary item within the R13 char cap (MEDIUM)
+    """
+    findings: list[Finding] = []
+    try:
+        blog_path.resolve().relative_to(PROJECT_ROOT / "blogs" / "published")
+    except ValueError:
+        return findings  # not a published blog; skip (detailed source is exempt)
+
+    # 1. generator version
+    gm = _GENERATOR_RE.search(text[:2000])
+    if not gm:
+        findings.append(Finding(
+            severity="high",
+            category="Readability Generator Missing",
+            message="frontmatter has no parseable 'generator: blog-publisher vX.Y'. Re-generate via blog-publisher (must stamp v1.1).",
+            line=1,
+        ))
+    else:
+        major, minor = int(gm.group(1)), int(gm.group(2))
+        if (major, minor) < (1, 1):
+            findings.append(Finding(
+                severity="high",
+                category="Readability Generator Outdated",
+                message=(
+                    f"generator is v{major}.{minor}; v1.1+ required. v1.0 means R11-R14 "
+                    "(Japanese-ize, merge tables, 3-line cap, event de-dup) were skipped — "
+                    "the 2026-05-18 '読みづらい' regression. Re-generate with R11-R14 applied."
+                ),
+                line=1,
+            ))
+
+    body = _strip_frontmatter(text)
+
+    # 2. internal-QA token leakage into reader body
+    for pat, reason in _READABILITY_HIGH_TOKENS:
+        m = re.search(pat, body)
+        if m:
+            findings.append(Finding(
+                severity="high",
+                category="Readability Internal Token Leak",
+                message=f"reader body contains internal-QA token '{m.group(0)}': {reason}",
+                line=line_of(text, text.find(m.group(0))),
+            ))
+    for pat, reason in _READABILITY_MEDIUM_TOKENS:
+        m = re.search(pat, body)
+        if m:
+            findings.append(Finding(
+                severity="medium",
+                category="Readability Jargon Leak",
+                message=f"reader body contains jargon '{m.group(0)}': {reason}",
+                line=line_of(text, text.find(m.group(0))),
+            ))
+
+    # 3. R13 — 3-line summary item length cap
+    sm = re.search(r"##\s*3\s*行まとめ(.*?)(?=\n##\s)", body, re.DOTALL)
+    if sm:
+        items = re.findall(r"^\s*\d+\.\s+(.*?)(?=^\s*\d+\.\s|\Z)", sm.group(1), re.DOTALL | re.MULTILINE)
+        for i, item in enumerate(items, 1):
+            # strip markdown emphasis + collapse whitespace for a fair char count
+            clean = re.sub(r"\s+", " ", re.sub(r"[*_`>#-]", "", item)).strip()
+            if len(clean) > _R13_ITEM_CHAR_CAP:
+                findings.append(Finding(
+                    severity="medium",
+                    category="Readability 3-Line Summary Too Dense",
+                    message=(
+                        f"3行まとめ item {i} is {len(clean)} chars (R13 cap {_R13_ITEM_CHAR_CAP}). "
+                        "Use a bold headline + ≤2 plain sentences; defer numbers to マーケット状況."
+                    ),
+                    line=line_of(text, text.find(item[:20])) if item[:20] else None,
+                ))
+    return findings
+
+
 def collect(text: str, snapshot: dict, ir_yaml: str | None, blog_path: Path | None = None) -> list[Finding]:
     findings: list[Finding] = []
     findings.extend(check_snapshot_completeness(snapshot))
@@ -719,6 +830,7 @@ def collect(text: str, snapshot: dict, ir_yaml: str | None, blog_path: Path | No
     findings.extend(check_ir_manifest_completeness(text, ir_yaml))
     if blog_path is not None:
         findings.extend(check_published_frontmatter(blog_path, text))
+        findings.extend(check_published_readability(blog_path, text))
     return findings
 
 

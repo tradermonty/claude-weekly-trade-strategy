@@ -544,16 +544,23 @@ The Uptrend Ratio oversight issue can be detected by this review.
      source: blogs/YYYY-MM-DD-weekly-strategy.md
      source_sha256: <SHA256 of detailed version>
      generated: <ISO8601 timestamp>
-     generator: blog-publisher v1.0 -->
+     generator: blog-publisher v1.1 -->
 ```
 
-**Transformation rules R1-R10**: see `.claude/agents/blog-publisher.md`. Highlights:
+**`generator` は必ず `blog-publisher v1.1` (以上)**。`v1.0` は R11-R14 (英語日本語化 / 配分表統合 / 3行まとめ圧縮 / イベント重複排除) 未適用を意味し、**Step 5.6 postflight が HIGH で FAIL** する (2026-05-18 の「読みづらい」リグレッション対策、Issue #22)。可読性のゴールドスタンダードは `scripts/tests/fixtures/publish/2026-05-11-clean.md`。
+
+**Transformation rules R1-R14**: see `.claude/agents/blog-publisher.md`. Highlights:
 - **R1**: Source annotations consolidated to Sources (with Uptrend Ratio one-time exception in body)
 - **R2**: Decompose `**XXX (説明)**` into `**XXX**` + next sentence
 - **R5**: Table cells ≤ 80 chars (1 number + 1 judgment + 1 reason)
 - **R6**: Imperative → descriptive (but trigger time criteria like `終値2日連続` are absolute)
 - **R8**: 10 sections in fixed order (merge ロット管理 + セクター配分 to reduce redundancy)
 - **R10**: P0/P1/P2 hierarchical preservation (numbers, URLs, scenarios, disclaimer)
+- **R11 (mandatory)**: English jargon → Japanese (ETF/company/event names kept)
+- **R12 (mandatory)**: single merged allocation table (no duplicate category+ETF tables)
+- **R13 (mandatory)**: 3行まとめ = bold headline + ≤2 plain sentences each (numbers deferred to マーケット状況)
+- **R14 (mandatory)**: 夜・早朝チェック ≤7 items, no duplication vs 重要イベント table
+- **Reader-body forbidden tokens** (postflight HIGH): `Issue #N` / `slope -0.x` / `narrow_rally` / `週次更新` / `1週遅行` must never appear in the published body (legit only in detailed source)
 
 **P0 facts (100% preserve, never drop)**:
 - ETF/index spot prices, allocation %, scenario probabilities, IR/official/Fed/market URLs, trigger thresholds + time criteria, option expiries, event datetimes, disclaimer 4 elements (モデル配分例 / 個別投資助言ではない / 各自判断 / 筆者推定), 4 scenario headings + each trigger/action.
@@ -579,6 +586,12 @@ python3 scripts/postflight_blog_check.py blogs/published/YYYY-MM-DD-weekly-strat
   - HTML comment frontmatter parse + presence check
   - `source` path validation (must be under `PROJECT_ROOT/blogs/`, no `../`, must not self-reference `blogs/published/`)
   - `source_sha256` verification against current detailed version SHA256
+  - **Readability gate (Issue #22, `check_published_readability`)**:
+    - `generator` must be `v1.1`+ — `v1.0` → **HIGH FAIL** (R11-R14 skipped)
+    - reader-body internal-QA token leak (`Issue #N` / `slope -0.x` / `narrow_rally` / `週次更新` / `1週遅行`) → **HIGH FAIL**
+    - soft jargon (`Risk Budget` / `バブルスコア` / `複合判定`) → MEDIUM
+    - 3行まとめ item > 220 chars (R13) → MEDIUM
+  - **Detailed source is exempt** (gate triggers only for `blogs/published/` paths; these tokens are legitimate in the source of truth)
 - exit 0 (PASS) → proceed to Step 5.7
 - exit 1 (FAIL) → re-run Step 5.5 (max 2 retries), then halt
 
@@ -1255,6 +1268,24 @@ curl -s https://raw.githubusercontent.com/tradermonty/uptrend-dashboard/main/dat
 - Reviewer: Wikipedia ソース検出 → REVISION REQUIRED (Low)
 - Reviewer: 予想値の出典分離なし → REVISION REQUIRED (Low)
 
+### Published Version Readability Regression (Issue #22)
+
+2026-05-18: 公開版が **blog-publisher v1.0** で生成され、v1.1 必須ルール R11-R14 (英語日本語化 / 配分表統合 / 3行まとめ圧縮 / イベント重複排除) が未適用。3行まとめ1行目が約20数値を詰めた巨大一文、内部QAルール「『週次』『1週遅行』表記は誤り」「Issue #15」が読者向け本文に2回露出、`slope -0.0082` 等のジャーゴン残存。ユーザーから前週 (5/11、v1.1) と比べ「読みづらい」と指摘。
+
+**Root Cause**:
+- `.claude/agents/blog-publisher.md` の frontmatter テンプレが `generator: blog-publisher v1.0` をハードコード、R11-R14 が「v1.1 Refinement Rules (任意)」扱いで Step 4 処理ループ・主チェックリストに非統合
+- postflight は P0 事実のみ検査し、可読性劣化を検知しないため v1.0 の読みにくい版も PASS してしまった
+
+**Fix (多層防御)**:
+1. **agent 定義**: v1.0→v1.1 既定、R11-R14 を「MANDATORY」に格上げ＋Step 4 処理ループ＆統合チェックリストに組込、`scripts/tests/fixtures/publish/2026-05-11-clean.md` を明示的ゴールドスタンダード化、Reader-Body Forbidden Tokens 表追記
+2. **postflight 機械ゲート** (`check_published_readability`、`blogs/published/` 専用): generator v1.0 = HIGH / 内部QA語漏れ (`Issue #N` / `slope -0.x` / `narrow_rally` / `週次更新` / `1週遅行`) = HIGH / ソフトjargon (`Risk Budget` / `バブルスコア` / `複合判定`) = MEDIUM / 3行まとめ >220字 = MEDIUM。詳細版は exempt
+3. **CI テスト**: `scripts/tests/test_postflight_blog_check.py` に v1.0却下・トークン漏れ検知・詳細版exempt・実公開版PASS のテスト追加
+
+**Rules**:
+- blog-publisher は `generator: blog-publisher v1.1` を必ず明記、R11-R14 を全 run で適用
+- Reviewer / orchestrator: Step 5.6 で readability gate が FAIL → Step 5.5 を R11-R14 適用で再実行 (最大2回)
+- 詳細版 (source of truth) は可読性目的で編集しない。可読性は公開版のみで担保 (二層分離)
+
 ---
 
 ## Pre-flight / Post-flight Verification Pipeline (2026-05-09 新設)
@@ -1282,6 +1313,7 @@ curl -s https://raw.githubusercontent.com/tradermonty/uptrend-dashboard/main/dat
 [Step 5.6] postflight 再実行（公開版）
   scripts/postflight_blog_check.py blogs/published/YYYY-MM-DD-weekly-strategy.md
   → 既存チェック + sha256 frontmatter 検証 (詳細版との同期保護、path traversal 対策)
+  → + 可読性ゲート (Issue #22): generator v1.1 必須 / 内部QA語漏れ検出 / R13 3行まとめ長
   → exit 0 = PASS / exit 1 = FAIL (FAIL なら Step 5.5 リトライ最大 2 回)
   ↓
 [Step 5.7] publish_blog_diff.py で詳細版 vs 公開版の整合検証
@@ -1301,6 +1333,7 @@ curl -s https://raw.githubusercontent.com/tradermonty/uptrend-dashboard/main/dat
 - 禁止語 (Powell 退任、Panic Mode、Wikipedia 等) がゼロ
 - 公式スケジュール出典と市場コンセンサス出典が分離されている
 - (公開版のみ) HTML コメント frontmatter に source/source_sha256 が存在し、現在の詳細版 SHA256 と一致
+- (公開版のみ、Issue #22) `generator: blog-publisher v1.1`+ である / 内部QA語 (`Issue #N` / `slope -0.x` / `narrow_rally` / `週次更新` / `1週遅行`) が reader body に不在 / 3行まとめ各項目 ≤220字 (R13)
 
 **PASS 条件 (publish_blog_diff.py, Phase 1)**:
 - ETF/index spot (SPY/QQQ/GLD/SPX/NDX/VIX/WTI/GC) が公開版に存在
@@ -1316,8 +1349,8 @@ curl -s https://raw.githubusercontent.com/tradermonty/uptrend-dashboard/main/dat
 
 ## Version Control
 
-- **Project Version**: 2.6
-- **Last Updated**: 2026-05-10 (Step 5.5/5.6/5.7 追加: 公開版生成パイプライン)
+- **Project Version**: 2.7
+- **Last Updated**: 2026-05-16 (Issue #22: 公開版可読性ゲート + blog-publisher v1.1 既定化)
 - **Maintenance**: Update this document regularly
 
 ---
