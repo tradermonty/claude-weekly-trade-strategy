@@ -70,15 +70,29 @@ _VALID_ETFS = frozenset({
 
 _ETF_SYMBOLS = re.compile(
     r"(SPY|QQQ|DIA|XLV|XLP|GLD|XLE|BIL|TLT|URA|SH|SDS|IWM|COPX)\s*"
+    r"(?:\*\*)?\s*"  # tolerate bold between symbol and value ("QQQ **1%維持**")
     r"(\d+(?:\.\d+)?)"
     r"(?:\s*-\s*(\d+(?:\.\d+)?))?"
     r"\s*%"
+)
+
+# Transition notation "15%→**18%**": drop the old value so inline scans pick
+# the new (bolded) allocation instead of the pre-transition one.
+_PCT_TRANSITION = re.compile(
+    r"(\d+(?:\.\d+)?)\s*%\s*→\s*\*?\*?(\d+(?:\.\d+)?)\s*%"
 )
 
 # Fix 2: Support range format for cash row
 _CASH_ROW = re.compile(
     r"\|\s*\*?\*?現金[・&]?短期債\*?\*?\s*\|\s*"
     r"(?:\*?\*?)?\s*(\d+)(?:\s*-\s*(\d+))?\s*%"
+)
+
+# Lot-management table cash row "| **現金・短期債** | 37% | **33%** |":
+# the bolded 今週 cell takes priority over the 前週 cell.
+_CASH_ROW_BOLD = re.compile(
+    r"\|\s*\*?\*?現金[・&]?短期債\*?\*?\s*\|[^|\n]*\|\s*"
+    r"\*\*(\d+)(?:\s*-\s*(\d+))?\s*%"
 )
 
 # Fix 3: Category table row with bold "今週" values for fallback
@@ -156,21 +170,33 @@ def _parse_sector_allocation(text: str) -> dict[str, float]:
     # Parse from the dedicated allocation section first so scenario blocks
     # (which can contain ETF percentages) do not overwrite current allocation.
     section = _extract_section(text, _SECTOR_ALLOCATION_SECTION_KEYWORD)
+    # Blogs since 2026-08 merge per-ETF allocations into the ロット管理 table
+    # (no separate セクター配分 section); scoping to that section keeps the
+    # inline scan from picking stale values elsewhere in the article.
+    if section is None:
+        section = _extract_section(text, "ロット管理")
     parse_source = section if section else text
 
     # 1. Try pipe table format first (latest blogs: | セクター | ETF | 配分 |)
     alloc = _parse_pipe_allocation_table(parse_source)
 
-    # 2. If insufficient, fall back to inline ETF regex
+    # 2. If insufficient, fall back to inline ETF regex. Normalize transition
+    # notation ("15%→**18%**" → "18%") so the new value is captured.
+    inline_source = _PCT_TRANSITION.sub(r"\2%", parse_source)
     if sum(alloc.values()) < 50:
-        for m in _ETF_SYMBOLS.finditer(parse_source):
+        for m in _ETF_SYMBOLS.finditer(inline_source):
             symbol = m.group(1)
             pct = _midpoint(float(m.group(2)), m.group(3))
             alloc[symbol] = pct
 
-    # Cash row: assign to BIL (only if not already parsed from pipe table)
+    # Cash row: assign to BIL (only if not already parsed from pipe table).
+    # The lot-table format keeps 前週/今週 in separate cells, so the bolded
+    # 今週 cell takes priority over the plain 前週 cell.
     if "BIL" not in alloc or alloc.get("BIL", 0) == 0:
-        cash_matches = list(_CASH_ROW.finditer(parse_source))
+        cash_matches = (
+            list(_CASH_ROW_BOLD.finditer(inline_source))
+            or list(_CASH_ROW.finditer(inline_source))
+        )
         if cash_matches:
             last = cash_matches[-1]
             alloc["BIL"] = _midpoint(float(last.group(1)), last.group(2))
@@ -252,11 +278,47 @@ _SCENARIO_HEADER_JP = re.compile(
     r"[（(]確率[：:]\s*(\d+)%",
 )
 
-# Support both **トリガー**: and **トリガー条件**: and **条件**:
+# Support **トリガー**:, **トリガー条件**:, **条件**: and — from 2026-08-10 —
+# a qualifier carried inside the bold label, e.g.
+# "**トリガー (下記のうち2つ以上が終値ベースで成立)**:" or
+# "**トリガー (いずれか1つの成立で発動)**:". Without the qualifier allowance the
+# Risk-On and Caution blocks parse to an EMPTY trigger list, which Layer 2 then
+# evaluates as "no conditions" instead of failing loudly.
 _SCENARIO_TRIGGER = re.compile(
-    r"\*\*(?:トリガー(?:条件)?|条件)\*\*[：:]\s*(.+?)(?:\n\n|\n###|\n---|\Z)",
+    r"\*\*(?:トリガー(?:条件)?|条件)[^*\n]*\*\*[：:]\s*(.+?)(?:\n\n|\n###|\n---|\Z)",
     re.DOTALL,
 )
+
+# The qualifier inside the bold trigger label states how many legs must hold.
+# It is captured separately from the legs because "all 5" and "any 1" produce
+# the same leg list but opposite verdicts.
+_SCENARIO_TRIGGER_LABEL = re.compile(
+    r"\*\*(?:トリガー(?:条件)?|条件)([^*\n]*)\*\*[：:]"
+)
+
+_RULE_AT_LEAST = re.compile(r"(\d+)\s*(?:つ|本|脚)以上")
+
+
+def _parse_satisfaction_rule(block: str) -> tuple[str, int]:
+    """Read the scenario's satisfaction rule from its trigger label.
+
+    Returns (rule, min_legs) where rule is "all" / "any" / "at_least".
+    Defaults to ("any", 1) when the label carries no qualifier, which matches
+    how a bare "**トリガー**:" list has always been read.
+    """
+    m = _SCENARIO_TRIGGER_LABEL.search(block)
+    if not m:
+        return "any", 1
+    qualifier = m.group(1)
+    at_least = _RULE_AT_LEAST.search(qualifier)
+    if at_least:
+        return "at_least", int(at_least.group(1))
+    if "すべて" in qualifier or "全て" in qualifier or "AND" in qualifier:
+        return "all", 0
+    if "いずれか" in qualifier or "1つ" in qualifier or "何れか" in qualifier:
+        return "any", 1
+    return "any", 1
+
 
 _SCENARIO_ACTION_LINE = re.compile(
     r"-\s*(?:\*\*)?(?:コア|防御|テーマ|現金)[^:：]*(?:\*\*)?:\s*"
@@ -272,9 +334,13 @@ _BEAR_KEYWORDS = frozenset({
 })
 
 
+# The dash before "筆者推定" varies between blogs: ASCII double-hyphen "--"
+# (used through 2026-05-11) and the em/en/horizontal-bar dash "—/–/―"
+# (2026-05-18 onward). Accept all forms so scenario probabilities parse
+# regardless of the writer's dash convention.
 _SCENARIO_HEADER_D = re.compile(
     r"###\s+シナリオ\s*\d+\s*[（(]\s*(.+?)\s*[）)][：:]\s*"
-    r".+?--\s*筆者推定\s*\*{0,2}\s*(\d+)\s*%?\s*\*{0,2}",
+    r".+?(?:--|[—–―])\s*筆者推定\s*\*{0,2}\s*(\d+)\s*%?\s*\*{0,2}",
 )
 
 # Inline Tail Risk note embedded in scenario blocks:
@@ -288,20 +354,49 @@ _TAIL_RISK_CAT_ALLOC = re.compile(
 
 # Inline ETF detail in scenario blocks:
 # "SPY 12%→20%" → 20, "SPY 12%->20%" → 20, "QQQ 2%(復帰)" → 2, "DIA 8%維持" → 8
+# The arrow form also appears without a "%" on either side (2026-07-20 onward):
+# "SPY 17→19 (+2%)" → 19. Only the arrow form may omit "%", because a bare
+# "TICKER <number>" would otherwise match quoted price levels (BIL/XLP/XLE/TLT
+# all trade under $100, so a size cap alone cannot separate them).
+# "コア **18%** (SPY 12 / QQQ 0 / DIA 6)" → capture the parenthesised breakdown.
+_CATEGORY_PAREN_BREAKDOWN = re.compile(
+    r"(?:コア|防御|テーマ)[^（(\n]{0,32}?\d+\s*%\*{0,2}\s*[（(]([^）)\n]*)[）)]"
+)
+
+# Inside a category parenthesis the percent sign is optional: "SPY 12", "GLD 13%".
+_CATEGORY_PAREN_ETF = re.compile(
+    r"(" + "|".join(_VALID_ETFS) + r")\s*\*{0,2}\s*(\d+(?:\.\d+)?)\s*%?"
+)
+
 _SCENARIO_ETF_INLINE = re.compile(
     r"(" + "|".join(_VALID_ETFS) + r")"
     r"\s+"
-    r"(?:\d+(?:\.\d+)?%?\s*(?:→|->)\s*)?"   # optional: current% → or ->
-    r"(\d+(?:\.\d+)?)\s*%"                   # target percentage
+    r"(?:"
+    r"\d+(?:\.\d+)?\s*%?\s*(?:→|->)\s*\*{0,2}\s*(?P<arrow>\d+(?:\.\d+)?)\s*%?"
+    r"|"
+    r"\*{0,2}\s*(?P<plain>\d+(?:\.\d+)?)\s*%"
+    r")"
 )
 
 
 def _normalize_scenario_name_d(raw: str) -> str:
-    """Map Format D parenthetical name to standard name."""
+    """Map Format D parenthetical name to standard name.
+
+    Only "base"/"bull"/"bear"/"tail_risk" are valid downstream
+    (``strategy_intent`` rejects anything else), so the Japanese and
+    Risk-On/Caution spellings used in the blogs must map onto them rather than
+    falling through to a slugified passthrough.
+    """
     lowered = raw.lower().strip()
     if lowered == "base":
         return "base"
     if lowered == "bull":
+        return "bull"
+    # Risk-On / リスクオン are the writer's names for the bull scenario.
+    # "Bull / さらに上値追い" (2026-06-22) also belongs here — the substring check
+    # runs before the bear/tail checks, which never contain "bull".
+    if ("bull" in lowered or "risk-on" in lowered or "risk on" in lowered
+            or "リスクオン" in lowered):
         return "bull"
     if "bear" in lowered and "tail" in lowered:
         return "bear"  # combined scenario
@@ -309,6 +404,9 @@ def _normalize_scenario_name_d(raw: str) -> str:
         return "bear"
     if "tail" in lowered:
         return "tail_risk"
+    # 警戒 / Caution are the writer's names for the bear scenario.
+    if "警戒" in raw or "caution" in lowered:
+        return "bear"
     return lowered.replace(" ", "_")
 
 
@@ -319,45 +417,85 @@ def _parse_scenario_cash_pct(text: str) -> Optional[float]:
       - "現金 42%→**47%**" → 47  (take target after arrow)
       - "現金 **42%**"      → 42  (no arrow, take the value)
     """
+    # The gap between 現金 and its percentage may contain a label such as
+    # "・短期債 (BIL): " but never a digit. Excluding digits keeps the search
+    # from skipping over the cash value to an unrelated arrow later in the same
+    # line — e.g. "現金 **44%**。…XLEは4%→2%へ削減" must yield 44, not 2.
+    gap = r"[^\d\n]{0,24}"
     for line in text.splitlines():
         if "現金" not in line:
             continue
-        # Prefer value after → or -> near 現金 (target)
-        # Restrict arrow search to text near 現金 to avoid matching
-        # unrelated arrows later in the line (e.g., "コア23→25%")
+        # Prefer the value after → or -> (the target of the change)
         arrow_m = re.search(
-            r"現金.*?(\d+(?:\.\d+)?)\s*%\s*(?:→|->)\s*\*?\*?\s*(\d+(?:\.\d+)?)\s*%",
+            r"現金" + gap + r"(\d+(?:\.\d+)?)\s*%\s*(?:→|->)\s*\*{0,2}\s*(\d+(?:\.\d+)?)\s*%",
             line,
         )
         if arrow_m:
             return float(arrow_m.group(2))
-        # No arrow — take first percentage after 現金
-        plain_m = re.search(r"現金.*?(\d+(?:\.\d+)?)\s*%", line)
+        # No arrow — take the percentage attached to 現金
+        plain_m = re.search(r"現金" + gap + r"(\d+(?:\.\d+)?)\s*%", line)
         if plain_m:
             return float(plain_m.group(1))
     return None
 
 
-def _parse_scenario_etf_detail(block: str) -> dict[str, float]:
-    """Extract explicit ETF percentages from scenario action lines.
+def _action_section(block: str) -> str:
+    """Return just the アクション part of a scenario block.
 
-    Restricts search to the action bullet-point section only (before the first
-    blank line after the action header, or before *Tail Risk / --- markers).
-    This prevents ETF mentions in later sections from overwriting correct values.
+    Stops at the first blank line after the action header, or at a Tail Risk /
+    probability / section marker. This prevents percentages and ETF mentions in
+    later sections from overwriting the action's own values.
+    """
+    if "**アクション" not in block:
+        return block
+    section = block.split("**アクション")[1]
+    # "\n**注" stops the scan before the scenario's footnotes. Those notes carry
+    # conditional variants ("XLE は 5% 据え置き", "XLV 13% + GLD 14%") that would
+    # otherwise overwrite the action's own ETF percentages.
+    markers = ("\n\n", "\n**注", "\n*実行タイミング", "\n*Tail Risk",
+               "\n*シナリオ確率", "\n---", "\n##")
+    # Cut at the EARLIEST marker, not the first one that happens to appear in
+    # this tuple. Scanning in tuple order let a blank line further down the block
+    # win over a "**注1**" line right after the action, so the footnotes'
+    # conditional percentages leaked into the allocation.
+    positions = [pos for pos in (section.find(m) for m in markers) if pos != -1]
+    return section[:min(positions)] if positions else section
+
+
+def _parse_category_paren_etfs(action_section: str) -> dict[str, float]:
+    """Extract ETF percentages from the one-line category-with-breakdown form.
+
+    The Tail Risk action is written on a single line as::
+
+        コア **18%** (SPY 12 / QQQ 0 / DIA 6) / 防御 **23%** (XLV 13 / XLP 10)
+
+    Inside those parentheses the numbers carry no "%", so the general
+    ``_SCENARIO_ETF_INLINE`` pattern (which requires "%" on the bare form to
+    avoid swallowing quoted price levels) skips them and the block silently
+    falls back to a default category split. Restricting the bare-number match to
+    the inside of a category parenthesis makes it unambiguous: no price level
+    ever appears there.
     """
     etf_alloc: dict[str, float] = {}
-    if "**アクション" in block:
-        action_section = block.split("**アクション")[1]
-        # Limit to action bullets only: stop at first blank line, Tail Risk note, or ---
-        for end_marker in ("\n\n", "\n*Tail Risk", "\n*シナリオ確率", "\n---", "\n##"):
-            pos = action_section.find(end_marker)
-            if pos != -1:
-                action_section = action_section[:pos]
-                break
-    else:
-        action_section = block
+    for cat_m in _CATEGORY_PAREN_BREAKDOWN.finditer(action_section):
+        for etf_m in _CATEGORY_PAREN_ETF.finditer(cat_m.group(1)):
+            pct = float(etf_m.group(2))
+            if pct > 100:
+                continue
+            etf_alloc[etf_m.group(1)] = pct
+    return etf_alloc
+
+
+def _parse_scenario_etf_detail(block: str) -> dict[str, float]:
+    """Extract explicit ETF percentages from scenario action lines."""
+    etf_alloc: dict[str, float] = {}
+    action_section = _action_section(block)
+    etf_alloc.update(_parse_category_paren_etfs(action_section))
     for m in _SCENARIO_ETF_INLINE.finditer(action_section):
-        etf_alloc[m.group(1)] = float(m.group(2))
+        pct = float(m.group("arrow") or m.group("plain"))
+        if pct > 100:
+            continue  # a price level, not an allocation percentage
+        etf_alloc[m.group(1)] = pct
     # Map "現金 X%" to BIL if BIL not already found
     if "BIL" not in etf_alloc:
         cash_pct = _parse_scenario_cash_pct(action_section)
@@ -404,9 +542,11 @@ def _parse_scenarios(text: str) -> dict[str, ScenarioSpec]:
                 # Overlay explicit ETF details
                 alloc.update(etf_detail)
 
+            rule, min_legs = _parse_satisfaction_rule(block)
             scenarios[name] = ScenarioSpec(
                 name=name, probability=probability,
                 triggers=triggers, allocation=alloc,
+                satisfaction_rule=rule, min_legs=min_legs,
             )
 
         # Check for inline Tail Risk note (embedded as *Tail Risk（5%）:...*)
@@ -456,9 +596,11 @@ def _parse_scenarios(text: str) -> dict[str, ScenarioSpec]:
                 alloc = _distribute_to_etfs(cat_alloc, etf_ratios) if cat_alloc else dict(current)
                 alloc.update(etf_detail)
 
+            rule, min_legs = _parse_satisfaction_rule(block)
             scenarios[name] = ScenarioSpec(
                 name=name, probability=probability,
                 triggers=triggers, allocation=alloc,
+                satisfaction_rule=rule, min_legs=min_legs,
             )
         return scenarios
 
@@ -489,22 +631,63 @@ def _parse_scenarios(text: str) -> dict[str, ScenarioSpec]:
 
         for letter, desc, prob, triggers, alloc in raw_scenarios:
             name = name_map.get(letter, letter.lower())
+            rule, min_legs = _parse_satisfaction_rule(block)
             scenarios[name] = ScenarioSpec(
                 name=name, probability=prob,
                 triggers=triggers, allocation=alloc,
+                satisfaction_rule=rule, min_legs=min_legs,
             )
 
     return scenarios
 
 
 _INDICATOR_KEYWORDS = (
-    "VIX", "S&P", "原油", "Breadth", "Uptrend", "10Y",
-    "Nasdaq", "Dow", "ゴールド", "Gold", "WTI", "Core PCE", "PCE", "GDP",
+    "VIX", "S&P", "SPX", "原油", "Breadth", "Uptrend", "10Y", "10年債", "10年金利",
+    "Nasdaq", "NDX", "Dow", "ゴールド", "Gold", "WTI", "Core PCE", "PCE", "GDP",
 )
 
 
 def _has_indicator_keyword(text: str) -> bool:
     return any(kw in text for kw in _INDICATOR_KEYWORDS)
+
+
+_TRIGGER_SEPARATOR = re.compile(r"\s+\+\s+|\s+or\s+|、")
+_OPEN_PARENS = "(（"
+_CLOSE_PARENS = ")）"
+
+
+def _split_trigger_parts(raw: str) -> list[str]:
+    """Split a trigger line on top-level `+` / `or` / `、` separators.
+
+    Parenthesised spans are kept intact so that a qualifier such as
+    "VIX 26超 (ザラ場、即時)" is not torn into "VIX 26超 (ザラ場" + "即時)".
+    Square brackets are deliberately NOT protected: they group OR legs
+    ("[WTI ... or 10年債 ...]") which downstream consumers evaluate separately.
+    """
+    parts: list[str] = []
+    depth = 0
+    start = 0
+    i = 0
+    while i < len(raw):
+        ch = raw[i]
+        if ch in _OPEN_PARENS:
+            depth += 1
+            i += 1
+            continue
+        if ch in _CLOSE_PARENS:
+            depth = max(0, depth - 1)
+            i += 1
+            continue
+        if depth == 0:
+            m = _TRIGGER_SEPARATOR.match(raw, i)
+            if m:
+                parts.append(raw[start:i])
+                i = m.end()
+                start = i
+                continue
+        i += 1
+    parts.append(raw[start:])
+    return parts
 
 
 def _parse_trigger_list(block: str) -> list[str]:
@@ -521,10 +704,13 @@ def _parse_trigger_list(block: str) -> list[str]:
     if not trigger_match:
         return triggers
     raw = trigger_match.group(1).strip()
-    parts = re.split(r"\s+\+\s+|\s+or\s+|、", raw)
+    parts = _split_trigger_parts(raw)
     prev_indicator: str | None = None
     for part in parts:
         cleaned = re.sub(r"\*\*", "", part).strip()
+        # Strip stray group brackets left by splitting an OR group such as
+        # "[WTI 100ドル上抜け or 10年債 4.806% 上抜け]".
+        cleaned = cleaned.strip("[]［］").strip()
         if not cleaned:
             continue
         if (
@@ -599,11 +785,27 @@ _CATEGORY_NAMES = {
     "現金": "cash",
 }
 
-# Support range format in "from → to" pattern (e.g. "40-45% → **30-35%**")
-_CAT_ALLOC_LINE = re.compile(
-    r"-\s*(?:\*\*)?(?P<cat>コア|防御|テーマ|現金)[^:：]*(?:\*\*)?[：:]\s*"
-    r"(?:[\d]+(?:\s*-\s*\d+)?%\s*→\s*)?"
+# Support range format in "from → to" pattern (e.g. "40-45% → **30-35%**").
+# The colon after the category label is optional: blogs write both
+# "- コア: 40% → **45%**" and "- コア 28% → **33%**" (2026-07-20 onward).
+# The label tail is capped and excludes digits, "(" and "$" so that dollar
+# example lines ("- コア指数: $40K") and parenthesised ETF detail never supply
+# the percentage.
+_CAT_LABEL_TAIL = r"(?:\*\*)?[^\d\n$＄(（]{0,12}"
+_CAT_ALLOC_VALUE = (
+    r"(?:[\d]+(?:\s*-\s*\d+)?\s*%\s*(?:→|->)\s*)?"
     r"(?:\*\*)?\s*(?P<pct>\d+)(?:\s*-\s*(?P<pct_hi>\d+))?\s*%"
+)
+_CAT_ALLOC_LINE = re.compile(
+    r"-\s*(?:\*\*)?(?P<cat>コア|防御|テーマ|現金)" + _CAT_LABEL_TAIL + _CAT_ALLOC_VALUE
+)
+
+# Tail Risk actions are written as one inline run rather than a bullet list:
+# "コア **15%** (SPY 9/QQQ 2/DIA 4) / 防御 **25%** (...) / テーマ **16%** / 現金 **44%**"
+_CAT_ALLOC_INLINE = re.compile(
+    r"(?:^|[/／、,—–―(（]|\s)\s*(?:\*\*)?(?P<cat>コア|防御|テーマ|現金)"
+    + _CAT_LABEL_TAIL
+    + _CAT_ALLOC_VALUE
 )
 
 
@@ -611,18 +813,31 @@ def _parse_category_allocation(block: str) -> Optional[dict[str, int]]:
     """Parse category-level allocation from a scenario action block.
 
     Returns {"core": 34, "defensive": 24, "theme": 14, "cash": 28} or None.
+
+    Tries the bullet-list form first. If that does not yield a full set, falls
+    back to the inline "コア 15% / 防御 25% / ..." form used by Tail Risk, which
+    is matched only inside the action section so that percentages quoted in the
+    根拠 / トリガー prose cannot be mistaken for an allocation.
     """
-    result: dict[str, int] = {}
-    for m in _CAT_ALLOC_LINE.finditer(block):
-        cat_jp = m.group("cat")
-        cat_en = _CATEGORY_NAMES.get(cat_jp)
-        if cat_en:
+    def _collect(pattern: re.Pattern[str], source: str) -> dict[str, int]:
+        found: dict[str, int] = {}
+        for m in pattern.finditer(source):
+            cat_en = _CATEGORY_NAMES.get(m.group("cat"))
+            if not cat_en:
+                continue
             lo = int(m.group("pct"))
             hi_str = m.group("pct_hi")
-            if hi_str:
-                result[cat_en] = round((lo + int(hi_str)) / 2)
-            else:
-                result[cat_en] = lo
+            found[cat_en] = round((lo + int(hi_str)) / 2) if hi_str else lo
+        return found
+
+    result = _collect(_CAT_ALLOC_LINE, block)
+    if len(result) < 3:
+        # The inline form always spells out all four categories, so require the
+        # full set. A partial match means the text is prose, not an allocation,
+        # and a partial set would silently drop a category from the total.
+        inline = _collect(_CAT_ALLOC_INLINE, _action_section(block))
+        if len(inline) == 4:
+            result = inline
 
     return result if len(result) >= 3 else None
 
@@ -815,13 +1030,37 @@ _VIX_THRESHOLDS = re.compile(
 # Fallback: slash-separated values without labels, optional bold/decorator text
 # Format: | **VIX** | current | 17 / 20 / 23 / 26 | note
 # Or: 17 / **20突破** / **23** / 26 (bold + suffix text allowed)
-_VIX_THRESHOLDS_SLASH = re.compile(
-    r"\*?\*?VIX\*?\*?\s*\|[^|]*\|\s*"
-    r"\*?\*?(\d+(?:\.\d+)?)[^/|]*?/\s*"
-    r"\*?\*?(\d+(?:\.\d+)?)[^/|]*?/\s*"
-    r"\*?\*?(\d+(?:\.\d+)?)[^/|]*?/\s*"
-    r"\*?\*?(\d+(?:\.\d+)?)"
+# The threshold cell is captured whole (not four fixed groups) because blogs may
+# add chart annotations such as `**14.00 (手描き下限)** / **17** / 20 / 23 / 26`.
+# Reading such a cell positionally shifts every level down one rung.
+_VIX_THRESHOLD_CELL = re.compile(r"\*?\*?VIX\*?\*?\s*\|[^|\n]*\|([^|\n]*)")
+
+_VIX_LEVEL_IN_SEGMENT = re.compile(r"\d+(?:\.\d+)?")
+
+# Standard Monty ladder (CLAUDE.md "Monty Style" rule 2). Values outside it are
+# chart annotations, not regime boundaries.
+_VIX_LADDER: tuple[tuple[str, float], ...] = (
+    ("risk_on", 17.0),
+    ("caution", 20.0),
+    ("stress", 23.0),
+    ("panic", 26.0),
 )
+
+_VIX_POSITIONAL_KEYS = ("risk_on", "caution", "stress", "panic")
+
+
+def _parse_vix_threshold_levels(text: str) -> list[float]:
+    """Return every numeric level listed in the VIX threshold cell, in order."""
+    m = _VIX_THRESHOLD_CELL.search(text)
+    if not m:
+        return []
+
+    levels: list[float] = []
+    for segment in m.group(1).split("/"):
+        num = _VIX_LEVEL_IN_SEGMENT.search(segment)
+        if num:
+            levels.append(float(num.group()))
+    return levels
 
 
 def _parse_vix_triggers(text: str) -> dict[str, float]:
@@ -833,21 +1072,24 @@ def _parse_vix_triggers(text: str) -> dict[str, float]:
             "caution": float(m.group(2)),
             "stress": float(m.group(3)),
         }
-    m2 = _VIX_THRESHOLDS_SLASH.search(text)
-    if m2:
-        return {
-            "risk_on": float(m2.group(1)),
-            "caution": float(m2.group(2)),
-            "stress": float(m2.group(3)),
-            "panic": float(m2.group(4)),
-        }
-    return {}
+
+    levels = _parse_vix_threshold_levels(text)
+    if len(levels) < 3:
+        return {}
+
+    # Anchor on the standard ladder by value whenever the cell carries most of it,
+    # so extra annotation levels cannot shift the mapping.
+    by_value = {key: level for key, level in _VIX_LADDER if level in levels}
+    if len(by_value) >= 3:
+        return by_value
+
+    return dict(zip(_VIX_POSITIONAL_KEYS, levels[:4]))
 
 
 # --- Yield triggers -------------------------------------------------------
 
 _YIELD_THRESHOLDS = re.compile(
-    r"\*?\*?10Y利回り\*?\*?\s*\|[^|]*\|\s*"
+    r"\*?\*?10Y(?:\s*/\s*30Y)?\s*利回り\*?\*?\s*\|[^|]*\|\s*"
     r"(\d+\.\d+)%?\s*\(下限\)\s*/\s*"
     r"(\d+\.\d+)%?\s*\(警戒\)\s*/\s*"
     r"(\d+\.\d+)%?\s*\(赤\)"
@@ -856,8 +1098,10 @@ _YIELD_THRESHOLDS = re.compile(
 # Fallback: slash-separated values without labels, with optional space in "10Y 利回り"
 # Format: | **10Y 利回り** | current | 4.11% / 4.36% / 4.50% / 4.60% | note
 # Bold/decorator text between values is tolerated, e.g. "4.11% / **4.36%突破** / **4.50%** / 4.60%"
+# Combined row headers like "10Y / 30Y 利回り" are tolerated; thresholds are read
+# from the 3rd cell so the combined current-value cell (4.750% / 5.270%) is skipped.
 _YIELD_THRESHOLDS_SLASH = re.compile(
-    r"\*?\*?10Y\s*利回り\*?\*?\s*\|[^|]*\|\s*"
+    r"\*?\*?10Y(?:\s*/\s*30Y)?\s*利回り\*?\*?\s*\|[^|]*\|\s*"
     r"\*?\*?(\d+\.\d+)%?[^/|]*?/\s*"
     r"\*?\*?(\d+\.\d+)%?[^/|]*?/\s*"
     r"\*?\*?(\d+\.\d+)%?[^/|]*?/\s*"

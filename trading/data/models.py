@@ -99,6 +99,15 @@ class ScenarioSpec:
     probability: int            # percentage (e.g. 45)
     triggers: list[str]
     allocation: dict[str, float]  # {symbol: pct}
+    # How many legs must hold for the scenario to fire, taken from the trigger
+    # heading ("すべて満たす" / "2つ以上" / "いずれか1つ" / "2脚の AND").
+    # Without this every scenario looks like a plain OR, so a Base case that
+    # requires all five legs would read as fired on one.
+    #   "all"      - every leg
+    #   "any"      - a single leg is enough
+    #   "at_least" - at least `min_legs` legs
+    satisfaction_rule: str = "any"
+    min_legs: int = 1
 
 
 @dataclass
