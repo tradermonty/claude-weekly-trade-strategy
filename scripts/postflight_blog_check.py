@@ -24,6 +24,7 @@ import json
 import re
 import sys
 from dataclasses import dataclass
+from datetime import date
 from pathlib import Path
 from typing import Iterable
 
@@ -319,6 +320,157 @@ def check_option_expiries(text: str, snapshot: dict) -> list[Finding]:
                 message=f"VIX option uses weekly {md}. Recommended VIX expiries are monthly ({sorted(vix_monthly_md)}) or post-event weekly ({sorted(recommended_weekly_md)}). Other weeklies (e.g., 5/20) should not be the default hedge expiry.",
                 line=line_no,
             ))
+    return findings
+
+
+EVENT_WORDS_FOR_VIX_COVERAGE = ("FOMC", "決算", "CPI", "PCE", "雇用統計", "GDP")
+
+# "7/29(水) VIXウィークリー" / "8/19(水) VIX標準月次" / "8/21(金) 満期" — a date
+# presented as an expiry. Plain "7/29 FOMC" must not match.
+VIX_EXPIRY_MENTION = re.compile(
+    r"(\d{1,2})/(\d{1,2})[^\d]{0,12}?(?:満期|ウィークリー|月次)"
+)
+
+# VIX settles on the SOQ struck on the expiry morning (~9:30 ET). A release that
+# lands before that print still feeds into the settlement value even though the
+# contract stopped trading the previous session; an afternoon event does not.
+VIX_SOQ_ET_MINUTES = 9 * 60 + 30
+
+# Fixed release times for events whose schedule is fixed, used when the line
+# does not spell out an ET time.
+EVENT_DEFAULT_ET_MINUTES = {
+    "FOMC": 14 * 60,
+    "CPI": 8 * 60 + 30,
+    "PCE": 8 * 60 + 30,
+    "GDP": 8 * 60 + 30,
+    "雇用統計": 8 * 60 + 30,
+    "雇用コスト": 8 * 60 + 30,
+}
+
+
+def _event_et_minutes(line: str) -> int | None:
+    """Latest ET time-of-day on the line, in minutes past midnight.
+
+    An explicit "14:00 ET" wins; otherwise fall back to the known release time
+    of any fixed-schedule event named on the line. Returns None when neither is
+    available (e.g. an earnings line with no time), which the caller treats as
+    "unverifiable" rather than "not covered".
+    """
+    times = [int(h) * 60 + int(mm)
+             for h, mm in re.findall(r"(\d{1,2}):(\d{2})\s*ET", line)]
+    if times:
+        return max(times)
+    defaults = [v for k, v in EVENT_DEFAULT_ET_MINUTES.items() if k in line]
+    return max(defaults) if defaults else None
+
+# A line that explicitly says the expiry does NOT cover the event is the fix,
+# not the defect — never flag it.
+VIX_COVERAGE_NEGATIONS = (
+    "カバーしません", "カバーできません", "カバーしない",
+    "消滅", "使えません", "使えない", "対象外", "間に合わない",
+)
+
+
+def check_vix_expiry_event_coverage(text: str, snapshot: dict) -> list[Finding]:
+    """VIX options are AM-settled and stop trading the business day BEFORE expiry.
+
+    An expiry offered as cover for an event landing on or after that expiry date
+    is already gone when the event happens. The 2026-07-27 draft quoted the
+    7/29 weekly as covering the 7/29 14:00 ET FOMC statement, but 7/29 options
+    stopped trading 7/28 and settled on the morning of 7/29.
+
+    Event day is taken as the latest OTHER date on the line; when the expiry is
+    the only date there, the expiry date itself is the event day. That keeps
+    "VIX 8/19 covers the 7/29 FOMC" passing while catching "VIX 7/29 covers FOMC".
+    """
+    findings: list[Finding] = []
+    ltd_map = snapshot.get("option_expiries", {}).get("vix_last_trading_day", {})
+    if not ltd_map:
+        return findings
+
+    md_to_iso = {}
+    for iso in ltd_map:
+        d = date.fromisoformat(iso)
+        md_to_iso[f"{d.month}/{d.day}"] = iso
+
+    year_str = str(snapshot.get("target_week_start", ""))[:4]
+    if not year_str.isdigit():
+        return findings
+    year = int(year_str)
+
+    for line_no, line in enumerate(text.splitlines(), start=1):
+        if "VIX" not in line:
+            continue
+        if not any(w in line for w in EVENT_WORDS_FOR_VIX_COVERAGE):
+            continue
+        if any(n in line for n in VIX_COVERAGE_NEGATIONS):
+            continue
+
+        # Only dates actually presented AS an expiry count; a bare "7/29 FOMC"
+        # is an event date, not an expiry quote.
+        expiry_hits = []
+        for m in VIX_EXPIRY_MENTION.finditer(line):
+            md = f"{int(m.group(1))}/{int(m.group(2))}"
+            if md in md_to_iso:
+                expiry_hits.append((md, int(m.group(1)), int(m.group(2))))
+        if not expiry_hits:
+            continue
+
+        all_dates = [(int(mm), int(dd))
+                     for mm, dd in re.findall(r"(\d{1,2})/(\d{1,2})", line)]
+        for md, mm, dd in expiry_hits:
+            others = [t for t in all_dates if t != (mm, dd)]
+            try:
+                expiry_day = date.fromisoformat(md_to_iso[md])
+                event_day = date(year, *max(others)) if others else date(year, mm, dd)
+                last_trading = date.fromisoformat(ltd_map[md_to_iso[md]])
+            except ValueError:
+                continue
+
+            if last_trading >= event_day:
+                continue  # still tradable when the event lands
+
+            if event_day > expiry_day:
+                findings.append(Finding(
+                    severity="high",
+                    category="vix-expiry-coverage",
+                    message=(
+                        f"VIX {md} 満期は {event_day.month}/{event_day.day} のイベントより前に"
+                        f"清算されるため、当該イベントをカバーできません。より後の満期に差し替えてください"
+                    ),
+                    line=line_no,
+                ))
+                continue
+
+            # Same-day: the contract stops trading the prior session, but final
+            # settlement is the SOQ struck on the expiry morning (~9:30 ET), so a
+            # pre-open release still feeds into the settlement price.
+            et_minutes = _event_et_minutes(line)
+            if et_minutes is None:
+                findings.append(Finding(
+                    severity="medium",
+                    category="vix-expiry-coverage",
+                    message=(
+                        f"VIX {md} 満期と同日のイベントですが本文に ET 時刻がなく、"
+                        f"SOQ（満期日朝、概ね 9:30 ET）の前後どちらかを判定できません。"
+                        f"取引は {last_trading.month}/{last_trading.day} に終了します。"
+                        f"イベント時刻を明記してください"
+                    ),
+                    line=line_no,
+                ))
+            elif et_minutes >= VIX_SOQ_ET_MINUTES:
+                findings.append(Finding(
+                    severity="high",
+                    category="vix-expiry-coverage",
+                    message=(
+                        f"VIX {md} 満期は最終取引日 {last_trading.month}/{last_trading.day} で"
+                        f"取引を終え、満期日朝の SOQ（概ね 9:30 ET）で清算されます。"
+                        f"{et_minutes // 60}:{et_minutes % 60:02d} ET のイベントは清算後のため"
+                        f"カバーできません。より後の満期に差し替えてください"
+                    ),
+                    line=line_no,
+                ))
+            # else: pre-SOQ release — reflected in the settlement print, no finding
     return findings
 
 
@@ -736,6 +888,30 @@ _GENERATOR_RE = re.compile(r"generator:\s*blog-publisher\s*v(\d+)\.(\d+)", re.IG
 # blocks the regression — making R13 a true MANDATORY gate (M1 fix).
 _R13_ITEM_CHAR_CAP = 200
 
+# R15 (v1.2) — internal decision machinery that must not reach the reader.
+# The detailed version documents *how* the call was made; the published version
+# states only the conclusion and the action. Added 2026-08-23 after the reader
+# reported the published body read like an internal analyst memo while every
+# mechanical gate was green.
+_R15_INTERNAL_TERMS = [
+    "差し戻し条件",
+    "昇格条件",
+    "昇格側",
+    "拒否権",
+    "書面化",
+    "単日確定系",
+    "終値2日確定系",
+    "複合リスクバジェット",
+    "フェーズ軸",
+    "統計検証2本",
+    "両論併記",
+]
+
+# R11/v1.2 — English phase names are allowed ONLY inside scenario headings,
+# where scripts/publish_blog_diff.py matches on them (SCENARIO_NAMES).
+# Anywhere else the reader-facing text must use Japanese.
+_PHASE_NAMES_EN = ["Base", "Caution", "Stress", "Risk-On", "Tail Risk"]
+
 
 def _strip_frontmatter(text: str) -> str:
     """Remove the leading HTML comment frontmatter so reader-body scans
@@ -825,6 +1001,59 @@ def check_published_readability(blog_path: Path, text: str) -> list[Finding]:
                     ),
                     line=line_of(text, text.find(item[:20])) if item[:20] else None,
                 ))
+
+    # R15-R19 arrived with generator v1.2 (2026-08-23). Files generated before
+    # that stamp are not held to rules that did not exist when they were written;
+    # they are still fully covered by every check above.
+    _is_v12 = bool(gm) and (int(gm.group(1)), int(gm.group(2))) >= (1, 2)
+    if not _is_v12:
+        return findings
+
+    # --- R15: internal decision machinery in the reader body (v1.2) ---
+    hits: list[tuple[str, int]] = []
+    for i, line in enumerate(body.split("\n"), start=1):
+        if line.lstrip().startswith(("<!--", "source", "generated", "generator")):
+            continue
+        for term in _R15_INTERNAL_TERMS:
+            if term in line:
+                hits.append((term, i))
+    if hits:
+        shown = ", ".join(f"{t} (line {ln})" for t, ln in hits[:6])
+        findings.append(Finding(
+            severity="high" if len(hits) >= 3 else "medium",
+            category="Readability Internal Machinery (R15)",
+            message=(
+                f"{len(hits)} internal-decision term(s) in the reader body: {shown}. "
+                "These only parse for someone who has read the workflow docs. State the "
+                "conclusion and the action instead (e.g. 差し戻し条件が3/4成立 → "
+                "「先週決めた8つの条件のうち6つが起きました」). See blog-publisher R15."
+            ),
+            line=hits[0][1],
+        ))
+
+    # --- R11 scope: English phase names outside scenario headings (v1.2) ---
+    phase_hits: list[tuple[str, int]] = []
+    for i, line in enumerate(body.split("\n"), start=1):
+        if line.lstrip().startswith("#"):
+            continue  # scenario headings legitimately carry the English name
+        for name in _PHASE_NAMES_EN:
+            if re.search(rf"(?<![A-Za-z]){re.escape(name)}(?![A-Za-z])", line):
+                phase_hits.append((name, i))
+    if phase_hits:
+        shown = ", ".join(f"{n} (line {ln})" for n, ln in phase_hits[:6])
+        findings.append(Finding(
+            severity="medium",
+            category="Readability English Phase Name (R11)",
+            message=(
+                f"{len(phase_hits)} English phase name(s) outside scenario headings: {shown}. "
+                "Headings keep the English literal (publish_blog_diff matches on it); "
+                "running prose must use Japanese (Base→平常 / Caution→警戒 / Stress→悪化 / "
+                "Risk-On→強気 / Tail Risk→最悪ケース). See blog-publisher R11."
+            ),
+            line=phase_hits[0][1],
+        ))
+
+
     return findings
 
 
@@ -835,6 +1064,7 @@ def collect(text: str, snapshot: dict, ir_yaml: str | None, blog_path: Path | No
     findings.extend(check_etf_spot_prices(text, snapshot))
     findings.extend(check_option_otm(text, snapshot))
     findings.extend(check_option_expiries(text, snapshot))
+    findings.extend(check_vix_expiry_event_coverage(text, snapshot))
     findings.extend(check_day_of_week(text, snapshot))
     findings.extend(check_ir_times_against_yaml(text, ir_yaml))
     findings.extend(check_ir_manifest_completeness(text, ir_yaml))
