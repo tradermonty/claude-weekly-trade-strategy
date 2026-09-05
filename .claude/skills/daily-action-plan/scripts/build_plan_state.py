@@ -594,7 +594,15 @@ def _condition_fully_met(
         met_prev = entry.get("met_prev")
         if met_prev is None:
             return None  # cannot confirm consecutiveness without the prior close
-        return bool(entry.get("met_close")) and bool(met_prev)
+        held_both = bool(entry.get("met_close")) and bool(met_prev)
+        if meta["required_days"] > _MAX_CONFIRMED_DAYS:
+            # Only today and the previous close are on file, so a 3-day (or
+            # longer) run cannot be established. Saying True here fired a
+            # "17超を終値3日連続" leg on two days, and contradicted the progress
+            # text, which already reported "2/3日達成（2日分のみ確認可）".
+            # A run that has already broken is still a definite miss.
+            return None if held_both else False
+        return held_both
 
     return bool(entry.get("met_close"))
 
@@ -636,10 +644,12 @@ def _compute_trigger_distance(
     us10y = market.get("us10y", {}).get("value")
     us30y = market.get("us30y", {}).get("value")
     us2y = market.get("us2y", {}).get("value")
+    us5y = market.get("us5y", {}).get("value")
     curve_2s10s = market.get("curve_2s10s", {}).get("value")
     uptrend_ratio = breadth.get("uptrend_ratio")
     cross_diff = breadth.get("cross_diff")
     breadth_50_raw = breadth.get("breadth_50_raw")
+    breadth_raw = breadth.get("breadth_raw")
 
     for name, scenario in scenarios.items():
         triggers = scenario.get("triggers", [])
@@ -837,6 +847,26 @@ def _compute_trigger_distance(
                         entry, trigger, market, "us2y", timing, today,
                     )
                     trigger_distances.append(entry)
+            # 5Y Treasury yield. The 2026-09-07 article moved the policy-path
+            # trigger to the belly (5Y +6.0bp, the largest move of any tenor)
+            # and dropped the 2Y levels; without this branch those four legs
+            # were unevaluable and the coverage gate failed closed.
+            elif us5y and ("5年債" in trigger or "5年金利" in trigger
+                           or "5Y" in trigger.upper()):
+                y5_m = re.search(r"(\d+(?:\.\d+)?)\s*%", trigger)
+                if y5_m:
+                    target = float(y5_m.group(1))
+                    entry = {
+                        "trigger": trigger,
+                        "indicator": "US 5Y Yield",
+                        "current": us5y,
+                        "target": target,
+                        "diff": round(us5y - target, 3),
+                    }
+                    _enrich_trigger_entry(
+                        entry, trigger, market, "us5y", timing, today,
+                    )
+                    trigger_distances.append(entry)
             # Copper ("銅 HG 6.1615 終値割れ"). Priced in dollars per pound, so
             # the level is a single digit with four decimals.
             elif copper and ("銅" in trigger or "COPPER" in trigger.upper()
@@ -890,6 +920,28 @@ def _compute_trigger_distance(
                     }
                     _enrich_trigger_entry(
                         entry, trigger, market, "breadth_50_raw", timing, today,
+                    )
+                    trigger_distances.append(entry)
+            # Breadth 200-series raw reading ("Breadth 生値 (200日線上) が
+            # 64.0% を CSV 2データ点連続で下回る"). The 2026-09-07 article moved
+            # the Stress condition off the 8MA-200MA spread and onto the raw
+            # percentage, because both averages are EMAs and the spread is
+            # decided by the raw level. Quoted in %, so it must be claimed
+            # before the spread branch, which reads a pt value.
+            elif (breadth_raw is not None and "BREADTH" in trigger.upper()
+                  and ("生値" in trigger or "RAW" in trigger.upper())):
+                braw_m = re.search(r"(\d+(?:\.\d+)?)\s*%", trigger)
+                if braw_m:
+                    target = float(braw_m.group(1))
+                    entry = {
+                        "trigger": trigger,
+                        "indicator": "Breadth Raw (200MA basis)",
+                        "current": breadth_raw,
+                        "target": target,
+                        "diff": round(breadth_raw - target, 2),
+                    }
+                    _enrich_trigger_entry(
+                        entry, trigger, market, "breadth_raw", timing, today,
                     )
                     trigger_distances.append(entry)
             # Breadth 8MA-200MA spread ("Breadth 8MA と 200MA の差が +7pt 割れ").
@@ -988,6 +1040,121 @@ def _compute_trigger_distance(
     return distances
 
 
+# --- Source-text audit ------------------------------------------------------
+# `source_leg_total` counts legs in parse_blog's OUTPUT, so a scenario the
+# parser could not read contributes 0 legs and checks 18-20 all pass on 0 of 0.
+# This audit reads the article text directly: when a scenario block carries a
+# trigger label but no leg survived parsing, the run must fail rather than
+# report full coverage of nothing.
+
+# "### シナリオ 2 (Risk-On): ..." — the char after シナリオ must not be 別, so
+# the section heading "## シナリオ別プラン" is not mistaken for a scenario.
+_RAW_SCENARIO_HEADING = re.compile(
+    r"^#{2,4}\s*(シナリオ\s*[0-9０-９A-Za-z][^\n]*)$", re.M
+)
+_RAW_TRIGGER_LABEL = re.compile(r"\*\*(?:トリガー(?:条件)?|発動条件|条件)[^*\n]*\*\*")
+
+# Whether a block STATES conditions, judged without reference to the label:
+# a heading the parser does not know ("**判定基準**:") leaves the legs in the
+# article and out of the plan, and a label-based test cannot see that. A line
+# naming an instrument, a number and a comparison is a condition.
+_RAW_INSTRUMENTS = (
+    "VIX", "SPX", "S&P", "NDX", "Nasdaq", "ナスダック", "Dow", "ダウ",
+    "Russell", "小型株", "10年債", "30年債", "2年債", "5年債", "利回り",
+    "WTI", "原油", "銅", "HG", "金", "GC", "GLD", "SPY", "QQQ", "DIA", "IWM",
+    "Uptrend", "Breadth", "値上がり銘柄比率", "参加率",
+)
+_RAW_COMPARISON = re.compile(
+    r"(終値|割れ|割り込|上抜け|下抜け|超|未満|以上|以下|回復|維持|下回|上回)"
+)
+
+
+def _block_states_conditions(block: str) -> bool:
+    """True when some line names an instrument, a number and a comparison."""
+    for line in block.splitlines():
+        if not any(ch.isdigit() for ch in line):
+            continue
+        if not _RAW_COMPARISON.search(line):
+            continue
+        if any(name in line for name in _RAW_INSTRUMENTS):
+            return True
+    return False
+_RAW_HEADING_PROB = re.compile(r"(\d{1,3})\s*%")
+
+
+def _heading_probability(heading: str) -> Optional[int]:
+    """The scenario probability written in its heading, if any."""
+    tail = heading.split("筆者推定")[-1]
+    matches = _RAW_HEADING_PROB.findall(tail) or _RAW_HEADING_PROB.findall(heading)
+    return int(matches[-1]) if matches else None
+
+
+def _audit_source_triggers(blog_text: str, spec_scenarios: dict) -> dict:
+    """Compare the article's scenario blocks against what the parser produced.
+
+    Joins on the probability written in each heading, which is the one field
+    both sides carry. Returns `applicable: False` for articles whose headings do
+    not match the Japanese scenario format (older English posts), so the gate
+    never fails on a format it was not written for.
+    """
+    headings = list(_RAW_SCENARIO_HEADING.finditer(blog_text))
+    if not headings:
+        return {
+            "applicable": False,
+            "reason": "no Japanese scenario headings found",
+            "raw_scenario_count": 0,
+            "parsed_scenario_count": len(spec_scenarios),
+            "gaps": [],
+        }
+
+    by_prob: dict = {}
+    for name, sc in spec_scenarios.items():
+        by_prob.setdefault(sc.probability, []).append((name, sc))
+
+    gaps = []
+    with_label = 0
+    for i, m in enumerate(headings):
+        start = m.end()
+        end = headings[i + 1].start() if i + 1 < len(headings) else len(blog_text)
+        section = re.search(r"^##\s", blog_text[start:end], re.M)
+        if section:
+            end = start + section.start()
+        block = blog_text[start:end]
+        heading = m.group(1).strip()
+
+        has_label = bool(_RAW_TRIGGER_LABEL.search(block))
+        if has_label:
+            with_label += 1
+        if not (has_label or _block_states_conditions(block)):
+            continue
+
+        prob = _heading_probability(heading)
+        candidates = by_prob.get(prob) if prob is not None else None
+        if not candidates:
+            gaps.append({
+                "heading": heading[:70],
+                "reason": f"no parsed scenario with probability {prob}",
+            })
+            continue
+        if all(not sc.triggers for _, sc in candidates):
+            gaps.append({
+                "heading": heading[:70],
+                "reason": (
+                    "conditions written in the article, 0 legs parsed"
+                    if not has_label else
+                    "trigger block in the article, 0 legs parsed"
+                ),
+            })
+
+    return {
+        "applicable": True,
+        "raw_scenario_count": len(headings),
+        "raw_with_trigger_block": with_label,
+        "parsed_scenario_count": len(spec_scenarios),
+        "gaps": gaps,
+    }
+
+
 def build_plan_state(
     timing: str,
     market_json: dict,
@@ -1071,6 +1238,14 @@ def build_plan_state(
         "eval": "",
     }
 
+    # Treasury 5Y. Same reason as the 2Y entry above: the 2026-09-07 week put
+    # the policy-path trigger on the belly of the curve.
+    market["us5y"] = {
+        "value": _safe_float(treasury.get("year5")),
+        "prev_close": _safe_float(treasury_prev.get("year5")),
+        "eval": "",
+    }
+
     # 2s10s spread in basis points, plus its previous close, so curve triggers
     # ("2s10s が 30bp 割れを終値2日連続") are evaluable on the same footing.
     prev_2y = _safe_float(treasury_prev.get("year2"))
@@ -1107,6 +1282,7 @@ def build_plan_state(
         "dead_cross": breadth_json.get("dead_cross", False),
         "cross_diff": _safe_float(breadth_json.get("cross_diff")),
         "breadth_50_raw": _safe_float(breadth_json.get("breadth_50_raw")),
+        "breadth_raw": _safe_float(breadth_json.get("breadth_raw")),
         "uptrend_date": breadth_json.get("uptrend_date", ""),
         "uptrend_ratio": _safe_float(breadth_json.get("uptrend_ratio")),
         "uptrend_color": breadth_json.get("uptrend_color", ""),
@@ -1167,7 +1343,10 @@ def build_plan_state(
     # a single leg: an AND group whose partner is unmet has NOT fired, and the
     # met leg on its own is not a signal.
 
+    source_audit = _audit_source_triggers(blog_text, spec.scenarios)
+
     trigger_coverage = {
+        "source_audit": source_audit,
         "source_leg_total": sum(d["source_leg_count"] for d in trigger_distances),
         "evaluated_leg_total": sum(d["evaluated_leg_count"] for d in trigger_distances),
         "per_scenario": {

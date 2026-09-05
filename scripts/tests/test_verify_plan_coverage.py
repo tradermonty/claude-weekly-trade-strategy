@@ -96,6 +96,12 @@ def _run(ps):
     }
 
 
+def _run21(ps):
+    """Return whether check #21 (source-text audit) passed."""
+    result = vp.verify(ps, {}, {})
+    return {c["num"]: c["status"] == "PASS" for c in result.checks}[21]
+
+
 def test_baseline_passes():
     assert _run(_plan_state()) == {18: True, 19: True, 20: True}
 
@@ -301,3 +307,73 @@ if __name__ == "__main__":
             failed += 1
     print(f"\n{passed} passed, {failed} failed")
     sys.exit(1 if failed else 0)
+
+
+# --- #21: the source-text audit -------------------------------------------
+# Checks 18-20 count legs in the parser's output. A scenario the parser could
+# not read reports 0 of 0 and passes all three, which is how a whole scenario
+# could disappear between the article and the plan without any gate objecting.
+
+
+def test_check_21_is_missing_audit_fails_closed():
+    ps = _plan_state()
+    ps["analysis"]["trigger_coverage"].pop("source_audit", None)
+    assert _run21(ps) is False, "an absent audit must not pass"
+
+
+def test_check_21_passes_with_a_clean_audit():
+    ps = _plan_state()
+    ps["analysis"]["trigger_coverage"]["source_audit"] = {
+        "applicable": True, "raw_scenario_count": 4,
+        "raw_with_trigger_block": 4, "parsed_scenario_count": 4, "gaps": [],
+    }
+    assert _run21(ps) is True
+
+
+def test_check_21_fails_when_a_scenario_was_dropped():
+    ps = _plan_state()
+    ps["analysis"]["trigger_coverage"]["source_audit"] = {
+        "applicable": True, "raw_scenario_count": 4,
+        "raw_with_trigger_block": 4, "parsed_scenario_count": 4,
+        "gaps": [{"heading": "シナリオ 2 (Risk-On)",
+                  "reason": "conditions written in the article, 0 legs parsed"}],
+    }
+    assert _run21(ps) is False
+
+
+def test_check_21_reports_zero_of_zero_coverage_as_a_failure():
+    """The exact shape of the blind spot: coverage 0/0 with a live scenario."""
+    ps = _plan_state()
+    cov = ps["analysis"]["trigger_coverage"]
+    for d in ps["analysis"]["trigger_distances"]:
+        d["trigger_distances"] = []
+        d["source_leg_count"] = 0
+        d["evaluated_leg_count"] = 0
+        d["unevaluated_legs"] = []
+        d["met_leg_count"] = 0
+        d["undecided_leg_count"] = 0
+        d["scenario_satisfied"] = False
+    cov["source_leg_total"] = 0
+    cov["evaluated_leg_total"] = 0
+    cov["and_groups"] = []
+    cov["per_scenario"] = {k: {"source": 0, "evaluated": 0} for k in cov["per_scenario"]}
+    for r in cov["scenario_rules"].values():
+        r.update({"leg_count": 0, "met_leg_count": 0,
+                  "undecided_leg_count": 0, "satisfied": False})
+    cov["source_audit"] = {
+        "applicable": True, "raw_scenario_count": 4, "raw_with_trigger_block": 4,
+        "parsed_scenario_count": 4,
+        "gaps": [{"heading": "シナリオ 1 (Base)", "reason": "0 legs parsed"}],
+    }
+    checks = _run(ps)
+    assert checks[18] is True, "coverage arithmetic is satisfied by 0 == 0"
+    assert _run21(ps) is False, "the audit is what catches it"
+
+
+def test_check_21_skips_a_format_it_was_not_written_for():
+    ps = _plan_state()
+    ps["analysis"]["trigger_coverage"]["source_audit"] = {
+        "applicable": False, "reason": "no Japanese scenario headings found",
+        "raw_scenario_count": 0, "parsed_scenario_count": 3, "gaps": [],
+    }
+    assert _run21(ps) is True

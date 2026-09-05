@@ -284,17 +284,49 @@ _SCENARIO_HEADER_JP = re.compile(
 # "**トリガー (いずれか1つの成立で発動)**:". Without the qualifier allowance the
 # Risk-On and Caution blocks parse to an EMPTY trigger list, which Layer 2 then
 # evaluates as "no conditions" instead of failing loudly.
-_SCENARIO_TRIGGER = re.compile(
-    r"\*\*(?:トリガー(?:条件)?|条件)[^*\n]*\*\*[：:]\s*(.+?)(?:\n\n|\n###|\n---|\Z)",
-    re.DOTALL,
+# The bold trigger label opens the leg list. The qualifier inside it states how
+# many legs must hold and is captured separately, because "all 5" and "any 1"
+# produce the same leg list but opposite verdicts.
+_SCENARIO_TRIGGER_LABEL = re.compile(
+    r"\*\*(?:トリガー(?:条件)?|発動条件|条件)([^*\n]*)\*\*"
 )
 
-# The qualifier inside the bold trigger label states how many legs must hold.
-# It is captured separately from the legs because "all 5" and "any 1" produce
-# the same leg list but opposite verdicts.
-_SCENARIO_TRIGGER_LABEL = re.compile(
-    r"\*\*(?:トリガー(?:条件)?|条件)([^*\n]*)\*\*[：:]"
-)
+# Prose may sit between the label and the colon that introduces the legs: the
+# 2026-09-07 article wrote two explanatory sentences there, and requiring the
+# colon to follow the label immediately dropped all four of that scenario's
+# legs while every coverage check still passed. Search forward for the colon
+# instead, bounded so an unrelated later paragraph can never be captured.
+_TRIGGER_COLON_WINDOW = 600
+_TRIGGER_BLOCK_END = re.compile(r"\n\n|\n###|\n---")
+
+
+def _find_trigger_block(block: str) -> tuple[str, str] | None:
+    """Locate the trigger label and its leg list inside a scenario block.
+
+    Returns (qualifier, legs_text), or None when the block carries no trigger
+    label or no colon introduces the legs.
+    """
+    m = _SCENARIO_TRIGGER_LABEL.search(block)
+    if not m:
+        return None
+    qualifier = m.group(1)
+
+    rest = block[m.end():]
+    end_m = _TRIGGER_BLOCK_END.search(rest)
+    window = rest[: end_m.start()] if end_m else rest
+
+    colon = -1
+    for i, ch in enumerate(window[:_TRIGGER_COLON_WINDOW]):
+        if ch in "：:":
+            colon = i
+            break
+    if colon < 0:
+        return None
+
+    body = window[colon + 1:].strip()
+    if not body or not any(c.isdigit() for c in body):
+        return None
+    return qualifier, body
 
 _RULE_AT_LEAST = re.compile(r"(\d+)\s*(?:つ|本|脚)以上")
 
@@ -306,10 +338,10 @@ def _parse_satisfaction_rule(block: str) -> tuple[str, int]:
     Defaults to ("any", 1) when the label carries no qualifier, which matches
     how a bare "**トリガー**:" list has always been read.
     """
-    m = _SCENARIO_TRIGGER_LABEL.search(block)
-    if not m:
+    found = _find_trigger_block(block)
+    if not found:
         return "any", 1
-    qualifier = m.group(1)
+    qualifier = found[0]
     at_least = _RULE_AT_LEAST.search(qualifier)
     if at_least:
         return "at_least", int(at_least.group(1))
@@ -608,7 +640,9 @@ def _parse_scenarios(text: str) -> dict[str, ScenarioSpec]:
     headers_jp = list(_SCENARIO_HEADER_JP.finditer(text))
     if headers_jp:
         # Collect raw scenario data
-        raw_scenarios: list[tuple[str, str, int, list[str], dict[str, float]]] = []
+        raw_scenarios: list[
+            tuple[str, str, int, list[str], dict[str, float], str, int]
+        ] = []
         for idx, header_match in enumerate(headers_jp):
             letter = header_match.group(1)
             desc = header_match.group(2).strip()
@@ -622,16 +656,23 @@ def _parse_scenarios(text: str) -> dict[str, ScenarioSpec]:
             cat_alloc = _parse_category_allocation(block)
             alloc = _distribute_to_etfs(cat_alloc, etf_ratios) if cat_alloc else dict(current)
 
-            raw_scenarios.append((letter, desc, probability, triggers, alloc))
+            # Read the rule from THIS scenario's own block. Reading it after
+            # the loop reused `block`, which by then held the last scenario's
+            # text, so an "いずれか1つ" final scenario silently turned every
+            # earlier "すべて満たす" scenario into an OR.
+            rule, min_legs = _parse_satisfaction_rule(block)
+
+            raw_scenarios.append(
+                (letter, desc, probability, triggers, alloc, rule, min_legs)
+            )
 
         # Map Japanese names to standard scenario names
         name_map = _map_jp_scenarios_to_names(
-            [(letter, desc, prob) for letter, desc, prob, _, _ in raw_scenarios]
+            [(letter, desc, prob) for letter, desc, prob, _, _, _, _ in raw_scenarios]
         )
 
-        for letter, desc, prob, triggers, alloc in raw_scenarios:
+        for letter, desc, prob, triggers, alloc, rule, min_legs in raw_scenarios:
             name = name_map.get(letter, letter.lower())
-            rule, min_legs = _parse_satisfaction_rule(block)
             scenarios[name] = ScenarioSpec(
                 name=name, probability=prob,
                 triggers=triggers, allocation=alloc,
@@ -699,11 +740,11 @@ def _parse_trigger_list(block: str) -> list[str]:
     name from the previous fragment so downstream consumers can identify the
     underlying asset.
     """
-    trigger_match = _SCENARIO_TRIGGER.search(block)
+    found = _find_trigger_block(block)
     triggers: list[str] = []
-    if not trigger_match:
+    if not found:
         return triggers
-    raw = trigger_match.group(1).strip()
+    raw = found[1].strip()
     parts = _split_trigger_parts(raw)
     prev_indicator: str | None = None
     for part in parts:

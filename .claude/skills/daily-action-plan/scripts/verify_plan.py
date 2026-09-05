@@ -549,6 +549,35 @@ def verify(plan_state: dict, market_json: dict, breadth_json: dict) -> Verificat
              + (f"; fired: {fired}" if fired else "; none fired"),
     )
 
+    # --- #21: Source-text audit (parser gaps) ---
+    # Checks 18-20 count legs in the parser's output, so a scenario the parser
+    # could not read passes them on 0 of 0. This check reads the audit that
+    # build_plan_state ran against the article text itself: a scenario block
+    # with a trigger label must yield at least one leg.
+    audit = coverage.get("source_audit")
+    if audit is None:
+        result.check(
+            21, "Source-text audit (no scenario silently dropped)", False,
+            "source_audit missing - rebuild plan_state with the current "
+            "build_plan_state.py",
+        )
+    elif not audit.get("applicable", False):
+        result.check(
+            21, "Source-text audit (no scenario silently dropped)", True,
+            f"not applicable: {audit.get('reason', 'unknown format')}",
+        )
+    else:
+        gaps = audit.get("gaps") or []
+        result.check(
+            21, "Source-text audit (no scenario silently dropped)", not gaps,
+            "; ".join(f"{g['heading']}: {g['reason']}" for g in gaps) if gaps
+            else (
+                f"{audit.get('raw_with_trigger_block')} of "
+                f"{audit.get('raw_scenario_count')} article scenario block(s) "
+                f"carry a trigger label; all parsed"
+            ),
+        )
+
     return result
 
 

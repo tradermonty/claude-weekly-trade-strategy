@@ -39,10 +39,15 @@ MARKET = {
     "us30y": {"value": 5.22, "prev_close": 5.19},
     "us2y": {"value": 4.34, "prev_close": 4.20},
     "curve_2s10s": {"value": 39.0, "prev_close": 47.0},
+    # 2026-09-07 put the policy-path trigger on the belly of the curve.
+    "us5y": {"value": 4.54, "prev_close": 4.52},
 }
 BREADTH = {
     "breadth_200ma": 63.47, "breadth_8ma": 72.17,
     "uptrend_ratio": 19.72, "cross_diff": 8.70, "breadth_50_raw": 53.69,
+    # 2026-09-07 moved the Stress condition onto the raw 200-series reading,
+    # because both published averages are EMAs of it.
+    "breadth_raw": 68.66,
 }
 TODAY = date(2026, 8, 31)
 
@@ -52,6 +57,7 @@ FIXTURES = ROOT / "scripts/tests/fixtures/plan_state"
 BLOGS = [
     FIXTURES / "2026-08-24-weekly-strategy.md",
     FIXTURES / "2026-08-31-weekly-strategy.md",
+    FIXTURES / "2026-09-07-weekly-strategy.md",
 ]
 
 
@@ -105,6 +111,7 @@ def test_every_leg_of_every_real_blog_is_evaluated():
 EXPECTED_LEGS = {
     "2026-08-24-weekly-strategy.md": 21,
     "2026-08-31-weekly-strategy.md": 21,
+    "2026-09-07-weekly-strategy.md": 21,
 }
 
 
@@ -290,9 +297,11 @@ def test_no_entry_has_an_out_of_scale_target():
     """A target far outside its instrument's range means the wrong branch won."""
     bounds = {
         "VIX": (5, 100), "WTI Oil": (10, 200), "Copper": (1, 20),
-        "US 2Y Yield": (0, 15), "US 10Y Yield": (0, 15), "US 30Y Yield": (0, 15),
+        "US 2Y Yield": (0, 15), "US 5Y Yield": (0, 15),
+        "US 10Y Yield": (0, 15), "US 30Y Yield": (0, 15),
         "2s10s Spread": (-200, 300), "Uptrend Ratio": (0, 100),
         "Breadth 8MA-200MA": (-50, 50), "Breadth-50 Raw": (0, 100),
+        "Breadth Raw (200MA basis)": (0, 100),
         "S&P 500": (1000, 20000), "Nasdaq 100": (5000, 60000),
         "Dow Jones": (10000, 100000), "Russell 2000": (500, 10000),
     }
@@ -364,3 +373,178 @@ if __name__ == "__main__":
             failed += 1
     print(f"\n{passed} passed, {failed} failed")
     sys.exit(1 if failed else 0)
+
+
+# --- consecutive-day conditions -------------------------------------------
+# A leg written "終値3日連続" cannot be settled from today's close and the
+# previous one. Returning True there fired such a leg on day 2 and contradicted
+# the progress text, which already said "2/3日達成（2日分のみ確認可）".
+
+
+def _verdict(trigger, met_close, met_prev):
+    meta = bps._parse_trigger_metadata(trigger)
+    entry = {"met_close": met_close, "met_prev": met_prev}
+    return meta, bps._condition_fully_met(entry, meta, TODAY, is_official=True)
+
+
+def test_a_two_day_condition_is_met_on_two_days():
+    meta, verdict = _verdict("VIX 17超を終値2日連続", True, True)
+    assert meta["required_days"] == 2
+    assert verdict is True
+
+
+def test_a_three_day_condition_is_not_met_on_two_days():
+    meta, verdict = _verdict("VIX 17超を終値3日連続", True, True)
+    assert meta["required_days"] == 3
+    assert verdict is not True, (
+        "a 3-day run cannot be confirmed from today + prev close alone"
+    )
+
+
+def test_a_three_day_condition_that_broke_today_is_a_definite_miss():
+    _, verdict = _verdict("VIX 17超を終値3日連続", False, True)
+    assert verdict is False
+
+
+def test_progress_text_and_verdict_agree_for_long_runs():
+    """The progress string and the verdict must not tell different stories."""
+    for days in (2, 3, 4, 5):
+        trigger = f"VIX 17超を終値{days}日連続"
+        meta = bps._parse_trigger_metadata(trigger)
+        entry = {"met_close": True, "met_prev": True, "met_current_quote": True}
+        progress = bps._build_progress_string(entry, meta, TODAY, is_official=True)
+        verdict = bps._condition_fully_met(entry, meta, TODAY, is_official=True)
+        claims_full = progress.startswith(f"{days}/{days}日達成")
+        assert claims_full == (verdict is True), (
+            f"{days}日連続: progress={progress!r} verdict={verdict!r}"
+        )
+
+
+def test_a_long_run_never_satisfies_a_scenario():
+    """An unconfirmable leg must not count towards a scenario or AND group."""
+    _, verdict = _verdict("VIX 17超を終値3日連続", True, True)
+    assert not (verdict is True)
+
+
+# --- source-text audit ----------------------------------------------------
+# source_leg_total counts legs in the parser's OUTPUT, so a scenario the parser
+# cannot read contributes 0 and checks 18-20 pass on 0 of 0. The audit reads the
+# article text instead.
+
+_AUDIT_BLOG = """## シナリオ別プラン
+
+### シナリオ 1 (Base): レンジ継続 — 筆者推定 **60%**
+
+**{label1}**: SPX 7,700 を終値で維持 / VIX 17 を終値で上回らない
+
+**アクション (合計 100%)**:
+- コア: 30%
+- 現金: 70%
+
+### シナリオ 2 (Risk-On): 上放れ — 筆者推定 **40%**
+
+**{label2}**: SPX 7,900 を終値2日連続上抜け / VIX 14 を終値2日連続下回る
+
+**アクション (合計 100%)**:
+- コア: 50%
+- 現金: 50%
+"""
+
+
+def _audit(label1="トリガー (すべて満たす)", label2="トリガー (いずれか1つ)"):
+    text = _AUDIT_BLOG.format(label1=label1, label2=label2)
+    spec = parse_blog_text(text)
+    return bps._audit_source_triggers(text, spec.scenarios), spec
+
+
+def parse_blog_text(text):
+    """parse_blog takes a path; write the text out so the audit sees the same."""
+    import tempfile
+    tmpdir = tempfile.mkdtemp()
+    path = Path(tmpdir) / "2026-09-07-weekly-strategy.md"
+    path.write_text(text, encoding="utf-8")
+    return parse_blog(path)
+
+
+def test_source_audit_passes_when_every_scenario_parsed():
+    audit, spec = _audit()
+    assert audit["applicable"] is True
+    assert audit["raw_scenario_count"] == 2
+    assert audit["raw_with_trigger_block"] == 2
+    assert audit["gaps"] == [], audit["gaps"]
+    assert all(sc.triggers for sc in spec.scenarios.values())
+
+
+def test_source_audit_flags_a_label_the_parser_cannot_read():
+    """An unrecognised label leaves the legs in the article but out of the plan."""
+    audit, spec = _audit(label2="判定基準")
+    dropped = [name for name, sc in spec.scenarios.items() if not sc.triggers]
+    assert dropped, "expected the parser to drop the relabelled scenario"
+    assert audit["gaps"], (
+        "coverage would report 0 of 0 legs for the dropped scenario; "
+        "the audit must flag it"
+    )
+    assert any("0 legs parsed" in g["reason"] for g in audit["gaps"])
+
+
+def test_source_audit_flags_every_scenario_when_all_labels_change():
+    audit, _ = _audit(label1="判定基準", label2="判定基準")
+    assert len(audit["gaps"]) == 2
+
+
+def test_source_audit_is_not_applicable_without_japanese_headings():
+    text = "## Scenarios\n\n### Base case (60%)\n\n**Trigger**: SPX 7,700 hold\n"
+    audit = bps._audit_source_triggers(text, {})
+    assert audit["applicable"] is False
+    assert audit["gaps"] == []
+
+
+def test_source_audit_clean_on_the_tracked_fixtures():
+    for blog in BLOGS:
+        spec = parse_blog(blog)
+        audit = bps._audit_source_triggers(
+            blog.read_text(encoding="utf-8"), spec.scenarios)
+        assert audit["applicable"] is True, blog.name
+        assert audit["gaps"] == [], f"{blog.name}: {audit['gaps']}"
+        assert audit["raw_with_trigger_block"] >= 4, blog.name
+
+
+def test_section_heading_is_not_counted_as_a_scenario():
+    """'## シナリオ別プラン' is a section title, not a scenario block."""
+    audit, _ = _audit()
+    assert audit["raw_scenario_count"] == 2
+
+
+# --- instruments the 2026-09-07 article introduced -------------------------
+
+
+def test_five_year_yield_legs_are_evaluated():
+    """米5年債 legs were unevaluable until the 5Y branch existed."""
+    blog = FIXTURES / "2026-09-07-weekly-strategy.md"
+    entries = _all_entries(blog)
+    five = [e for e in entries if "5年債" in e["trigger"]]
+    assert five, "the fixture should carry 米5年債 legs"
+    for e in five:
+        assert e["indicator"] == "US 5Y Yield", e
+        assert e["current"] == MARKET["us5y"]["value"]
+        assert e["target"] in (4.45, 4.60), e
+
+
+def test_breadth_raw_leg_is_evaluated_against_the_raw_series():
+    blog = FIXTURES / "2026-09-07-weekly-strategy.md"
+    raw = [e for e in _all_entries(blog)
+           if "生値" in e["trigger"] and "BREADTH" in e["trigger"].upper()]
+    assert raw, "the fixture should carry the Breadth 生値 leg"
+    for e in raw:
+        assert e["indicator"] == "Breadth Raw (200MA basis)", e
+        assert e["current"] == BREADTH["breadth_raw"]
+        assert e["target"] == 64.0
+
+
+def test_breadth_raw_does_not_steal_the_spread_leg():
+    """A pt-quoted spread leg must still reach the 8MA-200MA branch."""
+    scen = {"bear": {"probability": 28, "triggers": [
+        "Breadth 8MA と 200MA の差が +7pt 割れ"]}}
+    tds = bps._compute_trigger_distance(scen, MARKET, BREADTH, "post-market", TODAY)
+    entries = [e for d in tds for e in d["trigger_distances"]]
+    assert entries and entries[0]["indicator"] == "Breadth 8MA-200MA"

@@ -927,28 +927,53 @@ class TestJapaneseScenarioNameMapping:
 # Integration: all blogs parse successfully
 # ---------------------------------------------------------------------------
 
+# `blogs/**` is gitignored, so a clean checkout — and CI — has none of the
+# weekly articles. Asserting a corpus size that only exists on a developer
+# machine turned the suite red on every clean clone, which is a fixture problem
+# and not a parser problem. Use the real corpus when it is present and the
+# tracked fixtures otherwise; either way the parser is exercised end to end.
+_ROOT = Path(__file__).parent.parent.parent
+_FIXTURE_BLOGS = _ROOT / "scripts/tests/fixtures/plan_state"
+_LIVE_BLOGS = _ROOT / "blogs"
+_FULL_CORPUS_MIN = 16
+
+
+def _blog_corpus() -> tuple[Path, int]:
+    """(directory to build the timeline from, minimum entries to expect)."""
+    if _LIVE_BLOGS.is_dir():
+        articles = [
+            p for p in _LIVE_BLOGS.iterdir()
+            if p.is_file() and p.suffix == ".md"
+        ]
+        if len(articles) >= _FULL_CORPUS_MIN:
+            return _LIVE_BLOGS, _FULL_CORPUS_MIN
+    tracked = sorted(_FIXTURE_BLOGS.glob("*-weekly-strategy.md"))
+    if not tracked:
+        pytest.skip("no blog corpus and no tracked fixtures")
+    return _FIXTURE_BLOGS, len(tracked)
+
+
 class TestAllBlogsParse:
-    """Verify all blog files in the blogs/ directory parse successfully."""
+    """Verify the available blog corpus parses successfully."""
 
     def test_all_blogs_valid_via_timeline(self) -> None:
         """StrategyTimeline should report 0 skipped blogs."""
         from trading.backtest.strategy_timeline import StrategyTimeline
-        blogs_dir = Path(__file__).parent.parent.parent / "blogs"
-        if not blogs_dir.exists():
-            pytest.skip("Blogs directory not available")
+        blogs_dir, minimum = _blog_corpus()
 
         tl = StrategyTimeline()
         tl.build(blogs_dir)
         skipped_info = [(s.blog_date, s.reason) for s in tl.skipped]
         assert len(tl.skipped) == 0, f"Skipped blogs: {skipped_info}"
-        assert len(tl.entries) >= 16, f"Expected >=16 entries, got {len(tl.entries)}"
+        assert len(tl.entries) >= minimum, (
+            f"Expected >={minimum} entries from {blogs_dir.name}, "
+            f"got {len(tl.entries)}"
+        )
 
     def test_each_blog_has_allocation_and_scenarios(self) -> None:
         """Every parsed blog should have non-empty allocation and scenarios."""
         from trading.backtest.strategy_timeline import StrategyTimeline
-        blogs_dir = Path(__file__).parent.parent.parent / "blogs"
-        if not blogs_dir.exists():
-            pytest.skip("Blogs directory not available")
+        blogs_dir, _ = _blog_corpus()
 
         tl = StrategyTimeline()
         tl.build(blogs_dir)
@@ -1135,3 +1160,97 @@ class TestCategoryParenBreakdown:
         detail = _parse_scenario_etf_detail(block)
         assert detail["XLE"] == 2.0, "footnote branch leaked into the action"
         assert detail["BIL"] == 43.0
+
+
+class TestJapaneseScenarioRules:
+    """Each Japanese scenario must keep its OWN satisfaction rule.
+
+    The rule used to be read after the collection loop had finished, so `block`
+    still held the LAST scenario's text and every scenario inherited that
+    scenario's rule: a closing "いずれか1つ" turned an opening "すべて満たす"
+    into an OR, and a base case that needs five legs looked satisfied by one.
+    """
+
+    TEXT = """### シナリオA) 平常（確率:60%）
+**トリガー (すべて満たす)**: SPX 7,700 超 + VIX 17 未満
+
+**アクション (合計 100%)**:
+- コア: 30%
+- 現金: 70%
+
+### シナリオB) 警戒（確率:40%）
+**トリガー (いずれか1つ)**: SPX 7,000 割れ + VIX 23 超
+
+**アクション (合計 100%)**:
+- コア: 10%
+- 現金: 90%
+"""
+
+    def test_first_scenario_keeps_all_when_last_scenario_is_any(self) -> None:
+        from trading.layer2.tools.strategy_parser import _parse_scenarios
+        scenarios = _parse_scenarios(self.TEXT)
+        first = [s for s in scenarios.values() if s.probability == 60][0]
+        assert first.satisfaction_rule == "all", (
+            "the 60% scenario says すべて満たす; it must not inherit "
+            "いずれか1つ from the scenario below it"
+        )
+
+    def test_last_scenario_keeps_its_own_any(self) -> None:
+        from trading.layer2.tools.strategy_parser import _parse_scenarios
+        scenarios = _parse_scenarios(self.TEXT)
+        last = [s for s in scenarios.values() if s.probability == 40][0]
+        assert last.satisfaction_rule == "any"
+
+    def test_at_least_is_not_leaked_to_the_others(self) -> None:
+        from trading.layer2.tools.strategy_parser import _parse_scenarios
+        text = self.TEXT.replace("**トリガー (いずれか1つ)**", "**トリガー (2つ以上)**")
+        scenarios = _parse_scenarios(text)
+        by_prob = {s.probability: s for s in scenarios.values()}
+        assert by_prob[60].satisfaction_rule == "all"
+        assert by_prob[40].satisfaction_rule == "at_least"
+        assert by_prob[40].min_legs == 2
+
+
+class TestTriggerLabelVariants:
+    """The legs must survive the wording the articles actually use."""
+
+    HEAD = "### シナリオA) 平常（確率:60%）\n"
+    LEGS = "SPX 7,700 超 / VIX 17 未満\n"
+
+    def _legs(self, label_line: str) -> list:
+        from trading.layer2.tools.strategy_parser import _parse_trigger_list
+        return _parse_trigger_list(self.HEAD + label_line + "\n")
+
+    def test_plain_label(self) -> None:
+        assert self._legs("**トリガー**: " + self.LEGS)
+
+    def test_label_with_qualifier(self) -> None:
+        assert self._legs("**トリガー (すべて満たす)**: " + self.LEGS)
+
+    def test_prose_between_label_and_colon(self) -> None:
+        """2026-09-07 wrote two sentences between the label and the legs."""
+        line = (
+            "**トリガー (下記のうち2つ以上)**。**これは配分の部分復帰であり、"
+            "フェーズ昇格ではありません。** 昇格条件は別に定義しています: "
+            + self.LEGS
+        )
+        legs = self._legs(line)
+        assert legs, "prose before the colon must not drop the legs"
+        assert any("7,700" in leg for leg in legs)
+
+    def test_hatsudou_jouken_label(self) -> None:
+        assert self._legs("**発動条件 (すべて満たす)**: " + self.LEGS)
+
+    def test_prose_without_a_colon_yields_nothing(self) -> None:
+        """No colon means no leg list; guessing would invent triggers."""
+        assert self._legs("**トリガー (すべて満たす)** の詳細は後述します\n") == []
+
+    def test_unrelated_later_paragraph_is_not_captured(self) -> None:
+        from trading.layer2.tools.strategy_parser import _parse_trigger_list
+        block = (
+            self.HEAD
+            + "**トリガー (すべて満たす)** の詳細は後述します\n"
+            + "\n"
+            + "**アクション (合計 100%)**: コア 30%\n"
+        )
+        assert _parse_trigger_list(block) == []
