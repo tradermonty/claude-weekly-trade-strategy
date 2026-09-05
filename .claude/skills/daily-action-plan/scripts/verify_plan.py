@@ -313,6 +313,322 @@ def verify(plan_state: dict, market_json: dict, breadth_json: dict) -> Verificat
         "; ".join(semantic_errors) if semantic_errors else "all OK",
     )
 
+    # --- #18: Trigger coverage (fail-closed) ---
+    # Checks 16-17 only inspect the rows that were emitted, so a leg no branch
+    # claimed passed silently. On 2026-08-31 that hid 9 of 21 legs, including
+    # the article's own headline indicator. Every blog leg must be either
+    # evaluated or explicitly declared manual-only.
+    coverage = plan_state.get("analysis", {}).get("trigger_coverage") or {}
+    manual_only = set(coverage.get("manual_only", []))
+    src_total = coverage.get("source_leg_total")
+    eval_total = coverage.get("evaluated_leg_total")
+
+    if src_total is None or eval_total is None:
+        result.check(
+            18, "Trigger coverage (every blog leg evaluated)", False,
+            "trigger_coverage missing - rebuild plan_state with the current "
+            "build_plan_state.py",
+        )
+    else:
+        problems = []
+        for scenario, legs in (coverage.get("unevaluated") or {}).items():
+            for leg in legs:
+                if leg not in manual_only:
+                    problems.append(f"{scenario}: {leg[:45]}")
+
+        # Arithmetic identity, not just an empty list. `unevaluated` can be
+        # empty while the totals disagree (a stale or hand-edited plan_state),
+        # and checking only the list let 12/21 pass.
+        if eval_total + len(manual_only) != src_total:
+            problems.append(
+                f"count mismatch: evaluated {eval_total} + manual_only "
+                f"{len(manual_only)} != source {src_total}"
+            )
+
+        # Same identity per scenario, recomputed from trigger_distances rather
+        # than trusting the stored block: iterating `per_scenario` alone meant
+        # deleting the block skipped the check entirely.
+        blocks = plan_state.get("analysis", {}).get("trigger_distances", []) or []
+        actual = {
+            b.get("scenario"): {
+                "source": b.get("source_leg_count"),
+                "evaluated": len(b.get("trigger_distances", [])),
+            }
+            for b in blocks
+        }
+        per_scenario = coverage.get("per_scenario")
+        if per_scenario is None:
+            problems.append("per_scenario block missing")
+            per_scenario = {}
+        elif set(per_scenario) != set(actual):
+            problems.append(
+                f"per_scenario covers {sorted(per_scenario)} but plan has "
+                f"{sorted(actual)}"
+            )
+        for scenario, counts in actual.items():
+            declared = sum(
+                1 for leg in (coverage.get("unevaluated") or {}).get(scenario, [])
+                if leg in manual_only
+            )
+            stored = per_scenario.get(scenario, {})
+            if stored and (stored.get("source") != counts["source"]
+                           or stored.get("evaluated") != counts["evaluated"]):
+                problems.append(
+                    f"{scenario}: stored {stored.get('evaluated')}/{stored.get('source')} "
+                    f"but legs give {counts['evaluated']}/{counts['source']}"
+                )
+            if counts["evaluated"] + declared != counts["source"]:
+                problems.append(
+                    f"{scenario}: {counts['evaluated']}+{declared} != {counts['source']}"
+                )
+        # The totals must also match what the legs actually show.
+        if sum(c["evaluated"] for c in actual.values()) != eval_total:
+            problems.append(
+                f"evaluated_leg_total {eval_total} != "
+                f"{sum(c['evaluated'] for c in actual.values())} from legs"
+            )
+
+        result.check(
+            18, "Trigger coverage (every blog leg evaluated)", not problems,
+            f"{eval_total}/{src_total} legs evaluated"
+            + (f"; {'; '.join(problems)}" if problems else ""),
+        )
+
+    # --- #19: AND-group semantics ---
+    # Legs sharing an and_group must ALL be met before the scenario fires.
+    # Tagging alone is not enough: without this check a tail-risk scenario whose
+    # sibling leg was dropped looked satisfiable by the surviving leg alone.
+    and_groups = {}
+    for sd in plan_state.get("analysis", {}).get("trigger_distances", []):
+        for td in sd.get("trigger_distances", []):
+            gid = td.get("and_group")
+            if gid:
+                and_groups.setdefault(gid, []).append(td)
+
+    stored_groups = {
+        g.get("group"): g
+        for g in (plan_state.get("analysis", {})
+                  .get("trigger_coverage", {}) or {}).get("and_groups", [])
+        if isinstance(g, dict)
+    }
+
+    and_ok = True
+    and_errors = []
+    met_key = "met_close" if is_official else "met_current_quote"
+    for gid, legs in and_groups.items():
+        if len(legs) < 2:
+            and_ok = False
+            and_errors.append(
+                f"{gid}: only {len(legs)} leg tagged - the AND partner was dropped"
+            )
+            continue
+        # Recompute from `condition_met`, which folds in the time basis. Using
+        # met_close counts a 終値2日連続 leg as met on day one.
+        flags = [leg.get("condition_met") for leg in legs]
+        recomputed = all(f is True for f in flags)
+        met_count = sum(1 for f in flags if f)
+        stored = stored_groups.get(gid)
+        if stored is None:
+            and_ok = False
+            and_errors.append(f"{gid}: no and_groups verdict stored in plan_state")
+            continue
+        # `satisfied` must be present, not merely falsy-by-absence: deleting the
+        # key used to pass whenever the recomputed verdict was also False.
+        if "satisfied" not in stored:
+            and_ok = False
+            and_errors.append(f"{gid}: stored group has no 'satisfied' key")
+        elif bool(stored["satisfied"]) != recomputed:
+            and_ok = False
+            and_errors.append(
+                f"{gid}: stored satisfied={stored['satisfied']} but legs give "
+                f"{recomputed}"
+            )
+        if stored.get("leg_count") != len(legs):
+            and_ok = False
+            and_errors.append(
+                f"{gid}: leg_count {stored.get('leg_count')} != {len(legs)} present"
+            )
+        if stored.get("met_count") != met_count:
+            and_ok = False
+            and_errors.append(
+                f"{gid}: met_count {stored.get('met_count')} != {met_count} from legs"
+            )
+        # Every leg carries the group verdict so a consumer reading a single row
+        # cannot mistake one met leg for a fired scenario. Its VALUE must match
+        # too; checking only presence let a leg claim True under a False group.
+        for leg in legs:
+            if "and_satisfied" not in leg:
+                and_ok = False
+                and_errors.append(f"{gid}: a leg is missing and_satisfied")
+            elif bool(leg["and_satisfied"]) != recomputed:
+                and_ok = False
+                and_errors.append(
+                    f"{gid}: leg and_satisfied={leg['and_satisfied']} != group "
+                    f"{recomputed}"
+                )
+
+    result.check(
+        19, "AND-group verdicts stored and consistent", and_ok,
+        "; ".join(and_errors) if and_errors
+        else f"{len(and_groups)} group(s) OK"
+        + (f" (satisfied: {[g for g, s in stored_groups.items() if s.get('satisfied')]})"
+           if any(s.get("satisfied") for s in stored_groups.values()) else ""),
+    )
+
+    # --- #20: Scenario satisfaction rules ---
+    # The blog says how many legs a scenario needs ("すべて満たす" / "2つ以上" /
+    # "いずれか1つ"). Without that rule stored and checked, every scenario reads
+    # as a plain OR and a Base case requiring all five legs looks fired on one.
+    stored_rules = coverage.get("scenario_rules")
+    rule_ok = True
+    rule_errors = []
+    if stored_rules is None:
+        rule_ok = False
+        rule_errors.append(
+            "scenario_rules missing - rebuild plan_state with the current "
+            "build_plan_state.py"
+        )
+    else:
+        blocks = plan_state.get("analysis", {}).get("trigger_distances", []) or []
+        if set(stored_rules) != {b.get("scenario") for b in blocks}:
+            rule_ok = False
+            rule_errors.append(
+                f"scenario_rules covers {sorted(stored_rules)} but plan has "
+                f"{sorted(b.get('scenario') for b in blocks)}"
+            )
+        for b in blocks:
+            name = b.get("scenario")
+            stored = stored_rules.get(name)
+            if stored is None:
+                rule_ok = False
+                rule_errors.append(f"{name}: no rule stored")
+                continue
+            legs = b.get("trigger_distances", [])
+            flags = [leg.get("condition_met") for leg in legs]
+            met = sum(1 for f in flags if f)
+            rule = stored.get("rule")
+            min_legs = stored.get("min_legs", 1)
+            if rule == "all":
+                expected = bool(legs) and all(f is True for f in flags)
+            elif rule == "at_least":
+                expected = met >= min_legs
+            elif rule == "any":
+                expected = met >= 1
+            else:
+                rule_ok = False
+                rule_errors.append(f"{name}: unknown rule {rule!r}")
+                continue
+            # Two things override the leg arithmetic, in both the aggregator and
+            # here: an independent condition the article states outside the leg
+            # list, and a rule that never reached the aggregator at all.
+            if stored.get("gates") or stored.get("rule_missing"):
+                expected = False
+            if "satisfied" not in stored:
+                rule_ok = False
+                rule_errors.append(f"{name}: no 'satisfied' key")
+            elif bool(stored["satisfied"]) != expected:
+                rule_ok = False
+                rule_errors.append(
+                    f"{name}: stored satisfied={stored['satisfied']} but "
+                    f"rule={rule} min={min_legs} met={met}/{len(legs)} gives {expected}"
+                )
+            if stored.get("met_leg_count") != met:
+                rule_ok = False
+                rule_errors.append(
+                    f"{name}: met_leg_count {stored.get('met_leg_count')} != {met}"
+                )
+            if stored.get("leg_count") != len(legs):
+                rule_ok = False
+                rule_errors.append(
+                    f"{name}: leg_count {stored.get('leg_count')} != {len(legs)}"
+                )
+
+    # A rule that never reached the aggregator is a broken contract, not an OR.
+    missing_rule = [
+        n for n, r in (stored_rules or {}).items()
+        if r.get("rule_missing") or r.get("rule") in (None, "unknown")
+    ]
+    if missing_rule:
+        rule_ok = False
+        rule_errors.append(
+            "satisfaction rule missing for: " + ", ".join(sorted(missing_rule))
+        )
+
+    fired = (
+        [n for n, s in (stored_rules or {}).items() if s.get("satisfied")]
+        if stored_rules else []
+    )
+    result.check(
+        20, "Scenario satisfaction rules stored and consistent", rule_ok,
+        "; ".join(rule_errors) if rule_errors
+        else f"{len(stored_rules or {})} scenario(s) OK"
+             + (f"; fired: {fired}" if fired else "; none fired"),
+    )
+
+    # --- #21: Source-text audit (parser gaps) ---
+    # Checks 18-20 count legs in the parser's output, so a scenario the parser
+    # could not read passes them on 0 of 0. This check reads the audit that
+    # build_plan_state ran against the article text itself: a scenario block
+    # with a trigger label must yield at least one leg.
+    audit = coverage.get("source_audit")
+    _required_audit_keys = ("applicable", "raw_scenario_count",
+                            "parsed_scenario_count", "gaps")
+    if not isinstance(audit, dict) or not audit:
+        result.check(
+            21, "Source-text audit (no scenario silently dropped)", False,
+            "source_audit missing or empty - rebuild plan_state with the "
+            "current build_plan_state.py",
+        )
+    elif any(k not in audit for k in _required_audit_keys) or not isinstance(
+        audit.get("gaps"), list
+    ):
+        # An empty dict used to reach the `applicable is False` branch and pass,
+        # so a truncated audit was indistinguishable from a deliberate skip.
+        result.check(
+            21, "Source-text audit (no scenario silently dropped)", False,
+            "source_audit is malformed: missing "
+            + ", ".join(k for k in _required_audit_keys if k not in audit)
+            + (" ; gaps is not a list" if not isinstance(audit.get("gaps"), list)
+               else ""),
+        )
+    elif not audit.get("applicable", False):
+        result.check(
+            21, "Source-text audit (no scenario silently dropped)", True,
+            f"not applicable: {audit.get('reason', 'unknown format')}",
+        )
+    else:
+        gaps = audit.get("gaps") or []
+        result.check(
+            21, "Source-text audit (no scenario silently dropped)", not gaps,
+            "; ".join(f"{g['heading']}: {g['reason']}" for g in gaps) if gaps
+            else (
+                f"{audit.get('raw_with_trigger_block')} of "
+                f"{audit.get('raw_scenario_count')} article scenario block(s) "
+                f"carry a trigger label; all parsed"
+            ),
+        )
+
+    # --- #22: independent mandatory conditions ---
+    # A scenario can carry a condition the article states outside its leg list
+    # ("CPI 発表後の終値でも条件が残っていること", a veto, an execution-date
+    # limit). Those are prose, so the price legs alone must never report the
+    # scenario as fired.
+    gate_errors = []
+    for name, r in (stored_rules or {}).items():
+        gates = r.get("gates") or []
+        if gates and r.get("satisfied"):
+            gate_errors.append(
+                f"{name}: satisfied=True while {len(gates)} independent "
+                f"condition(s) remain unevaluated"
+            )
+    gated = [n for n, r in (stored_rules or {}).items() if (r.get("gates") or [])]
+    result.check(
+        22, "Independent mandatory conditions block a scenario", not gate_errors,
+        "; ".join(gate_errors) if gate_errors
+        else (f"{len(gated)} scenario(s) carry one: {sorted(gated)}"
+              if gated else "no scenario carries one"),
+    )
+
     return result
 
 

@@ -70,6 +70,7 @@ class BreadthData:
     breadth_raw: Optional[float]
     breadth_200ma: Optional[float]
     breadth_8ma: Optional[float]
+    breadth_50_raw: Optional[float]
     trend: Optional[str]
 
 
@@ -102,6 +103,8 @@ class AnalysisResult:
     breadth_8ma_class: str
     dead_cross: bool
     cross_diff: float
+    breadth_raw: Optional[float]
+    breadth_50_raw: Optional[float]
     breadth_trend: str
     # Uptrend
     uptrend_date: str
@@ -187,6 +190,9 @@ def fetch_breadth_data(url: str = BREADTH_CSV_URL) -> list:
                     ),
                     breadth_8ma=_float_or_none(
                         row.get("Breadth_Index_8MA") or row.get("Breadth_8MA")
+                    ),
+                    breadth_50_raw=_float_or_none(
+                        row.get("Breadth_50_Index_Raw")
                     ),
                     trend=(
                         row.get("Breadth_200MA_Trend", "")
@@ -294,6 +300,21 @@ def analyze(
 
     cross_diff = b8_pct - b200_pct
 
+    # 50-day breadth raw reading. Blog triggers reference it directly
+    # ("Breadth-50 生値 50% 割れ"), so omitting it left that leg unevaluable.
+    # Missing stays None: defaulting to 0.0 would turn a blank CSV cell into a
+    # satisfied "below 50%" trigger. Downstream treats None as unevaluable and
+    # the coverage gate fails on it, which is the outcome we want.
+    b50 = latest_breadth.breadth_50_raw
+    b50_pct = None if b50 is None else (b50 * 100.0 if b50 <= 1.0 else b50)
+
+    # 200-day breadth raw reading. Both published averages are EMAs of this
+    # series, so the 2026-09-07 article put its Stress condition on the raw
+    # level ("Breadth 生値 64.0% を CSV 2データ点連続で下回る") rather than on
+    # the 8MA-200MA spread. Missing stays None for the same reason as above.
+    braw = latest_breadth.breadth_raw
+    braw_pct = None if braw is None else (braw * 100.0 if braw <= 1.0 else braw)
+
     # Sector analysis
     sectors = []
     for s in sector_rows:
@@ -319,6 +340,8 @@ def analyze(
         breadth_8ma_class=classify_breadth_8ma(b8_pct),
         dead_cross=is_dead_cross(b8_pct, b200_pct),
         cross_diff=round(cross_diff, 2),
+        breadth_raw=None if braw_pct is None else round(braw_pct, 2),
+        breadth_50_raw=None if b50_pct is None else round(b50_pct, 2),
         breadth_trend=latest_breadth.trend or "UNKNOWN",
         uptrend_date=latest_uptrend.date,
         uptrend_ratio=round(ratio_pct, 2),

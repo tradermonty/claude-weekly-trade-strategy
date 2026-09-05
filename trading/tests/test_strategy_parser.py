@@ -11,7 +11,16 @@ from pathlib import Path
 
 import pytest
 
-from trading.layer2.tools.strategy_parser import find_latest_blog, parse_blog
+from trading.layer2.tools.strategy_parser import (
+    _normalize_scenario_name_d,
+    _parse_category_allocation,
+    _parse_scenario_cash_pct,
+    _parse_scenario_etf_detail,
+    _parse_scenarios,
+    _parse_vix_triggers,
+    find_latest_blog,
+    parse_blog,
+)
 from trading.data.models import StrategySpec, ScenarioSpec, TradingLevel
 
 
@@ -163,6 +172,39 @@ class TestCurrentAllocation:
         assert parsed.current_allocation["XLE"] == pytest.approx(6.0, abs=0.1)
         assert parsed.current_allocation["BIL"] == pytest.approx(24.0, abs=0.1)
 
+    def test_lot_table_transition_values(self) -> None:
+        """2026-08-03 format: no セクター配分 section; per-ETF values live in
+        the ロット管理 table as "old%→**new%**" transitions plus bolded 維持.
+        The new (bolded) value must win, QQQ **1%維持** must be captured, and
+        the cash row must take the bolded 今週 cell (33%), not 前週 (37%)."""
+        from trading.layer2.tools.strategy_parser import _parse_sector_allocation
+
+        text = """
+### ロット管理
+
+| カテゴリ | 前週 (7/27) | 今週 (8/3) | 変化 | 実行タイミング | 根拠 |
+|---------|-----------|-----------|------|-------------|------|
+| **コア指数** | 25% | **29%** | **+4%** | 月曜寄り | SPY 15%→**18%** (+3%)、QQQ **1%維持** (観測枠)、DIA 9%→**10%** (+1%) |
+| **防御セクター** | 21% | **21%** | **±0%** | 維持 | XLV **10%維持**、XLP **11%維持** |
+| **テーマ/ヘッジ** | 17% | **17%** | **±0%** | 月曜寄り | GLD 13%→**12%** (-1%)、XLE 4%→**5%** (+1%) |
+| **現金・短期債** | 37% | **33%** | **-4%** | 段階的 | Stress 4条件不成立ぶんを戻す |
+
+### 今週の売買レベル
+| 指数 | 買い | 売り |
+"""
+        alloc = _parse_sector_allocation(text)
+        assert alloc == {
+            "SPY": 18.0,
+            "QQQ": 1.0,
+            "DIA": 10.0,
+            "XLV": 10.0,
+            "XLP": 11.0,
+            "GLD": 12.0,
+            "XLE": 5.0,
+            "BIL": 33.0,
+        }
+        assert sum(alloc.values()) == 100.0
+
 
 # ---------------------------------------------------------------------------
 # Scenarios
@@ -227,6 +269,129 @@ class TestScenarios:
         for name in spec.scenarios:
             assert name == name.lower()
             assert " " not in name
+
+
+# ---------------------------------------------------------------------------
+# Scenario header dash variants (regression: 2026-05-18 em-dash)
+# ---------------------------------------------------------------------------
+
+class TestScenarioHeaderDashVariants:
+    """Format D headers must parse whether the dash before 筆者推定 is the
+    ASCII double-hyphen ``--`` (through 2026-05-11) or the em/en/horizontal
+    dash ``—/–/―`` (2026-05-18 onward). Regression for the parser artifact
+    that zeroed scenario probabilities in the 2026-05-18 daily action plan.
+    """
+
+    @staticmethod
+    def _blog_with_dash(dash: str) -> str:
+        return (
+            "# 週次戦略\n\n"
+            "## シナリオ別プラン\n\n"
+            f"### シナリオ 1 (Base): NVDA まちまち {dash} 筆者推定 **45%**\n\n"
+            "**トリガー**: 原油 $95-110 レンジ\n\n"
+            "**アクション**: コア 23% / 防御 22% / テーマ 18% / 現金 37%\n\n"
+            f"### シナリオ 2 (Risk-On 復帰): NVDA 強い {dash} 筆者推定 **22%**\n\n"
+            "**トリガー**: Uptrend 赤→緑\n\n"
+            "**アクション**: コア 30% / 防御 18% / テーマ 17% / 現金 35%\n\n"
+            f"### シナリオ 3 (Caution 深化): NVDA 弱含み {dash} 筆者推定 **26%**\n\n"
+            "**トリガー**: 10Y 4.50% 超\n\n"
+            "**アクション**: コア 16% / 防御 24% / テーマ 20% / 現金 40%\n\n"
+            f"### シナリオ 4 (Tail Risk): ホルムズ完全封鎖 {dash} 筆者推定 **7%**\n\n"
+            "**トリガー**: VIX 26 ザラ場\n\n"
+            "**アクション**: コア 16% / 防御 24% / テーマ 20% / 現金 40%\n"
+        )
+
+    @pytest.mark.parametrize(
+        "dash",
+        ["--", "—", "–", "―"],  # --, em, en, horizontal bar
+    )
+    def test_probabilities_sum_to_100_regardless_of_dash(
+        self, tmp_path: Path, dash: str
+    ) -> None:
+        blog = tmp_path / "2026-05-18-weekly-strategy.md"
+        blog.write_text(self._blog_with_dash(dash), encoding="utf-8")
+        spec = parse_blog(blog)
+        # Four scenario blocks must be extracted (the bug left this empty).
+        assert len(spec.scenarios) == 4, (
+            f"dash={dash!r} -> scenarios={set(spec.scenarios)}"
+        )
+        total = sum(s.probability for s in spec.scenarios.values())
+        assert total == 100, f"dash={dash!r} -> probs did not sum to 100"
+        probs = sorted(s.probability for s in spec.scenarios.values())
+        assert probs == [7, 22, 26, 45], f"dash={dash!r} -> {probs}"
+
+
+# ---------------------------------------------------------------------------
+# Trigger splitting (regression: 2026-07-27 daily action plan)
+# ---------------------------------------------------------------------------
+
+class TestTriggerSplitting:
+    """Trigger lines must survive parenthesised qualifiers and OR groups.
+
+    Regression for the 2026-07-27 plan_state, where
+    "VIX **26超 (ザラ場、即時)**" was torn at the 、 into "VIX 26超 (ザラ場" +
+    "即時)", and "10年債 4.806%" inherited the indicator of the preceding leg
+    (becoming "WTI 10年債 ..." / "VIX 10年債 ...") because 10年債/SPX/NDX were
+    missing from the indicator keyword list.
+    """
+
+    @staticmethod
+    def _blog(trigger_line: str) -> str:
+        return (
+            "# 週次戦略\n\n"
+            "## シナリオ別プラン\n\n"
+            "### シナリオ 1 (Base): レンジ — 筆者推定 **60%**\n\n"
+            f"**トリガー**: {trigger_line}\n\n"
+            "**アクション**: コア 25% / 防御 21% / テーマ 17% / 現金 37%\n\n"
+            "### シナリオ 4 (Tail Risk): 供給ショック — 筆者推定 **40%**\n\n"
+            "**トリガー**: VIX **26超 (ザラ場、即時)**\n\n"
+            "**アクション**: コア 14% / 防御 25% / テーマ 17% / 現金 44%\n"
+        )
+
+    def _triggers(self, tmp_path: Path, trigger_line: str) -> list[str]:
+        blog = tmp_path / "2026-07-27-weekly-strategy.md"
+        blog.write_text(self._blog(trigger_line), encoding="utf-8")
+        return parse_blog(blog).scenarios["base"].triggers
+
+    def test_comma_inside_parens_does_not_split(self, tmp_path: Path) -> None:
+        triggers = self._triggers(tmp_path, "VIX **26超 (ザラ場、即時)**")
+        assert triggers == ["VIX 26超 (ザラ場、即時)"]
+
+    def test_top_level_comma_still_splits(self, tmp_path: Path) -> None:
+        triggers = self._triggers(tmp_path, "VIX **20-23 圏**、SPX **7,232.1 維持**")
+        assert triggers == ["VIX 20-23 圏", "SPX 7,232.1 維持"]
+
+    def test_or_group_brackets_are_stripped(self, tmp_path: Path) -> None:
+        triggers = self._triggers(
+            tmp_path,
+            "[WTI **100ドル終値上抜け** or 10年債 **4.806% 終値上抜け**]",
+        )
+        assert triggers == ["WTI 100ドル終値上抜け", "10年債 4.806% 終値上抜け"]
+
+    def test_yield_leg_does_not_inherit_previous_indicator(
+        self, tmp_path: Path
+    ) -> None:
+        triggers = self._triggers(
+            tmp_path,
+            "VIX **20-23 圏 (終値)** + SPX **7,232.1 維持 (終値)** + "
+            "NDX **26,233 を割らず 28,245.3 を挟んで推移** + "
+            "10年債 **4.501%〜4.806% レンジ (終値)**",
+        )
+        assert triggers == [
+            "VIX 20-23 圏 (終値)",
+            "SPX 7,232.1 維持 (終値)",
+            "NDX 26,233 を割らず 28,245.3 を挟んで推移",
+            "10年債 4.501%〜4.806% レンジ (終値)",
+        ]
+
+    def test_bare_number_leg_still_inherits_indicator(
+        self, tmp_path: Path
+    ) -> None:
+        """The inheritance path itself must keep working for bare price legs."""
+        triggers = self._triggers(
+            tmp_path, "WTI **$105 終値上抜け** + **$110 終値 2日連続**",
+        )
+        assert triggers == ["WTI $105 終値上抜け", "WTI $110 終値 2日連続"]
 
 
 # ---------------------------------------------------------------------------
@@ -337,6 +502,44 @@ class TestVixTriggers:
     def test_all_three_present(self, spec: StrategySpec) -> None:
         assert set(spec.vix_triggers.keys()) == {"risk_on", "caution", "stress"}
 
+    def test_four_level_slash_row(self) -> None:
+        text = "| **VIX** | **18.20** (8/14終値) | 17 / **20突破** / **23** / 26 | note |"
+
+        assert _parse_vix_triggers(text) == {
+            "risk_on": 17.0,
+            "caution": 20.0,
+            "stress": 23.0,
+            "panic": 26.0,
+        }
+
+    def test_annotation_level_does_not_shift_ladder(self) -> None:
+        """2026-08-17 blog prepended a hand-drawn floor to the threshold cell.
+
+        Reading the cell positionally mapped stress to 20 and panic to 23,
+        one rung below the standard ladder.
+        """
+        text = (
+            "| **VIX** | **14.25** (8/14終値。週足 OHLC 15.40/15.72/14.18/14.26) "
+            "| **14.00 (手描き下限)** / **17 (Risk-On 境界)** / 20 / 23 / 26 "
+            "| 6ヶ月最安終値を更新 |"
+        )
+
+        assert _parse_vix_triggers(text) == {
+            "risk_on": 17.0,
+            "caution": 20.0,
+            "stress": 23.0,
+            "panic": 26.0,
+        }
+
+    def test_partial_ladder_maps_by_value(self) -> None:
+        text = "| **VIX** | **21.40** | 20 / 23 / 26 | note |"
+
+        assert _parse_vix_triggers(text) == {
+            "caution": 20.0,
+            "stress": 23.0,
+            "panic": 26.0,
+        }
+
 
 # ---------------------------------------------------------------------------
 # Yield triggers
@@ -355,6 +558,23 @@ class TestYieldTriggers:
 
     def test_all_three_present(self, spec: StrategySpec) -> None:
         assert set(spec.yield_triggers.keys()) == {"lower", "warning", "red_line"}
+
+    def test_combined_10y_30y_row_header(self) -> None:
+        """2026-08-03 blog uses a combined '10Y / 30Y 利回り' row; thresholds
+        must come from the 3rd cell, not the combined current-value cell."""
+        from trading.layer2.tools.strategy_parser import _parse_yield_triggers
+
+        text = (
+            "| **10Y / 30Y 利回り** | **4.750% / 5.270%** (7/31、30年はサイクル高値) "
+            "| 4.11 / 4.36 / 4.50 / **4.60% 極限 (突破済)** | 今週も主役 |\n"
+        )
+        triggers = _parse_yield_triggers(text)
+        assert triggers == {
+            "lower": 4.11,
+            "warning": 4.36,
+            "red_line": 4.50,
+            "extreme": 4.60,
+        }
 
 
 # ---------------------------------------------------------------------------
@@ -707,28 +927,53 @@ class TestJapaneseScenarioNameMapping:
 # Integration: all blogs parse successfully
 # ---------------------------------------------------------------------------
 
+# `blogs/**` is gitignored, so a clean checkout — and CI — has none of the
+# weekly articles. Asserting a corpus size that only exists on a developer
+# machine turned the suite red on every clean clone, which is a fixture problem
+# and not a parser problem. Use the real corpus when it is present and the
+# tracked fixtures otherwise; either way the parser is exercised end to end.
+_ROOT = Path(__file__).parent.parent.parent
+_FIXTURE_BLOGS = _ROOT / "scripts/tests/fixtures/plan_state"
+_LIVE_BLOGS = _ROOT / "blogs"
+_FULL_CORPUS_MIN = 16
+
+
+def _blog_corpus() -> tuple[Path, int]:
+    """(directory to build the timeline from, minimum entries to expect)."""
+    if _LIVE_BLOGS.is_dir():
+        articles = [
+            p for p in _LIVE_BLOGS.iterdir()
+            if p.is_file() and p.suffix == ".md"
+        ]
+        if len(articles) >= _FULL_CORPUS_MIN:
+            return _LIVE_BLOGS, _FULL_CORPUS_MIN
+    tracked = sorted(_FIXTURE_BLOGS.glob("*-weekly-strategy.md"))
+    if not tracked:
+        pytest.skip("no blog corpus and no tracked fixtures")
+    return _FIXTURE_BLOGS, len(tracked)
+
+
 class TestAllBlogsParse:
-    """Verify all blog files in the blogs/ directory parse successfully."""
+    """Verify the available blog corpus parses successfully."""
 
     def test_all_blogs_valid_via_timeline(self) -> None:
         """StrategyTimeline should report 0 skipped blogs."""
         from trading.backtest.strategy_timeline import StrategyTimeline
-        blogs_dir = Path(__file__).parent.parent.parent / "blogs"
-        if not blogs_dir.exists():
-            pytest.skip("Blogs directory not available")
+        blogs_dir, minimum = _blog_corpus()
 
         tl = StrategyTimeline()
         tl.build(blogs_dir)
         skipped_info = [(s.blog_date, s.reason) for s in tl.skipped]
         assert len(tl.skipped) == 0, f"Skipped blogs: {skipped_info}"
-        assert len(tl.entries) >= 16, f"Expected >=16 entries, got {len(tl.entries)}"
+        assert len(tl.entries) >= minimum, (
+            f"Expected >={minimum} entries from {blogs_dir.name}, "
+            f"got {len(tl.entries)}"
+        )
 
     def test_each_blog_has_allocation_and_scenarios(self) -> None:
         """Every parsed blog should have non-empty allocation and scenarios."""
         from trading.backtest.strategy_timeline import StrategyTimeline
-        blogs_dir = Path(__file__).parent.parent.parent / "blogs"
-        if not blogs_dir.exists():
-            pytest.skip("Blogs directory not available")
+        blogs_dir, _ = _blog_corpus()
 
         tl = StrategyTimeline()
         tl.build(blogs_dir)
@@ -740,3 +985,272 @@ class TestAllBlogsParse:
             assert len(entry.strategy.scenarios) >= 3, (
                 f"{entry.blog_date}: only {len(entry.strategy.scenarios)} scenarios"
             )
+
+
+class TestScenarioAllocationFormats:
+    """Regression tests for the 2026-07-20 scenario allocation formats.
+
+    That week's blog dropped the colon after the category label and the "%" on
+    the arrow target, which made every non-base scenario fall back to the base
+    allocation and produced totals of 98 / 102 / 109 percent.
+    """
+
+    def test_category_line_without_colon(self) -> None:
+        """"- コア 28% → **33%**" (no colon) parses to the post-arrow value."""
+        block = (
+            "**アクション (合計 100%)**:\n"
+            "- コア 28% → **33%** (SPY 17→19 (+2%)、QQQ 2→4 (+2%)、DIA 9→10 (+1%))\n"
+            "- 防御 21% → **19%** (XLV 10→9 (-1%)、XLP 11→10 (-1%))\n"
+            "- テーマ 16% → **15%** (GLD 12→11 (-1%)、XLE 4%維持)\n"
+            "- 現金 35% → **33%** (-2%)\n"
+        )
+        assert _parse_category_allocation(block) == {
+            "core": 33, "defensive": 19, "theme": 15, "cash": 33,
+        }
+
+    def test_category_line_with_colon_still_parses(self) -> None:
+        """The older "- コア: 40% → **45%**" form must keep working."""
+        block = (
+            "**アクション**:\n"
+            "- コア: 40% → **45%**\n"
+            "- 防御: 18% → **17%**\n"
+            "- テーマ: 12% → **13%**\n"
+            "- 現金: 30% → **25%**\n"
+        )
+        assert _parse_category_allocation(block) == {
+            "core": 45, "defensive": 17, "theme": 13, "cash": 25,
+        }
+
+    def test_dollar_example_lines_are_not_allocations(self) -> None:
+        """"- コア指数: $40K" carries no percentage and must not match."""
+        block = (
+            "**アクション**:\n"
+            "- コア指数: $40K\n"
+            "- 防御: $20K\n"
+            "- 現金: $25K\n"
+        )
+        assert _parse_category_allocation(block) is None
+
+    def test_inline_category_form_used_by_tail_risk(self) -> None:
+        """Tail Risk writes all four categories inline, the first after "(" ."""
+        block = (
+            "**アクション (合計 100%)**: 上記推奨配分を**据え置き** "
+            "(コア 28% / 防御 21% / テーマ 16% / 現金 35%)\n"
+        )
+        assert _parse_category_allocation(block) == {
+            "core": 28, "defensive": 21, "theme": 16, "cash": 35,
+        }
+
+    def test_etf_arrow_target_without_percent_sign(self) -> None:
+        """"SPY 17→19 (+2%)" yields 19, not the pre-arrow 17."""
+        block = (
+            "**アクション (合計 100%)**:\n"
+            "- コア 28% → **33%** (SPY 17→19 (+2%)、QQQ 2→4 (+2%)、DIA 9→10 (+1%))\n"
+            "- テーマ 16% → **15%** (GLD 12→11 (-1%)、XLE 4%維持)\n"
+        )
+        detail = _parse_scenario_etf_detail(block)
+        assert detail["SPY"] == 19.0
+        assert detail["QQQ"] == 4.0
+        assert detail["DIA"] == 10.0
+        assert detail["GLD"] == 11.0
+        assert detail["XLE"] == 4.0
+
+    def test_price_levels_are_not_read_as_allocations(self) -> None:
+        """A quoted level above 100% must not be taken for a weight."""
+        block = "**アクション**: SPY 660→670 で追随、GLD 12→14%\n"
+        detail = _parse_scenario_etf_detail(block)
+        assert "SPY" not in detail
+        assert detail["GLD"] == 14.0
+
+    def test_cash_pct_ignores_unrelated_later_arrow(self) -> None:
+        """現金 **44%** followed by "XLEは4%→2%" must yield 44, not 2."""
+        line = (
+            "**アクション (合計 100%)**: コア **15%** / 現金 **44%**。"
+            "**注: 原油急騰局面でもXLEは4%→2%へ削減**。\n"
+        )
+        assert _parse_scenario_cash_pct(line) == 44.0
+
+    def test_cash_pct_takes_arrow_target_when_it_is_the_cash_change(self) -> None:
+        """"現金 35% → **33%**" still resolves to the post-arrow 33."""
+        assert _parse_scenario_cash_pct("- 現金 35% → **33%** (-2%)\n") == 33.0
+
+
+# ---------------------------------------------------------------------------
+# 2026-08-10 blog format regressions
+# ---------------------------------------------------------------------------
+
+class TestQualifiedTriggerLabel:
+    """The bold trigger label may carry a qualifier inside the asterisks."""
+
+    def test_trigger_with_parenthetical_qualifier_is_parsed(self) -> None:
+        """"**トリガー (いずれか1つの成立で発動)**:" must not yield an empty list.
+
+        An empty trigger list is silent: Layer 2 reads it as "no conditions"
+        rather than as a parse failure.
+        """
+        text = (
+            "### シナリオ 2 (Risk-On): 全面加速 — 筆者推定 **25%**\n\n"
+            "**トリガー (下記のうち2つ以上が終値ベースで成立)**: "
+            "NDX **30,839.1 終値上抜け** / VIX **14.00 終値割れ**\n\n"
+            "**アクション (合計 100%)**:\n"
+            "- コア 36% → **42%** (SPY 21→23、QQQ 5→9、DIA 10%維持)\n"
+            "- 現金 24% → **20%**\n"
+        )
+        scenarios = _parse_scenarios(text)
+        assert "bull" in scenarios
+        assert scenarios["bull"].triggers, "qualified trigger label produced no triggers"
+
+    def test_plain_trigger_label_still_parses(self) -> None:
+        text = (
+            "### シナリオ 1 (Base): 消化 — 筆者推定 **47%**\n\n"
+            "**トリガー**: SPX **7,636.4 を終値で維持**\n\n"
+            "**アクション (合計 100%)**: コア **36%** / 現金 **24%**\n"
+        )
+        scenarios = _parse_scenarios(text)
+        assert scenarios["base"].triggers
+
+
+class TestScenarioNameNormalization:
+    """Only base/bull/bear/tail_risk are valid downstream (strategy_intent)."""
+
+    @pytest.mark.parametrize(
+        "raw,expected",
+        [
+            ("Base", "base"),
+            ("Risk-On", "bull"),
+            ("risk on", "bull"),
+            ("リスクオン", "bull"),
+            ("警戒", "bear"),
+            ("Caution", "bear"),
+            ("Tail Risk", "tail_risk"),
+        ],
+    )
+    def test_writer_names_map_to_canonical(self, raw: str, expected: str) -> None:
+        assert _normalize_scenario_name_d(raw) == expected
+
+
+class TestCategoryParenBreakdown:
+    """The one-line Tail Risk action omits "%" inside the category parens."""
+
+    def test_bare_numbers_inside_category_parens(self) -> None:
+        block = (
+            "**アクション (合計 100%)**: **Tail Risk Defensive Mode** — "
+            "コア **18%** (SPY 12 / QQQ 0 / DIA 6) / 防御 **23%** (XLV 13 / XLP 10) / "
+            "テーマ **16%** (GLD 14 / XLE 2) / 現金 **43%**。\n"
+        )
+        detail = _parse_scenario_etf_detail(block)
+        assert detail == {
+            "SPY": 12.0, "QQQ": 0.0, "DIA": 6.0,
+            "XLV": 13.0, "XLP": 10.0, "GLD": 14.0, "XLE": 2.0, "BIL": 43.0,
+        }
+        assert sum(detail.values()) == 100.0
+
+    def test_footnotes_do_not_overwrite_the_action(self) -> None:
+        """Conditional variants in **注N** lines must stay out of the allocation."""
+        block = (
+            "**アクション (合計 100%)**: コア **18%** (SPY 12 / QQQ 0 / DIA 6) / "
+            "防御 **23%** (XLV 13 / XLP 10) / テーマ **16%** (GLD 14 / XLE 2) / "
+            "現金 **43%**。\n"
+            "*実行タイミング: 2脚成立を終値で確認後、翌営業日の寄りで分割執行。*\n"
+            "**注3**: (b) 供給ショック経路では XLE は 5% 据え置きとし、"
+            "テーマ **19%** (GLD 14 / XLE 5) / 現金 **40%**。\n"
+            "\n"
+            "次の段落。\n"
+        )
+        detail = _parse_scenario_etf_detail(block)
+        assert detail["XLE"] == 2.0, "footnote branch leaked into the action"
+        assert detail["BIL"] == 43.0
+
+
+class TestJapaneseScenarioRules:
+    """Each Japanese scenario must keep its OWN satisfaction rule.
+
+    The rule used to be read after the collection loop had finished, so `block`
+    still held the LAST scenario's text and every scenario inherited that
+    scenario's rule: a closing "いずれか1つ" turned an opening "すべて満たす"
+    into an OR, and a base case that needs five legs looked satisfied by one.
+    """
+
+    TEXT = """### シナリオA) 平常（確率:60%）
+**トリガー (すべて満たす)**: SPX 7,700 超 + VIX 17 未満
+
+**アクション (合計 100%)**:
+- コア: 30%
+- 現金: 70%
+
+### シナリオB) 警戒（確率:40%）
+**トリガー (いずれか1つ)**: SPX 7,000 割れ + VIX 23 超
+
+**アクション (合計 100%)**:
+- コア: 10%
+- 現金: 90%
+"""
+
+    def test_first_scenario_keeps_all_when_last_scenario_is_any(self) -> None:
+        from trading.layer2.tools.strategy_parser import _parse_scenarios
+        scenarios = _parse_scenarios(self.TEXT)
+        first = [s for s in scenarios.values() if s.probability == 60][0]
+        assert first.satisfaction_rule == "all", (
+            "the 60% scenario says すべて満たす; it must not inherit "
+            "いずれか1つ from the scenario below it"
+        )
+
+    def test_last_scenario_keeps_its_own_any(self) -> None:
+        from trading.layer2.tools.strategy_parser import _parse_scenarios
+        scenarios = _parse_scenarios(self.TEXT)
+        last = [s for s in scenarios.values() if s.probability == 40][0]
+        assert last.satisfaction_rule == "any"
+
+    def test_at_least_is_not_leaked_to_the_others(self) -> None:
+        from trading.layer2.tools.strategy_parser import _parse_scenarios
+        text = self.TEXT.replace("**トリガー (いずれか1つ)**", "**トリガー (2つ以上)**")
+        scenarios = _parse_scenarios(text)
+        by_prob = {s.probability: s for s in scenarios.values()}
+        assert by_prob[60].satisfaction_rule == "all"
+        assert by_prob[40].satisfaction_rule == "at_least"
+        assert by_prob[40].min_legs == 2
+
+
+class TestTriggerLabelVariants:
+    """The legs must survive the wording the articles actually use."""
+
+    HEAD = "### シナリオA) 平常（確率:60%）\n"
+    LEGS = "SPX 7,700 超 / VIX 17 未満\n"
+
+    def _legs(self, label_line: str) -> list:
+        from trading.layer2.tools.strategy_parser import _parse_trigger_list
+        return _parse_trigger_list(self.HEAD + label_line + "\n")
+
+    def test_plain_label(self) -> None:
+        assert self._legs("**トリガー**: " + self.LEGS)
+
+    def test_label_with_qualifier(self) -> None:
+        assert self._legs("**トリガー (すべて満たす)**: " + self.LEGS)
+
+    def test_prose_between_label_and_colon(self) -> None:
+        """2026-09-07 wrote two sentences between the label and the legs."""
+        line = (
+            "**トリガー (下記のうち2つ以上)**。**これは配分の部分復帰であり、"
+            "フェーズ昇格ではありません。** 昇格条件は別に定義しています: "
+            + self.LEGS
+        )
+        legs = self._legs(line)
+        assert legs, "prose before the colon must not drop the legs"
+        assert any("7,700" in leg for leg in legs)
+
+    def test_hatsudou_jouken_label(self) -> None:
+        assert self._legs("**発動条件 (すべて満たす)**: " + self.LEGS)
+
+    def test_prose_without_a_colon_yields_nothing(self) -> None:
+        """No colon means no leg list; guessing would invent triggers."""
+        assert self._legs("**トリガー (すべて満たす)** の詳細は後述します\n") == []
+
+    def test_unrelated_later_paragraph_is_not_captured(self) -> None:
+        from trading.layer2.tools.strategy_parser import _parse_trigger_list
+        block = (
+            self.HEAD
+            + "**トリガー (すべて満たす)** の詳細は後述します\n"
+            + "\n"
+            + "**アクション (合計 100%)**: コア 30%\n"
+        )
+        assert _parse_trigger_list(block) == []

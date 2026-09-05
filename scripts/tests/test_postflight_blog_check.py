@@ -26,6 +26,7 @@ check_forbidden_terms = module.check_forbidden_terms
 check_etf_spot_prices = module.check_etf_spot_prices
 check_option_otm = module.check_option_otm
 check_option_expiries = module.check_option_expiries
+check_vix_expiry_event_coverage = module.check_vix_expiry_event_coverage
 check_day_of_week = module.check_day_of_week
 check_ir_times_against_yaml = module.check_ir_times_against_yaml
 check_ir_manifest_completeness = module.check_ir_manifest_completeness
@@ -432,6 +433,131 @@ def test_readability_real_published_files_pass():
             continue
         findings = check_published_readability(p, p.read_text())
         assert findings == [], f"{date} published should pass readability gate, got {[f.render() for f in findings]}"
+
+
+
+# === VIX expiry AM settlement vs event coverage (2026-07-27 incident) ===
+#
+# The 2026-07-27 draft offered the 7/29 VIX weekly as cover for the 7/29
+# 14:00 ET FOMC statement. VIX options are AM-settled: 7/29 contracts stopped
+# trading 7/28 and settled on the morning of 7/29, so they were gone before
+# the statement. Machine checks passed at the time; only human review caught it.
+
+VIX_COVERAGE_SNAPSHOT = {
+    "target_week_start": "2026-07-27",
+    "option_expiries": {
+        "vix_standard": {"2026-07": "2026-07-22", "2026-08": "2026-08-19"},
+        "vix_weekly_wednesdays": [
+            "2026-07-01", "2026-07-08", "2026-07-15", "2026-07-22", "2026-07-29",
+        ],
+        "vix_last_trading_day": {
+            "2026-07-01": "2026-06-30",
+            "2026-07-08": "2026-07-07",
+            "2026-07-15": "2026-07-14",
+            "2026-07-22": "2026-07-21",
+            "2026-07-29": "2026-07-28",
+            "2026-08-19": "2026-08-18",
+        },
+    },
+}
+
+
+def test_vix_weekly_expiring_on_event_day_is_flagged():
+    body = "- **VIX コール**: 25 ストライク。**7/29(水) VIXウィークリー**で FOMC 当日のボラ上昇をカバー"
+    findings = check_vix_expiry_event_coverage(body, VIX_COVERAGE_SNAPSHOT)
+    assert len(findings) == 1
+    assert findings[0].severity == "high"
+    assert findings[0].category == "vix-expiry-coverage"
+    assert "7/28" in findings[0].message
+
+
+def test_vix_monthly_after_the_event_passes():
+    body = "- **VIX コール**: 25 ストライク (8/19(水) VIX標準月次)。FOMC 7/29 とその後の波及まで1枚で保持"
+    assert check_vix_expiry_event_coverage(body, VIX_COVERAGE_SNAPSHOT) == []
+
+
+def test_event_date_without_expiry_wording_is_ignored():
+    """A bare "7/29 FOMC" is an event date, not an expiry quote."""
+    body = "7/29 FOMC (SEPなし) → 同日引け後 MSFT/META。VIX 18.58 は攻撃前の値"
+    assert check_vix_expiry_event_coverage(body, VIX_COVERAGE_SNAPSHOT) == []
+
+
+def test_line_that_denies_coverage_is_not_flagged():
+    """The corrected wording explains the gap; it must not be reported as the gap."""
+    body = (
+        "VIX は **8/19(水) 標準月次**。**7/29(水) の VIX ウィークリーは FOMC をカバーしません** — "
+        "7/29物は 7/28(火)で取引終了・7/29朝に清算され、FOMC 声明の前に消滅します"
+    )
+    assert check_vix_expiry_event_coverage(body, VIX_COVERAGE_SNAPSHOT) == []
+
+
+def test_no_last_trading_day_in_snapshot_is_a_noop():
+    """Snapshots generated before the field existed must not crash the check."""
+    body = "**7/29(水) VIXウィークリー**で FOMC をカバー"
+    assert check_vix_expiry_event_coverage(body, SNAPSHOT_FIXTURE) == []
+
+
+def test_real_2026_07_27_blog_passes_vix_coverage():
+    blog = PROJECT_ROOT / "blogs" / "2026-07-27-weekly-strategy.md"
+    if not blog.exists():
+        return
+    import json
+    snap = json.loads(
+        (PROJECT_ROOT / "reports" / "2026-07-27" / "facts_snapshot.json").read_text()
+    )
+    assert check_vix_expiry_event_coverage(blog.read_text(), snap) == []
+
+
+# --- SOQ time-of-day awareness (Round 6) ---
+#
+# VIX settles on the SOQ struck on the expiry morning (~9:30 ET). Trading stops
+# the previous session, but a pre-open release still feeds into the settlement
+# print. So "expiry day == event day" is only a defect for afternoon events.
+
+def test_morning_release_on_expiry_day_is_allowed():
+    """8:30 ET GDP on 7/29 is reflected in the 7/29 SOQ."""
+    body = "VIX 7/29(水) 満期で 7/29 8:30 ET の GDP をカバー"
+    assert check_vix_expiry_event_coverage(body, VIX_COVERAGE_SNAPSHOT) == []
+
+
+def test_explicit_afternoon_time_on_expiry_day_is_high():
+    body = "VIX 7/29(水) 満期で 7/29 14:00 ET の FOMC 声明をカバー"
+    findings = check_vix_expiry_event_coverage(body, VIX_COVERAGE_SNAPSHOT)
+    assert len(findings) == 1
+    assert findings[0].severity == "high"
+    assert "9:30 ET" in findings[0].message
+
+
+def test_fomc_without_explicit_time_uses_known_release_time():
+    """FOMC statements land at 14:00 ET; no explicit time needed to flag it."""
+    body = "**7/29(水) VIXウィークリー**で FOMC のボラ上昇をカバー"
+    findings = check_vix_expiry_event_coverage(body, VIX_COVERAGE_SNAPSHOT)
+    assert len(findings) == 1
+    assert findings[0].severity == "high"
+
+
+def test_unknown_event_time_on_expiry_day_is_medium():
+    """An earnings line with no time cannot be judged either way."""
+    body = "VIX 7/29(水) 満期で同日の決算をカバー"
+    findings = check_vix_expiry_event_coverage(body, VIX_COVERAGE_SNAPSHOT)
+    assert len(findings) == 1
+    assert findings[0].severity == "medium"
+    assert "判定できません" in findings[0].message
+
+
+def test_event_after_expiry_day_is_high_regardless_of_time():
+    body = "VIX 7/29(水) 満期で 7/30 8:30 ET の GDP をカバー"
+    findings = check_vix_expiry_event_coverage(body, VIX_COVERAGE_SNAPSHOT)
+    assert len(findings) == 1
+    assert findings[0].severity == "high"
+
+
+def test_pre_soq_boundary_is_inclusive_of_soq_itself():
+    """9:30 ET is the SOQ print itself — treat it as not covered."""
+    body = "VIX 7/29(水) 満期で 7/29 9:30 ET の CPI をカバー"
+    findings = check_vix_expiry_event_coverage(body, VIX_COVERAGE_SNAPSHOT)
+    assert len(findings) == 1
+    assert findings[0].severity == "high"
 
 
 if __name__ == "__main__":

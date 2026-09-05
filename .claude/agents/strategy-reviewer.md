@@ -672,6 +672,70 @@ Round 3 Incidents:
 Prevention: postflight pipeline catches all of these mechanically.
 ```
 
+## Phase 6: Reader-Perspective Review (MANDATORY when a published version exists)
+
+Added 2026-08-23 after direct reader feedback on the 2026-08-24 week:
+*「分かりにくい箇所が目につく。一般の読者の目線では読みづらいし、文章の量も多い。
+AIっぽい表現もたくさん残っていて、読み物としてすらすら読めない」*
+
+**This phase applies to `blogs/published/` only.** The detailed version is the source of
+truth and is deliberately dense — never file readability findings against it.
+
+**Read as the target reader, not as a reviewer.** The target reader is
+**米国株の投資やトレードに興味がある、日本の一般的な個人投資家**. Not an analyst.
+They want to finish the article without getting tired, and come away knowing what to do.
+
+### 6-1. Read it straight through once, before checking anything
+
+Do not cross-reference, do not verify numbers. Just read it end to end as a reader would,
+then answer these four questions **before** looking at any checklist:
+
+1. **どこで詰まったか** — 読み返した箇所、意味が取れなかった箇所を行番号で挙げる
+2. **どこで疲れたか** — 数値が多すぎて読み飛ばした箇所
+3. **結局どうすればいいか、読み終えて言えるか** — 言えないなら記事の構成に問題がある
+4. **専門用語のうち、その場で意味が分からなかったものはどれか**
+
+**Report these verbatim.** They are the most valuable output of this phase, and they
+cannot be recovered by any mechanical check.
+
+### 6-2. Then check against R15-R20 (`.claude/agents/blog-publisher.md`)
+
+| # | 検査 | 違反時の severity |
+|---|------|-----------------|
+| **R15** | 社内判定用語が本文にないか — 「N/M 成立」「差し戻し条件」「昇格側」「拒否権」「書面化」「単日確定系」「終値2日確定系」「CSV 系」「バジェット」「フェーズ軸」「統計検証2本」「両論併記」 | **Medium** (複数箇所なら High) |
+| **R16** | 4文以上の段落 / 数値4つ以上を含む文 / 数値5つ以上の羅列が表になっていない | **Medium** |
+| **R17** | 見出しに価格水準や説明文が入っている | Low |
+| **R18** | 「〜という形です」「〜にあたります」「理由はNつあります」「一方で」の3回以上 | Low (多数なら Medium) |
+| **R19** | 全体が 20,000〜26,000字に収まっているか。28,000 超は R15/R16 違反の兆候 | Low |
+| **R20** | 常用語がひらがなに開かれていないか — こわい/ふつう/いちばん/すでに/ちがう/わかる/たかい 等。**ひらがなを増やしても読みやすくならない**（語彙と文構造で簡単にする） | Low (多数なら Medium) |
+| **フェーズ名** | シナリオ見出しの括弧内**以外**に英語のフェーズ名 (Base / Caution / Stress / Risk-On) が残っていないか | **Medium** |
+
+### 6-3. What is NOT a readability finding
+
+Do not file these — they are P0 and must stay even if they cost readability:
+
+- 数値そのもの、配分%、確率、トリガー閾値
+- 時間基準 (「終値2日連続」「ザラ場」) — **省略は P0 の毀損であり、可読性の改善ではない**
+- 公式 IR / 公式スケジュールの URL
+- 免責の4要素
+- 系列基準の注記 (FMP / CFD / COMEX の区別)
+
+**可読性は「事実を削ること」では達成しません。** 達成手段は、①内部プロセスの記述を落とす
+②長い段落を表に変える ③見出しを短くする ④定型表現を消す、の4つです。
+
+### 6-4. Known regression sources
+
+| いつ | 何が起きたか | 検出方法 |
+|------|------------|---------|
+| 2026-05-18 | v1.0 生成で R11-R14 未適用。3行まとめが巨大化、社内QA語が露出 | postflight の `generator` チェック |
+| 2026-08-23 | 全機械ゲート PASS のまま、本文が社内メモ体だった。英語フェーズ名が散文に残存、1段落に数値25個 | **機械ゲートでは検出不能。Phase 6-1 の通読でしか出ない** |
+
+**2026-08-23 の件は重要です。** postflight・publish_blog_diff・Codex 外部レビューの
+すべてが PASS を返した状態で、読者からは「読みづらい」と評価されました。
+**機械ゲートの全 PASS は、読みやすさを何も保証しません。**
+
+---
+
 ## Output Format
 
 Generate a review report with the following structure:
@@ -733,6 +797,23 @@ Generate a review report with the following structure:
 | Technical | Bull/Neutral/Bear | X% | YES/NO |
 | US Market | Bull/Neutral/Bear | X% | YES/NO |
 | News | Bull/Neutral/Bear | X% | YES/NO |
+
+## Reader-Perspective Review (published version only)
+
+**通読して詰まった箇所**: [行番号と理由。なければ「なし」]
+**疲れた箇所**: [数値過多で読み飛ばした箇所]
+**読み終えて「どうすればいいか」が言えるか**: [Yes / No + 理由]
+**その場で意味が分からなかった用語**: [列挙]
+
+| 検査 | 結果 |
+|------|------|
+| R15 社内判定用語 | [件数] |
+| R16 段落・文の長さ | [件数] |
+| R17 見出し | [件数] |
+| R18 AI 定型表現 | [件数] |
+| R19 文字数 | [実測値] |
+| R20 漢字/かなバランス | [件数] |
+| 英語フェーズ名の残存 | [件数] |
 
 ## Signal Coverage Check
 
