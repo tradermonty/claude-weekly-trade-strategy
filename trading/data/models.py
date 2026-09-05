@@ -108,6 +108,11 @@ class ScenarioSpec:
     #   "at_least" - at least `min_legs` legs
     satisfaction_rule: str = "any"
     min_legs: int = 1
+    # Conditions the article states OUTSIDE the leg list: an independent
+    # mandatory condition ("CPI 発表後の終値でも条件が残っていること"), a veto,
+    # or an execution-date limit. They are prose rather than levels, so a
+    # scenario carrying one cannot be declared fired on its price legs alone.
+    gates: list[str] = field(default_factory=list)
 
 
 @dataclass

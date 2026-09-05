@@ -313,8 +313,11 @@ def _parse_trigger_metadata(trigger: str) -> dict:
     elif "終値" in trigger:
         meta["time_basis"] = "daily_close"
 
-    # Consecutive days: "2日連続", "3日連続"
-    days_m = re.search(r"(\d+)日連続", trigger)
+    # Consecutive observations: "2日連続", "3日連続", and the CSV form the
+    # 2026-09-07 article used, "64.0% を CSV 2データ点連続で下回る". Reading only
+    # 日連続 left the CSV form at required_days=1, so a single reading below the
+    # level counted as met.
+    days_m = re.search(r"(\d+)\s*(?:日|データ点|データポイント|本|回)連続", trigger)
     if days_m:
         meta["required_days"] = int(days_m.group(1))
 
@@ -475,6 +478,10 @@ def _build_progress_string(
 
     # Consecutive-day conditions
     if required > 1:
+        if met_prev is None:
+            # No prior observation on file (CSV series carry no prev_close),
+            # so consecutiveness cannot be judged either way.
+            return f"0/{required}（前データ点なし・判定不可）"
         if met_close and met_prev:
             days_met = min(2, _MAX_CONFIRMED_DAYS)
             if days_met >= required:
@@ -626,6 +633,31 @@ def _split_trigger_lines(trigger: str) -> list[str]:
         if line:
             lines.append(line)
     return lines
+
+
+# A leg can carry one threshold per date. The 2026-09-07 article wrote the
+# GREEN-flip hurdles as "9/8 に 23.56% 超、9/9 に 24.38% 超、9/10 に 22.46% 超、
+# または 9/11 に 22.63% 超": taking the first number applied Monday's hurdle to
+# every day of the week, which both misses a real flip and invents one.
+_DATED_THRESHOLD = re.compile(
+    r"(\d{1,2})\s*/\s*(\d{1,2})\s*に\s*(?:\*\*)?\s*(\d+(?:\.\d+)?)\s*%"
+)
+
+
+def _dated_threshold(trigger: str, today: date) -> tuple[Optional[float], bool]:
+    """(threshold for `today`, whether the leg is date-qualified at all).
+
+    Returns (None, True) when the leg lists per-date thresholds but none match
+    today: the caller must then leave the leg unevaluated rather than fall back
+    to another day's number.
+    """
+    pairs = _DATED_THRESHOLD.findall(trigger)
+    if len(pairs) < 2:
+        return None, False
+    for mth, day, pct in pairs:
+        if int(mth) == today.month and int(day) == today.day:
+            return float(pct), True
+    return None, True
 
 
 def _compute_trigger_distance(
@@ -889,9 +921,18 @@ def _compute_trigger_distance(
             # series the article treats as its primary internal gauge.
             elif uptrend_ratio is not None and ("UPTREND" in trigger.upper()
                                                 or "上昇銘柄比率" in trigger):
+                dated_target, is_dated = _dated_threshold(trigger, today)
                 up_m = re.search(r"(\d+(?:\.\d+)?)\s*%", trigger)
-                if up_m:
-                    target = float(up_m.group(1))
+                if is_dated and dated_target is None:
+                    # Per-date hurdles with none for today: no threshold
+                    # applies. Claim nothing, so the fallback below records the
+                    # leg as unevaluated instead of a wrong verdict standing.
+                    pass
+                elif is_dated or up_m:
+                    target = (
+                        dated_target if dated_target is not None
+                        else float(up_m.group(1))
+                    )
                     entry = {
                         "trigger": trigger,
                         "indicator": "Uptrend Ratio",
@@ -1014,8 +1055,16 @@ def _compute_trigger_distance(
     # look fired on one.
     for d in distances:
         sc = scenarios.get(d["scenario"], {})
-        rule = sc.get("satisfaction_rule", "any")
-        min_legs = sc.get("min_legs", 1)
+        rule = sc.get("satisfaction_rule")
+        min_legs = sc.get("min_legs")
+        # A missing rule is a broken contract, not an OR. Defaulting to "any"
+        # turned a dropped field into a scenario that fires on one leg.
+        rule_missing = rule is None or (rule == "at_least" and min_legs is None)
+        if rule is None:
+            rule = "unknown"
+        if min_legs is None:
+            min_legs = 0
+
         legs = d["trigger_distances"]
         flags = [e.get("condition_met") for e in legs]
         met = sum(1 for f in flags if f)
@@ -1026,13 +1075,30 @@ def _compute_trigger_distance(
             satisfied = all(f is True for f in flags)
         elif rule == "at_least":
             satisfied = met >= min_legs
-        else:
+        elif rule == "any":
             satisfied = met >= 1
+        else:
+            satisfied = False
         # An "all" rule cannot be declared satisfied while a leg is undecided.
         if rule == "all" and undecided:
             satisfied = False
+        if rule_missing:
+            satisfied = False
+
+        # Independent conditions the article states outside the leg list
+        # ("CPI 発表後の終値でも条件が残っていること", a veto, an execution-date
+        # limit). They are prose, not levels, so they cannot be evaluated
+        # mechanically — and a scenario carrying one must not be reported as
+        # fired on its price legs alone.
+        gates = [g for g in (sc.get("gates") or []) if g]
+        if gates:
+            satisfied = False
+
         d["satisfaction_rule"] = rule
         d["min_legs"] = min_legs
+        d["rule_missing"] = rule_missing
+        d["gates"] = gates
+        d["gates_unevaluated"] = bool(gates)
         d["met_leg_count"] = met
         d["undecided_leg_count"] = sum(1 for f in flags if f is None)
         d["scenario_satisfied"] = satisfied
@@ -1107,12 +1173,33 @@ def _audit_source_triggers(blog_text: str, spec_scenarios: dict) -> dict:
             "gaps": [],
         }
 
+    # Join article blocks to parsed scenarios by POSITION when the counts
+    # agree: probability is not an identifier, and two scenarios sharing one
+    # (50/50) let a block whose conditions vanished borrow the other block's
+    # legs, which is the same blind spot one level up.
+    ordered = list(spec_scenarios.items())
+    positional = len(ordered) == len(headings)
+
     by_prob: dict = {}
     for name, sc in spec_scenarios.items():
         by_prob.setdefault(sc.probability, []).append((name, sc))
+    ambiguous_prob = any(len(v) > 1 for v in by_prob.values())
 
     gaps = []
     with_label = 0
+
+    # The article and the parse must describe the same number of scenarios.
+    # Without this, a scenario missing entirely from the parse slipped through
+    # whenever another scenario happened to share its probability.
+    if not positional:
+        gaps.append({
+            "heading": "(all)",
+            "reason": (
+                f"scenario count mismatch: {len(headings)} in the article, "
+                f"{len(ordered)} parsed"
+            ),
+        })
+
     for i, m in enumerate(headings):
         start = m.end()
         end = headings[i + 1].start() if i + 1 < len(headings) else len(blog_text)
@@ -1129,7 +1216,21 @@ def _audit_source_triggers(blog_text: str, spec_scenarios: dict) -> dict:
             continue
 
         prob = _heading_probability(heading)
-        candidates = by_prob.get(prob) if prob is not None else None
+        if positional:
+            candidates = [ordered[i]]
+        else:
+            candidates = by_prob.get(prob) if prob is not None else None
+            if candidates and ambiguous_prob and len(candidates) > 1:
+                gaps.append({
+                    "heading": heading[:70],
+                    "reason": (
+                        f"cannot map to a parsed scenario: probability {prob} "
+                        f"is shared by {len(candidates)} scenarios and the "
+                        f"counts differ ({len(headings)} in the article, "
+                        f"{len(ordered)} parsed)"
+                    ),
+                })
+                continue
         if not candidates:
             gaps.append({
                 "heading": heading[:70],
@@ -1148,6 +1249,7 @@ def _audit_source_triggers(blog_text: str, spec_scenarios: dict) -> dict:
 
     return {
         "applicable": True,
+        "join": "position" if positional else "probability",
         "raw_scenario_count": len(headings),
         "raw_with_trigger_block": with_label,
         "parsed_scenario_count": len(spec_scenarios),
@@ -1302,10 +1404,18 @@ def build_plan_state(
 
     scenarios = {}
     for name, sc in spec.scenarios.items():
+        # satisfaction_rule/min_legs must travel with the scenario. Dropping
+        # them here made every scenario an OR at the real entry point, however
+        # correctly the parser had read "すべて満たす" or "2つ以上", so a Base
+        # case needing five legs looked fired on one and the unit tests that
+        # passed the parser's own output never saw it.
         scenarios[name] = {
             "probability": sc.probability,
             "triggers": sc.triggers,
             "allocation": sc.allocation,
+            "satisfaction_rule": getattr(sc, "satisfaction_rule", None),
+            "min_legs": getattr(sc, "min_legs", None),
+            "gates": list(getattr(sc, "gates", []) or []),
         }
 
     # Trading levels
@@ -1366,6 +1476,9 @@ def build_plan_state(
             d["scenario"]: {
                 "rule": d["satisfaction_rule"],
                 "min_legs": d["min_legs"],
+                "rule_missing": d.get("rule_missing", False),
+                "gates": d.get("gates", []),
+                "gates_unevaluated": d.get("gates_unevaluated", False),
                 "leg_count": len(d["trigger_distances"]),
                 "met_leg_count": d["met_leg_count"],
                 "undecided_leg_count": d["undecided_leg_count"],

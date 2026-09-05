@@ -579,6 +579,7 @@ def _parse_scenarios(text: str) -> dict[str, ScenarioSpec]:
                 name=name, probability=probability,
                 triggers=triggers, allocation=alloc,
                 satisfaction_rule=rule, min_legs=min_legs,
+                gates=_parse_scenario_gates(block),
             )
 
         # Check for inline Tail Risk note (embedded as *Tail Risk（5%）:...*)
@@ -633,6 +634,7 @@ def _parse_scenarios(text: str) -> dict[str, ScenarioSpec]:
                 name=name, probability=probability,
                 triggers=triggers, allocation=alloc,
                 satisfaction_rule=rule, min_legs=min_legs,
+                gates=_parse_scenario_gates(block),
             )
         return scenarios
 
@@ -641,7 +643,7 @@ def _parse_scenarios(text: str) -> dict[str, ScenarioSpec]:
     if headers_jp:
         # Collect raw scenario data
         raw_scenarios: list[
-            tuple[str, str, int, list[str], dict[str, float], str, int]
+            tuple[str, str, int, list[str], dict[str, float], str, int, list[str]]
         ] = []
         for idx, header_match in enumerate(headers_jp):
             letter = header_match.group(1)
@@ -661,22 +663,25 @@ def _parse_scenarios(text: str) -> dict[str, ScenarioSpec]:
             # text, so an "いずれか1つ" final scenario silently turned every
             # earlier "すべて満たす" scenario into an OR.
             rule, min_legs = _parse_satisfaction_rule(block)
+            gates = _parse_scenario_gates(block)
 
             raw_scenarios.append(
-                (letter, desc, probability, triggers, alloc, rule, min_legs)
+                (letter, desc, probability, triggers, alloc, rule, min_legs, gates)
             )
 
         # Map Japanese names to standard scenario names
         name_map = _map_jp_scenarios_to_names(
-            [(letter, desc, prob) for letter, desc, prob, _, _, _, _ in raw_scenarios]
+            [(letter, desc, prob)
+             for letter, desc, prob, _, _, _, _, _ in raw_scenarios]
         )
 
-        for letter, desc, prob, triggers, alloc, rule, min_legs in raw_scenarios:
+        for (letter, desc, prob, triggers, alloc,
+             rule, min_legs, gates) in raw_scenarios:
             name = name_map.get(letter, letter.lower())
             scenarios[name] = ScenarioSpec(
                 name=name, probability=prob,
                 triggers=triggers, allocation=alloc,
-                satisfaction_rule=rule, min_legs=min_legs,
+                satisfaction_rule=rule, min_legs=min_legs, gates=gates,
             )
 
     return scenarios
@@ -766,6 +771,29 @@ def _parse_trigger_list(block: str) -> list[str]:
                 prev_indicator = kw
                 break
     return triggers
+
+
+# Independent conditions stated outside the trigger list. The 2026-09-07 article
+# put "**必ず満たす条件**: 9/11(金) の CPI 発表後の終値でも..." in its own
+# paragraph, so reading only the leg list made the scenario look satisfiable on
+# price alone, days before the article allows any execution.
+_SCENARIO_GATE_LABEL = re.compile(
+    r"\*\*\s*(必須条件[^*\n]*|必ず満たす条件[^*\n]*|拒否権[^*\n]*)\*\*[：:]?\s*"
+)
+
+
+def _parse_scenario_gates(block: str) -> list[str]:
+    """Return the independent mandatory conditions written in this block."""
+    gates: list[str] = []
+    for m in _SCENARIO_GATE_LABEL.finditer(block):
+        rest = block[m.end():]
+        end = _TRIGGER_BLOCK_END.search(rest)
+        text = (rest[: end.start()] if end else rest).strip()
+        text = re.sub(r"\*\*", "", text).strip()
+        label = re.sub(r"[*]", "", m.group(1)).strip()
+        if text:
+            gates.append(f"{label}: {text}"[:400])
+    return gates
 
 
 def _map_jp_scenarios_to_names(

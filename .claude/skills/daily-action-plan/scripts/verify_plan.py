@@ -518,6 +518,11 @@ def verify(plan_state: dict, market_json: dict, breadth_json: dict) -> Verificat
                 rule_ok = False
                 rule_errors.append(f"{name}: unknown rule {rule!r}")
                 continue
+            # Two things override the leg arithmetic, in both the aggregator and
+            # here: an independent condition the article states outside the leg
+            # list, and a rule that never reached the aggregator at all.
+            if stored.get("gates") or stored.get("rule_missing"):
+                expected = False
             if "satisfied" not in stored:
                 rule_ok = False
                 rule_errors.append(f"{name}: no 'satisfied' key")
@@ -538,6 +543,17 @@ def verify(plan_state: dict, market_json: dict, breadth_json: dict) -> Verificat
                     f"{name}: leg_count {stored.get('leg_count')} != {len(legs)}"
                 )
 
+    # A rule that never reached the aggregator is a broken contract, not an OR.
+    missing_rule = [
+        n for n, r in (stored_rules or {}).items()
+        if r.get("rule_missing") or r.get("rule") in (None, "unknown")
+    ]
+    if missing_rule:
+        rule_ok = False
+        rule_errors.append(
+            "satisfaction rule missing for: " + ", ".join(sorted(missing_rule))
+        )
+
     fired = (
         [n for n, s in (stored_rules or {}).items() if s.get("satisfied")]
         if stored_rules else []
@@ -555,11 +571,25 @@ def verify(plan_state: dict, market_json: dict, breadth_json: dict) -> Verificat
     # build_plan_state ran against the article text itself: a scenario block
     # with a trigger label must yield at least one leg.
     audit = coverage.get("source_audit")
-    if audit is None:
+    _required_audit_keys = ("applicable", "raw_scenario_count",
+                            "parsed_scenario_count", "gaps")
+    if not isinstance(audit, dict) or not audit:
         result.check(
             21, "Source-text audit (no scenario silently dropped)", False,
-            "source_audit missing - rebuild plan_state with the current "
-            "build_plan_state.py",
+            "source_audit missing or empty - rebuild plan_state with the "
+            "current build_plan_state.py",
+        )
+    elif any(k not in audit for k in _required_audit_keys) or not isinstance(
+        audit.get("gaps"), list
+    ):
+        # An empty dict used to reach the `applicable is False` branch and pass,
+        # so a truncated audit was indistinguishable from a deliberate skip.
+        result.check(
+            21, "Source-text audit (no scenario silently dropped)", False,
+            "source_audit is malformed: missing "
+            + ", ".join(k for k in _required_audit_keys if k not in audit)
+            + (" ; gaps is not a list" if not isinstance(audit.get("gaps"), list)
+               else ""),
         )
     elif not audit.get("applicable", False):
         result.check(
@@ -577,6 +607,27 @@ def verify(plan_state: dict, market_json: dict, breadth_json: dict) -> Verificat
                 f"carry a trigger label; all parsed"
             ),
         )
+
+    # --- #22: independent mandatory conditions ---
+    # A scenario can carry a condition the article states outside its leg list
+    # ("CPI 発表後の終値でも条件が残っていること", a veto, an execution-date
+    # limit). Those are prose, so the price legs alone must never report the
+    # scenario as fired.
+    gate_errors = []
+    for name, r in (stored_rules or {}).items():
+        gates = r.get("gates") or []
+        if gates and r.get("satisfied"):
+            gate_errors.append(
+                f"{name}: satisfied=True while {len(gates)} independent "
+                f"condition(s) remain unevaluated"
+            )
+    gated = [n for n, r in (stored_rules or {}).items() if (r.get("gates") or [])]
+    result.check(
+        22, "Independent mandatory conditions block a scenario", not gate_errors,
+        "; ".join(gate_errors) if gate_errors
+        else (f"{len(gated)} scenario(s) carry one: {sorted(gated)}"
+              if gated else "no scenario carries one"),
+    )
 
     return result
 

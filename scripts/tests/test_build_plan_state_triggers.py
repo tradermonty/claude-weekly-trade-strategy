@@ -51,6 +51,17 @@ BREADTH = {
 }
 TODAY = date(2026, 8, 31)
 
+# Each article is evaluated on a session inside its own week. A leg can carry
+# one threshold per date ("9/8 に 23.56% 超、9/9 に 24.38% 超..."), so evaluating
+# the 2026-09-07 article on an August date leaves that leg with no applicable
+# threshold — correctly unevaluated, but not what these tests mean to exercise.
+FIXTURE_TODAY = {
+    "2026-08-24-weekly-strategy.md": date(2026, 8, 24),
+    "2026-08-31-weekly-strategy.md": date(2026, 8, 31),
+    # 2026-09-07 is Labor Day; the week's first session is the 8th.
+    "2026-09-07-weekly-strategy.md": date(2026, 9, 8),
+}
+
 # blogs/** is gitignored, so the live articles do not exist on a clean
 # checkout. These tracked fixtures carry the scenario/trigger section verbatim.
 FIXTURES = ROOT / "scripts/tests/fixtures/plan_state"
@@ -69,9 +80,10 @@ def _scenarios(blog_path):
     }
 
 
-def _distances(blog_path):
+def _distances(blog_path, today=None):
+    when = today or FIXTURE_TODAY.get(getattr(blog_path, "name", ""), TODAY)
     return bps._compute_trigger_distance(
-        _scenarios(blog_path), MARKET, BREADTH, "post-market", TODAY)
+        _scenarios(blog_path), MARKET, BREADTH, "post-market", when)
 
 
 def _source_legs(scenario):
@@ -88,8 +100,9 @@ def _source_legs(scenario):
     return legs
 
 
-def _all_entries(blog_path):
-    return [e for blk in _distances(blog_path) for e in blk["trigger_distances"]]
+def _all_entries(blog_path, today=None):
+    return [e for blk in _distances(blog_path, today)
+            for e in blk["trigger_distances"]]
 
 
 # --- coverage -------------------------------------------------------------
@@ -356,24 +369,6 @@ def test_or_legs_are_not_tagged_as_and():
     assert all(e["and_group"] is None for e in blk["trigger_distances"])
 
 
-if __name__ == "__main__":
-    tests = [v for k, v in sorted(globals().items())
-             if k.startswith("test_") and callable(v)]
-    passed = failed = 0
-    for fn in tests:
-        try:
-            fn()
-            print(f"PASS: {fn.__name__}")
-            passed += 1
-        except AssertionError as e:
-            print(f"FAIL: {fn.__name__}: {e}")
-            failed += 1
-        except Exception as e:
-            print(f"ERROR: {fn.__name__}: {type(e).__name__}: {e}")
-            failed += 1
-    print(f"\n{passed} passed, {failed} failed")
-    sys.exit(1 if failed else 0)
-
 
 # --- consecutive-day conditions -------------------------------------------
 # A leg written "終値3日連続" cannot be settled from today's close and the
@@ -548,3 +543,229 @@ def test_breadth_raw_does_not_steal_the_spread_leg():
     tds = bps._compute_trigger_distance(scen, MARKET, BREADTH, "post-market", TODAY)
     entries = [e for d in tds for e in d["trigger_distances"]]
     assert entries and entries[0]["indicator"] == "Breadth 8MA-200MA"
+
+
+# --- date-qualified thresholds --------------------------------------------
+# "Uptrend Ratio が GREEN へ転換 (9/8 に 23.56% 超、9/9 に 24.38% 超、9/10 に
+# 22.46% 超、または 9/11 に 22.63% 超)" carries one threshold per date. Taking
+# the first number applied Monday's hurdle all week: it both misses a real flip
+# (9/10 at 23.0% clears 22.46% but not 23.56%) and invents one.
+
+_GREEN_LEG = ("Uptrend Ratio が GREEN へ転換 (9/8 に 23.56% 超、9/9 に 24.38% 超、"
+              "9/10 に 22.46% 超、または 9/11 に 22.63% 超)")
+
+
+def _green_entry(today, ratio):
+    scen = {"bull": {"probability": 20, "triggers": [_GREEN_LEG],
+                     "satisfaction_rule": "any", "min_legs": 1}}
+    breadth = dict(BREADTH, uptrend_ratio=ratio)
+    tds = bps._compute_trigger_distance(
+        scen, MARKET, breadth, "post-market", today)
+    entries = [e for d in tds for e in d["trigger_distances"]]
+    return (entries[0] if entries else None), tds[0]["unevaluated_legs"]
+
+
+def test_dated_threshold_uses_the_hurdle_for_today():
+    entry, unevaluated = _green_entry(date(2026, 9, 10), 23.0)
+    assert entry is not None and not unevaluated
+    assert entry["target"] == 22.46, "9/10 must use its own hurdle"
+
+
+def test_dated_threshold_does_not_reuse_mondays_number():
+    """23.0% on 9/10 clears 22.46%; the first-number rule called it a miss."""
+    entry, _ = _green_entry(date(2026, 9, 10), 23.0)
+    assert entry["target"] != 23.56
+
+
+def test_each_date_gets_its_own_hurdle():
+    for day, expected in ((8, 23.56), (9, 24.38), (10, 22.46), (11, 22.63)):
+        entry, _ = _green_entry(date(2026, 9, day), 23.0)
+        assert entry["target"] == expected, f"9/{day}"
+
+
+def test_a_date_with_no_hurdle_is_left_unevaluated():
+    """Falling back to another day's number would be a fabricated verdict."""
+    entry, unevaluated = _green_entry(date(2026, 9, 14), 23.0)
+    assert entry is None
+    assert unevaluated, "the leg must be reported, not silently dropped"
+
+
+# --- consecutive CSV observations -----------------------------------------
+
+
+def test_csv_two_point_condition_is_not_met_on_one_reading():
+    """"64.0% を CSV 2データ点連続で下回る" needs two readings, not one."""
+    trigger = "Breadth 生値 (200日線上) が 64.0% を CSV 2データ点連続で下回る"
+    meta = bps._parse_trigger_metadata(trigger)
+    assert meta["required_days"] == 2, "データ点連続 must be read as consecutive"
+
+    scen = {"bear": {"probability": 26, "triggers": [trigger],
+                     "satisfaction_rule": "any", "min_legs": 1}}
+    breadth = dict(BREADTH, breadth_raw=63.0)
+    tds = bps._compute_trigger_distance(
+        scen, MARKET, breadth, "post-market", TODAY)
+    entry = tds[0]["trigger_distances"][0]
+    assert entry["met_close"] is True, "today's reading is below the level"
+    assert entry["condition_met"] is not True, (
+        "no prior observation is on file, so consecutiveness is undecided"
+    )
+    assert tds[0]["scenario_satisfied"] is False
+
+
+def test_csv_two_point_progress_says_no_prior_observation():
+    trigger = "Breadth 生値 (200日線上) が 64.0% を CSV 2データ点連続で下回る"
+    meta = bps._parse_trigger_metadata(trigger)
+    entry = {"met_close": True, "met_prev": None, "met_current_quote": True}
+    progress = bps._build_progress_string(entry, meta, TODAY, is_official=True)
+    assert "判定不可" in progress, progress
+
+
+# --- satisfaction rules at the real entry point ---------------------------
+
+
+def test_scenario_dict_without_a_rule_does_not_fire():
+    """A missing rule is a broken contract, not an OR."""
+    scen = {"bull": {"probability": 20,
+                     "triggers": ["SPX 7,000 を終値で上回る"]}}
+    tds = bps._compute_trigger_distance(
+        scen, MARKET, BREADTH, "post-market", TODAY)
+    assert tds[0]["trigger_distances"][0]["condition_met"] is True
+    assert tds[0]["rule_missing"] is True
+    assert tds[0]["scenario_satisfied"] is False, (
+        "one met leg must not fire a scenario whose rule never arrived"
+    )
+
+
+def test_at_least_two_needs_two_legs():
+    scen = {"bull": {"probability": 20, "satisfaction_rule": "at_least",
+                     "min_legs": 2,
+                     "triggers": ["SPX 7,000 を終値で上回る",
+                                  "VIX 5 を終値で下回る"]}}
+    tds = bps._compute_trigger_distance(
+        scen, MARKET, BREADTH, "post-market", TODAY)
+    assert tds[0]["met_leg_count"] == 1
+    assert tds[0]["scenario_satisfied"] is False
+
+
+# --- independent mandatory conditions (gates) ------------------------------
+
+
+def test_a_gate_blocks_the_scenario_even_when_the_legs_hold():
+    scen = {"bull": {"probability": 20, "satisfaction_rule": "any", "min_legs": 1,
+                     "triggers": ["SPX 7,000 を終値で上回る"],
+                     "gates": ["必須条件: 9/11(金) の CPI 発表後の終値でも維持"]}}
+    tds = bps._compute_trigger_distance(
+        scen, MARKET, BREADTH, "post-market", TODAY)
+    assert tds[0]["met_leg_count"] == 1
+    assert tds[0]["gates_unevaluated"] is True
+    assert tds[0]["scenario_satisfied"] is False
+
+
+def test_the_0907_risk_on_scenario_carries_its_cpi_gate():
+    blog = FIXTURES / "2026-09-07-weekly-strategy.md"
+    spec = parse_blog(blog)
+    gates = spec.scenarios["bull"].gates
+    assert gates, "the article states an independent mandatory condition"
+    assert "CPI" in gates[0]
+
+
+def test_the_0907_risk_on_scenario_cannot_fire_on_price_alone():
+    """The reviewer's counterexample: price legs alone must not fire it."""
+    blog = FIXTURES / "2026-09-07-weekly-strategy.md"
+    scen = _scenarios(blog)
+    market = dict(MARKET)
+    market["sp500"] = {"price": 7750.0, "prev_close": 7740.0}
+    market["us10y"] = {"value": 4.69, "prev_close": 4.70}
+    market["us5y"] = {"value": 4.40, "prev_close": 4.41}
+    tds = bps._compute_trigger_distance(
+        scen, market, BREADTH, "post-market", date(2026, 9, 9))
+    bull = [d for d in tds if d["scenario"] == "bull"][0]
+    assert bull["met_leg_count"] >= 2, "the price legs do hold in this input"
+    assert bull["satisfaction_rule"] == "at_least" and bull["min_legs"] == 2
+    assert bull["scenario_satisfied"] is False, (
+        "the article requires the CPI-day close as well"
+    )
+
+
+# --- the audit must not be fooled by equal probabilities -------------------
+# Probability is not an identifier. Joining on it let a block whose conditions
+# vanished borrow the other block's legs when both scenarios read 50%.
+
+_TIE_BLOG = """## シナリオ別プラン
+
+### シナリオ 1 (Base): レンジ継続 — 筆者推定 **50%**
+
+**{label1}**: SPX 7,700 を終値で維持 / VIX 17 を終値で上回らない
+
+**アクション (合計 100%)**:
+- コア: 30%
+- 現金: 70%
+
+### シナリオ 2 (Risk-On): 上放れ — 筆者推定 **50%**
+
+**{label2}**: SPX 7,900 を終値2日連続上抜け / VIX 14 を終値2日連続下回る
+
+**アクション (合計 100%)**:
+- コア: 50%
+- 現金: 50%
+"""
+
+
+def _tie_audit(label1="トリガー (すべて満たす)", label2="トリガー (いずれか1つ)"):
+    text = _TIE_BLOG.format(label1=label1, label2=label2)
+    spec = parse_blog_text(text)
+    return bps._audit_source_triggers(text, spec.scenarios), spec
+
+
+def test_equal_probability_scenarios_still_pass_when_both_parse():
+    audit, spec = _tie_audit()
+    assert audit["gaps"] == [], audit["gaps"]
+    assert all(sc.triggers for sc in spec.scenarios.values())
+
+
+def test_equal_probability_does_not_hide_a_dropped_scenario():
+    """The reviewer's counterexample: both 50%, one label unreadable."""
+    audit, spec = _tie_audit(label2="判定基準")
+    dropped = [n for n, sc in spec.scenarios.items() if not sc.triggers]
+    assert dropped, "the relabelled scenario should have lost its legs"
+    assert audit["gaps"], (
+        "a tie on probability must not let the other scenario's legs "
+        "stand in for the dropped one"
+    )
+
+
+def test_audit_records_how_it_joined():
+    audit, _ = _tie_audit()
+    assert audit["join"] in ("position", "probability")
+
+
+def test_audit_reports_a_count_mismatch_it_cannot_resolve():
+    """Fewer parsed scenarios than article blocks, with probabilities tied."""
+    text = _TIE_BLOG.format(label1="トリガー (すべて満たす)",
+                            label2="トリガー (いずれか1つ)")
+    spec = parse_blog_text(text)
+    only_one = {"base": spec.scenarios["base"]}
+    audit = bps._audit_source_triggers(text, only_one)
+    assert audit["gaps"], "2 article blocks vs 1 parsed scenario must not pass"
+
+
+# The runner must stay at the END of this file: CI executes it with
+# `python <file>`, and it enumerates globals() when it runs, so any test
+# defined below it would never execute.
+if __name__ == "__main__":
+    tests = [v for k, v in sorted(globals().items())
+             if k.startswith("test_") and callable(v)]
+    passed = failed = 0
+    for fn in tests:
+        try:
+            fn()
+            print(f"PASS: {fn.__name__}")
+            passed += 1
+        except AssertionError as e:
+            print(f"FAIL: {fn.__name__}: {e}")
+            failed += 1
+        except Exception as e:
+            print(f"ERROR: {fn.__name__}: {type(e).__name__}: {e}")
+            failed += 1
+    print(f"\n{passed} passed, {failed} failed")
+    sys.exit(1 if failed else 0)

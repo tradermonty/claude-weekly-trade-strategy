@@ -290,24 +290,6 @@ def test_missing_breadth50_leaves_the_leg_unevaluated():
     assert blk["unevaluated_legs"] == ["Breadth-50 生値 50% 割れ"]
 
 
-if __name__ == "__main__":
-    tests = [v for k, v in sorted(globals().items())
-             if k.startswith("test_") and callable(v)]
-    passed = failed = 0
-    for fn in tests:
-        try:
-            fn()
-            print(f"PASS: {fn.__name__}")
-            passed += 1
-        except AssertionError as e:
-            print(f"FAIL: {fn.__name__}: {e}")
-            failed += 1
-        except Exception as e:
-            print(f"ERROR: {fn.__name__}: {type(e).__name__}: {e}")
-            failed += 1
-    print(f"\n{passed} passed, {failed} failed")
-    sys.exit(1 if failed else 0)
-
 
 # --- #21: the source-text audit -------------------------------------------
 # Checks 18-20 count legs in the parser's output. A scenario the parser could
@@ -377,3 +359,161 @@ def test_check_21_skips_a_format_it_was_not_written_for():
         "raw_scenario_count": 0, "parsed_scenario_count": 3, "gaps": [],
     }
     assert _run21(ps) is True
+
+
+# --- the real entry point -------------------------------------------------
+# The satisfaction rule was parsed correctly and then dropped by
+# build_plan_state's own scenario dict, so every scenario became an OR at the
+# only place that matters. Unit tests that fed `_compute_trigger_distance` the
+# parser's output could not see it: these go through build_plan_state itself.
+
+import importlib.util as _ilu  # noqa: E402
+
+_FIXTURES = ROOT / "scripts/tests/fixtures/plan_state"
+
+
+def _market_json(sp500=7750.0, sp500_prev=7740.0, y10=4.69, y10_prev=4.70,
+                 y5=4.40, y5_prev=4.41):
+    return {
+        "quotes": {
+            "^VIX": {"price": 14.5, "previousClose": 14.3},
+            "^GSPC": {"price": sp500, "previousClose": sp500_prev},
+            "^NDX": {"price": 29544.15, "previousClose": 29482.32},
+            "^DJI": {"price": 53414.25, "previousClose": 53686.11},
+            "^RUT": {"price": 2975.65, "previousClose": 2968.27},
+            "GCUSD": {"price": 4476.6, "previousClose": 4539.9},
+            "CLUSD": {"price": 91.0, "previousClose": 91.3},
+            "HGUSD": {"price": 6.6825, "previousClose": 6.6645},
+        },
+        "treasury": {
+            "year2": 4.37, "year5": y5, "year10": y10, "year30": 5.24,
+            "_prev": {"year2": 4.34, "year5": y5_prev,
+                      "year10": y10_prev, "year30": 5.25},
+        },
+    }
+
+
+_BREADTH_JSON = {
+    "breadth_date": "2026-09-03", "breadth_200ma": 63.61, "breadth_8ma": 69.01,
+    "cross_diff": 5.41, "breadth_50_raw": 51.1, "breadth_raw": 68.66,
+    "uptrend_date": "2026-09-04", "uptrend_ratio": 20.99,
+    "uptrend_color": "RED", "uptrend_class": "neutral",
+}
+
+
+def _built(blog_name="2026-09-07-weekly-strategy.md", **kw):
+    from datetime import date as _date
+    return bps.build_plan_state(
+        "post-market", _market_json(**kw), _BREADTH_JSON,
+        str(_FIXTURES / blog_name), today=_date(2026, 9, 9),
+    )
+
+
+def test_build_plan_state_keeps_each_scenario_rule():
+    rules = _built()["analysis"]["trigger_coverage"]["scenario_rules"]
+    assert rules["base"]["rule"] == "all"
+    assert rules["bull"]["rule"] == "at_least" and rules["bull"]["min_legs"] == 2
+    assert rules["tail_risk"]["rule"] == "all"
+    assert not any(r.get("rule_missing") for r in rules.values())
+
+
+def test_build_plan_state_does_not_fire_risk_on_from_one_leg():
+    """The counterexample: only the S&P leg holds, and it must not fire."""
+    ps = _built(sp500=7750.0, sp500_prev=7740.0, y10=4.78, y10_prev=4.78,
+                y5=4.54, y5_prev=4.54)
+    rules = ps["analysis"]["trigger_coverage"]["scenario_rules"]
+    assert rules["bull"]["met_leg_count"] <= 1
+    assert rules["bull"]["satisfied"] is False
+
+
+def test_build_plan_state_does_not_fire_risk_on_before_the_cpi_close():
+    """Two price legs hold, but the article also requires the CPI-day close."""
+    ps = _built(sp500=7750.0, sp500_prev=7740.0, y10=4.69, y10_prev=4.70,
+                y5=4.40, y5_prev=4.41)
+    rules = ps["analysis"]["trigger_coverage"]["scenario_rules"]
+    assert rules["bull"]["met_leg_count"] >= 2
+    assert rules["bull"]["gates"], "the CPI condition must be carried through"
+    assert rules["bull"]["satisfied"] is False
+
+
+def test_verify_passes_on_a_plan_state_from_the_real_entry_point():
+    """Checks 18-22 (the downstream contract) on a real build_plan_state run.
+
+    Checks 1-17 compare against the source market/breadth JSON, which these
+    tests do not supply, so they are out of scope here.
+    """
+    ps = _built()
+    result = vp.verify(ps, {}, {})
+    failed = [(c["num"], c["name"], c["detail"]) for c in result.checks
+              if c["status"] == "FAIL" and c["num"] in (18, 19, 20, 21, 22)]
+    assert failed == [], failed
+
+
+def test_verify_flags_a_scenario_that_fired_with_a_gate_open():
+    ps = _built()
+    rules = ps["analysis"]["trigger_coverage"]["scenario_rules"]
+    rules["bull"]["satisfied"] = True  # what a fail-open aggregator would store
+    result = vp.verify(ps, {}, {})
+    by_num = {c["num"]: c for c in result.checks}
+    assert by_num[22]["status"] == "FAIL"
+
+
+# --- #20 / #21 hardening ---------------------------------------------------
+
+
+def test_check_20_fails_when_a_rule_never_arrived():
+    ps = _plan_state()
+    ps["analysis"]["trigger_coverage"]["source_audit"] = {
+        "applicable": True, "raw_scenario_count": 2, "raw_with_trigger_block": 2,
+        "parsed_scenario_count": 2, "gaps": [],
+    }
+    rules = ps["analysis"]["trigger_coverage"]["scenario_rules"]
+    for r in rules.values():
+        r["rule_missing"] = True
+    result = vp.verify(ps, {}, {})
+    by_num = {c["num"]: c for c in result.checks}
+    assert by_num[20]["status"] == "FAIL"
+
+
+def test_check_21_rejects_an_empty_audit_object():
+    """An empty dict used to land in the not-applicable branch and pass."""
+    ps = _plan_state()
+    ps["analysis"]["trigger_coverage"]["source_audit"] = {}
+    assert _run21(ps) is False
+
+
+def test_check_21_rejects_a_truncated_audit():
+    ps = _plan_state()
+    ps["analysis"]["trigger_coverage"]["source_audit"] = {"applicable": True}
+    assert _run21(ps) is False
+
+
+def test_check_21_rejects_gaps_of_the_wrong_type():
+    ps = _plan_state()
+    ps["analysis"]["trigger_coverage"]["source_audit"] = {
+        "applicable": True, "raw_scenario_count": 4,
+        "parsed_scenario_count": 4, "gaps": "none",
+    }
+    assert _run21(ps) is False
+
+
+# The runner must stay at the END of this file: CI executes it with
+# `python <file>`, and it enumerates globals() when it runs, so any test
+# defined below it would never execute.
+if __name__ == "__main__":
+    tests = [v for k, v in sorted(globals().items())
+             if k.startswith("test_") and callable(v)]
+    passed = failed = 0
+    for fn in tests:
+        try:
+            fn()
+            print(f"PASS: {fn.__name__}")
+            passed += 1
+        except AssertionError as e:
+            print(f"FAIL: {fn.__name__}: {e}")
+            failed += 1
+        except Exception as e:
+            print(f"ERROR: {fn.__name__}: {type(e).__name__}: {e}")
+            failed += 1
+    print(f"\n{passed} passed, {failed} failed")
+    sys.exit(1 if failed else 0)
