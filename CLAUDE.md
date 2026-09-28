@@ -4,6 +4,20 @@ This project is a system for automatically generating weekly trade strategy blog
 
 ---
 
+## GitHub Account (MANDATORY)
+
+このリポジトリ (`tradermonty/claude-weekly-trade-strategy`) の作業は、すべて **`tradermonty`** アカウントで行う。
+
+- **gh CLI**: gh に複数のアカウントがログインしている場合、アクティブなアカウントの名義で書き込まれる。Issue・PR・コメント・マージなど GitHub に書き込む操作は、必ず次の形で実行する
+  ```bash
+  GH_TOKEN=$(gh auth token -u tradermonty) gh issue create ...
+  ```
+  または、作業の開始時に `gh auth switch -u tradermonty` で切り替え、終了後に元へ戻す
+- **git commit**: author・committer とも `tradermonty` にする。リポジトリの `user.name` / `user.email` は設定済みなので、上書きしない
+- **書き込み後の確認**: 作成した Issue・PR の作成者を `gh ... --json author` で読み戻し、`tradermonty` であることを確かめる
+
+---
+
 ## Project Structure
 
 ```
