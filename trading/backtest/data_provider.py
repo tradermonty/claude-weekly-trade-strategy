@@ -27,6 +27,11 @@ class DataProvider:
 
     Phase A uses Alpaca ETF data only.
     Phase B also uses FMP for VIX, indices, and treasury data.
+
+    ETF prices are dividend-adjusted (``adjClose`` / ``Adjustment.ALL``), so
+    portfolio valuation and returns include ETF distributions (BIL dividends,
+    etc.). FMP indicator/index data (VIX, SP500, NDX, DJI) stays on raw
+    ``close`` because Phase B trigger comparisons use absolute blog levels.
     """
 
     def __init__(
@@ -52,15 +57,15 @@ class DataProvider:
         start: date,
         end: date,
     ) -> None:
-        """Load ETF daily close and open prices into cache.
+        """Load ETF daily close and open prices (dividend-adjusted) into cache.
 
         Tries Alpaca first, falls back to FMP if Alpaca is unavailable.
         """
         for symbol in symbols:
             if symbol in self._etf_cache:
                 continue
-            cached_close = self._load_disk_cache(f"etf_{symbol}")
-            cached_open = self._load_disk_cache(f"etf_{symbol}_open")
+            cached_close = self._load_disk_cache(f"etf_adj_{symbol}")
+            cached_open = self._load_disk_cache(f"etf_adj_{symbol}_open")
             if cached_close:
                 self._etf_cache[symbol] = cached_close
                 if cached_open:
@@ -77,17 +82,17 @@ class DataProvider:
             if self._alpaca.api_key and self._alpaca.secret_key:
                 close_data, open_data = self._fetch_alpaca_bars(symbol, start, end)
 
-            # Fallback to FMP for ETFs
+            # Fallback to FMP for ETFs (dividend-adjusted)
             if not close_data and self._fmp and self._fmp.api_key:
                 logger.info("Falling back to FMP for %s", symbol)
-                close_data, open_data = self._fetch_fmp_historical(symbol, start, end)
+                close_data, open_data = self._fetch_fmp_historical(symbol, start, end, adjusted=True)
 
             if close_data:
                 self._etf_cache[symbol] = close_data
-                self._save_disk_cache(f"etf_{symbol}", close_data)
+                self._save_disk_cache(f"etf_adj_{symbol}", close_data)
             if open_data:
                 self._etf_open_cache[symbol] = open_data
-                self._save_disk_cache(f"etf_{symbol}_open", open_data)
+                self._save_disk_cache(f"etf_adj_{symbol}_open", open_data)
 
     def load_fmp_data(
         self,
@@ -204,8 +209,9 @@ class DataProvider:
     def _fetch_alpaca_bars(
         self, symbol: str, start: date, end: date,
     ) -> tuple[dict[date, float], dict[date, float]]:
-        """Fetch daily bars from Alpaca. Returns (close_prices, open_prices)."""
+        """Fetch daily bars from Alpaca, dividend-adjusted. Returns (close_prices, open_prices)."""
         try:
+            from alpaca.data.enums import Adjustment
             from alpaca.data.historical import StockHistoricalDataClient
             from alpaca.data.requests import StockBarsRequest
             from alpaca.data.timeframe import TimeFrame
@@ -217,6 +223,7 @@ class DataProvider:
             request = StockBarsRequest(
                 symbol_or_symbols=symbol,
                 timeframe=TimeFrame.Day,
+                adjustment=Adjustment.ALL,
                 start=datetime.combine(start, datetime.min.time()),
                 end=datetime.combine(end, datetime.min.time()),
             )
@@ -238,9 +245,16 @@ class DataProvider:
     # --- Private: FMP ---
 
     def _fetch_fmp_historical(
-        self, symbol: str, start: date, end: date,
+        self, symbol: str, start: date, end: date, adjusted: bool = False,
     ) -> tuple[dict[date, float], dict[date, float]]:
-        """Fetch historical daily data from FMP. Returns (close_prices, open_prices)."""
+        """Fetch historical daily data from FMP. Returns (close_prices, open_prices).
+
+        When ``adjusted`` is True, uses dividend-adjusted ``adjClose`` and scales
+        ``open`` by the same factor (``open * adjClose / close``), so ETF
+        distributions are reflected in the backtest return. Indicator/index data
+        (``adjusted=False``) is left as raw ``close`` so trigger level comparisons
+        against blog price levels stay on the same basis.
+        """
         if not self._fmp:
             return {}, {}
 
@@ -260,11 +274,21 @@ class DataProvider:
             open_data: dict[date, float] = {}
             for item in historical:
                 d = date.fromisoformat(item["date"])
-                close_data[d] = item["close"]
-                if "open" in item:
-                    open_data[d] = item["open"]
+                raw_close = item["close"]
+                if adjusted:
+                    adj_close = item.get("adjClose", raw_close)
+                    close_data[d] = adj_close
+                    if "open" in item and raw_close:
+                        open_data[d] = item["open"] * adj_close / raw_close
+                else:
+                    close_data[d] = raw_close
+                    if "open" in item:
+                        open_data[d] = item["open"]
 
-            logger.info("Fetched %d data points for %s from FMP", len(close_data), symbol)
+            logger.info(
+                "Fetched %d data points for %s from FMP (adjusted=%s)",
+                len(close_data), symbol, adjusted,
+            )
             return close_data, open_data
 
         except Exception as e:
