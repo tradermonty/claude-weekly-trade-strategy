@@ -117,19 +117,56 @@ def print_comparison_table(
     """Print a comparison table of strategies vs benchmarks. Returns the string."""
     all_results = {**strategy_results, **benchmark_results}
 
+    static_avg = benchmark_results.get("Static Average Mix")
+
     lines: list[str] = []
     lines.append("=== Strategy vs Benchmarks ===")
-    header = f"{'Name':<20}| {'Gross':>7} | {'Net':>7} | {'Max DD':>7} | {'Sharpe':>6} | {'Trades':>6} | {'Turnover':>8} | {'Costs':>8}"
-    lines.append(header)
-    lines.append("-" * len(header))
 
-    for name, r in all_results.items():
-        g_sign = "+" if r.gross_return_pct >= 0 else ""
-        n_sign = "+" if r.total_return_pct >= 0 else ""
+    if static_avg is None:
+        header = f"{'Name':<20}| {'Gross':>7} | {'Net':>7} | {'Max DD':>7} | {'Sharpe':>6} | {'Trades':>6} | {'Turnover':>8} | {'Costs':>8}"
+        lines.append(header)
+        lines.append("-" * len(header))
+
+        for name, r in all_results.items():
+            g_sign = "+" if r.gross_return_pct >= 0 else ""
+            n_sign = "+" if r.total_return_pct >= 0 else ""
+            lines.append(
+                f"{name:<20}| {g_sign}{r.gross_return_pct:>5.2f}% | {n_sign}{r.total_return_pct:>5.2f}% | "
+                f"{r.max_drawdown_pct:>6.2f}% | {r.sharpe_ratio:>6.2f} | {r.total_trades:>6} | "
+                f"{r.turnover:>8.2f} | ${r.total_cost:>7.2f}"
+            )
+    else:
+        # Timing effect = each row's net return minus Static Average Mix net return.
+        header = (
+            f"{'Name':<20}| {'Gross':>7} | {'Net':>7} | {'Timing':>9} | "
+            f"{'Max DD':>7} | {'Sharpe':>6} | {'Trades':>6} | {'Turnover':>8} | {'Costs':>8}"
+        )
+        lines.append(header)
+        lines.append("-" * len(header))
+
+        static_net = static_avg.total_return_pct
+        strategy_names = set(strategy_results.keys())
+        for name, r in all_results.items():
+            g_sign = "+" if r.gross_return_pct >= 0 else ""
+            n_sign = "+" if r.total_return_pct >= 0 else ""
+            if name in strategy_names:
+                timing = r.total_return_pct - static_net
+                timing_str = f"{timing:+.2f}pt"
+            else:
+                timing_str = "-"
+            lines.append(
+                f"{name:<20}| {g_sign}{r.gross_return_pct:>5.2f}% | {n_sign}{r.total_return_pct:>5.2f}% | "
+                f"{timing_str:>9} | "
+                f"{r.max_drawdown_pct:>6.2f}% | {r.sharpe_ratio:>6.2f} | {r.total_trades:>6} | "
+                f"{r.turnover:>8.2f} | ${r.total_cost:>7.2f}"
+            )
+
+        lines.append("")
         lines.append(
-            f"{name:<20}| {g_sign}{r.gross_return_pct:>5.2f}% | {n_sign}{r.total_return_pct:>5.2f}% | "
-            f"{r.max_drawdown_pct:>6.2f}% | {r.sharpe_ratio:>6.2f} | {r.total_trades:>6} | "
-            f"{r.turnover:>8.2f} | ${r.total_cost:>7.2f}"
+            "Note: 'Static Average Mix' is a look-ahead, after-the-fact evaluation "
+            "benchmark (trading-day-weighted average blog allocation, weekly rebalance). "
+            "It is NOT a tradable strategy. 'Timing' (shown for strategy rows only) "
+            "= row net return minus Static Average Mix net return."
         )
 
     lines.append("")

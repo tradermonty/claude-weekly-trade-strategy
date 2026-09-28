@@ -11,7 +11,7 @@ import pytest
 from trading.backtest.cli import build_parser, _trim_end_date
 from trading.backtest.metrics import BacktestResult, DailySnapshot, WeeklyPerformance
 from trading.backtest.portfolio_simulator import TradeRecord
-from trading.backtest.report import print_terminal_report, write_csv_reports
+from trading.backtest.report import print_comparison_table, print_terminal_report, write_csv_reports
 
 
 # --- CLI Parser Tests ---
@@ -214,3 +214,43 @@ class TestCSVReports:
         write_csv_reports(result, output)
         assert output.exists()
         assert (output / "summary.csv").exists()
+
+
+class TestComparisonTable:
+    def _result(self, phase: str, total_return_pct: float) -> BacktestResult:
+        """Create a minimal BacktestResult for comparison table testing."""
+        return BacktestResult(
+            phase=phase,
+            start_date=date(2026, 1, 5),
+            end_date=date(2026, 1, 6),
+            trading_days=2,
+            blogs_used=1,
+            blogs_skipped=0,
+            initial_capital=100_000,
+            final_value=100_000,
+            total_return_pct=total_return_pct,
+            max_drawdown_pct=-0.1,
+            sharpe_ratio=1.0,
+            total_trades=1,
+        )
+
+    def test_timing_shown_for_strategy_rows_only(self):
+        strategy_results = {"A": self._result("A", 10.0)}
+        benchmark_results = {
+            "Static Average Mix": self._result("Static Average Mix", 5.0),
+            "SPY B&H": self._result("SPY B&H", 7.0),
+        }
+
+        output = print_comparison_table(strategy_results, benchmark_results)
+
+        def timing_col(line: str) -> str:
+            return line.split("|")[3].strip()
+
+        strat = next(l for l in output.splitlines() if l.startswith("A "))
+        spy = next(l for l in output.splitlines() if l.startswith("SPY B&H"))
+        static = next(l for l in output.splitlines() if l.startswith("Static Average Mix"))
+
+        assert timing_col(strat) == "+5.00pt"
+        assert timing_col(spy) == "-"
+        assert timing_col(static) == "-"
+        assert "strategy rows only" in output

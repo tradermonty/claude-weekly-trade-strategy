@@ -208,7 +208,7 @@ def main(argv: list[str] | None = None) -> None:
     print_terminal_report(result)
 
     if args.benchmark:
-        _run_benchmark(config, data_provider, symbols, {result.phase: result}, output_dir)
+        _run_benchmark(config, timeline, data_provider, symbols, {result.phase: result}, output_dir)
 
     if config.output_dir:
         write_csv_reports(result, config.output_dir)
@@ -240,6 +240,7 @@ def _run_cost_matrix(
 
 def _run_benchmark(
     config: BacktestConfig,
+    timeline: StrategyTimeline,
     data_provider: DataProvider,
     symbols: list[str],
     strategy_results: dict,
@@ -251,6 +252,7 @@ def _run_benchmark(
     bench_engine = BenchmarkEngine(
         data_provider, config.start, config.end,
         config.initial_capital, config.cost_model,
+        timeline=timeline,
     )
     bench_results = bench_engine.run_all(symbols)
 
@@ -290,6 +292,7 @@ def _run_full_robustness(
     bench_engine = BenchmarkEngine(
         data_provider, config.start, config.end,
         config.initial_capital, config.cost_model,
+        timeline=timeline,
     )
     bench_results = bench_engine.run_all(symbols)
 

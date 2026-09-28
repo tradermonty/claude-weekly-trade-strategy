@@ -195,3 +195,131 @@ class TestBenchmarksSamePeriod:
         for name, r in results.items():
             assert r.start_date == start
             assert r.end_date == end
+
+
+class _Strat:
+    def __init__(self, alloc: dict):
+        self.current_allocation = alloc
+
+
+class _FakeTimeline:
+    """Minimal stand-in for StrategyTimeline exposing get_strategy."""
+
+    def __init__(self, mapping: dict):
+        self._mapping = mapping
+
+    def get_strategy(self, day):
+        alloc = self._mapping.get(day)
+        return None if alloc is None else _Strat(alloc)
+
+
+def _make_timeline(trading_days, allocs_by_day):
+    mapping = {day: alloc for day, alloc in zip(trading_days, allocs_by_day)}
+    return _FakeTimeline(mapping)
+
+
+class TestStaticMix:
+
+    def _engine(self, dp, start, end):
+        return BenchmarkEngine(
+            dp, start, end, 100_000,
+            cost_model=CostModel(spread_bps=0.0, sec_taf_rate=0.0),
+        )
+
+    def test_static_average_mix_weighted(self):
+        start = date(2025, 1, 6)
+        end = date(2025, 1, 17)
+        dp = DataProvider(AlpacaConfig(api_key="", secret_key="", base_url=""))
+        trading_days = dp.get_trading_days(start, end)
+        assert len(trading_days) == 10
+
+        allocs = [{"A": 20, "B": 80}] * 5 + [{"A": 40, "B": 60}] * 5
+        tl = _make_timeline(trading_days, allocs)
+        engine = self._engine(dp, start, end)
+
+        avg = engine._compute_static_average_mix(tl)
+
+        assert avg == pytest.approx({"A": 30.0, "B": 70.0})
+
+    def test_static_average_mix_skips_no_strategy_days(self):
+        start = date(2025, 1, 6)
+        end = date(2025, 1, 17)
+        dp = DataProvider(AlpacaConfig(api_key="", secret_key="", base_url=""))
+        trading_days = dp.get_trading_days(start, end)
+
+        # First day: no strategy in force; remaining 9 days split 4/5
+        allocs = [None] + [{"A": 20, "B": 80}] * 4 + [{"A": 40, "B": 60}] * 5
+        tl = _make_timeline(trading_days, allocs)
+        engine = self._engine(dp, start, end)
+
+        avg = engine._compute_static_average_mix(tl)
+
+        assert avg == pytest.approx({"A": (4 * 20 + 5 * 40) / 9, "B": (4 * 80 + 5 * 60) / 9})
+
+    def test_static_initial_mix_first_in_force(self):
+        start = date(2025, 1, 6)
+        end = date(2025, 1, 17)
+        dp = DataProvider(AlpacaConfig(api_key="", secret_key="", base_url=""))
+        trading_days = dp.get_trading_days(start, end)
+
+        allocs = [None, {"A": 25, "B": 75}] + [{"A": 60, "B": 40}] * 8
+        tl = _make_timeline(trading_days, allocs)
+        engine = self._engine(dp, start, end)
+
+        init = engine._compute_static_initial_mix(tl)
+
+        assert init == {"A": 25.0, "B": 75.0}
+
+    def test_weekly_rebalance_occurs_once_per_week(self):
+        # Divergent prices force a trade on each weekly rebalance.
+        start = date(2025, 1, 6)
+        end = date(2025, 1, 24)
+        dp = DataProvider(AlpacaConfig(api_key="", secret_key="", base_url=""))
+        trading_days = dp.get_trading_days(start, end)
+
+        aa, bb = 500.0, 300.0
+        aa_data, bb_data = {}, {}
+        for day in trading_days:
+            aa_data[day] = round(aa, 2)
+            bb_data[day] = round(bb, 2)
+            aa *= 1.003
+            bb *= 0.999
+        dp.inject_etf_data("AA", aa_data)
+        dp.inject_etf_data("BB", bb_data)
+
+        tl = _make_timeline(trading_days, [{"AA": 60, "BB": 40}] * len(trading_days))
+        engine = self._engine(dp, start, end)
+        result = engine.run_static_average_mix(tl)
+
+        rebalance_days = [s.date for s in result.daily_snapshots if s.trades_today > 0]
+
+        # Initial buy-in on the first trading day, then one rebalance per
+        # distinct ISO week, on the last trading day of that week.
+        week_lasts: dict = {}
+        for day in trading_days:
+            wk = day.isocalendar()[:2]
+            week_lasts[wk] = day
+
+        assert set(rebalance_days) == {trading_days[0]} | set(week_lasts.values())
+        assert len(rebalance_days) == len({trading_days[0]} | set(week_lasts.values()))
+
+    def test_run_all_adds_static_mix_when_timeline(self):
+        start = date(2025, 1, 6)
+        end = date(2025, 1, 24)
+        dp = DataProvider(AlpacaConfig(api_key="", secret_key="", base_url=""))
+        trading_days = dp.get_trading_days(start, end)
+        for symbol in ("AA", "BB"):
+            prices = {d: 100.0 for d in trading_days}
+            dp.inject_etf_data(symbol, prices)
+
+        tl = _make_timeline(trading_days, [{"AA": 60, "BB": 40}] * len(trading_days))
+        engine = BenchmarkEngine(
+            dp, start, end, 100_000,
+            cost_model=CostModel(spread_bps=0.0, sec_taf_rate=0.0),
+            timeline=tl,
+        )
+        results = engine.run_all(["AA", "BB"])
+
+        assert "Static Average Mix" in results
+        assert "Static Initial Mix" in results
+
