@@ -6,11 +6,11 @@
     <string>com.weekly-trade-strategy.post-market</string>
     <key>ProgramArguments</key>
     <array>
-        <string>/Users/takueisaotome/PycharmProjects/weekly-trade-strategy/scripts/run_daily_action_plan.sh</string>
+        <string>__PROJECT_ROOT__/scripts/run_daily_action_plan.sh</string>
         <string>post-market</string>
     </array>
     <key>WorkingDirectory</key>
-    <string>/Users/takueisaotome/PycharmProjects/weekly-trade-strategy</string>
+    <string>__PROJECT_ROOT__</string>
     <key>StartCalendarInterval</key>
     <dict>
         <!-- 1:17 PM PT = 4:17 PM ET (weekdays only) -->
@@ -20,15 +20,15 @@
         <integer>17</integer>
     </dict>
     <key>StandardOutPath</key>
-    <string>/Users/takueisaotome/PycharmProjects/weekly-trade-strategy/logs/launchd-post-market.log</string>
+    <string>__PROJECT_ROOT__/logs/launchd-post-market.log</string>
     <key>StandardErrorPath</key>
-    <string>/Users/takueisaotome/PycharmProjects/weekly-trade-strategy/logs/launchd-post-market.err</string>
+    <string>__PROJECT_ROOT__/logs/launchd-post-market.err</string>
     <key>EnvironmentVariables</key>
     <dict>
         <key>PATH</key>
-        <string>/Users/takueisaotome/.local/bin:/usr/local/bin:/usr/bin:/bin</string>
+        <string>__HOME__/.local/bin:/usr/local/bin:/usr/bin:/bin</string>
         <key>HOME</key>
-        <string>/Users/takueisaotome</string>
+        <string>__HOME__</string>
     </dict>
 </dict>
 </plist>
