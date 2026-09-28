@@ -80,10 +80,15 @@ def _scenarios(blog_path):
     }
 
 
+# Long-duration Treasuries are the AND partner of the 2026-09-14 Tail Risk rate
+# leg, so that group cannot be judged without a TLT price.
+ETFS = {"TLT": {"price": 80.87}}
+
+
 def _distances(blog_path, today=None):
     when = today or FIXTURE_TODAY.get(getattr(blog_path, "name", ""), TODAY)
     return bps._compute_trigger_distance(
-        _scenarios(blog_path), MARKET, BREADTH, "post-market", when)
+        _scenarios(blog_path), MARKET, BREADTH, "post-market", when, ETFS)
 
 
 def _source_legs(scenario):
@@ -769,3 +774,300 @@ if __name__ == "__main__":
             failed += 1
     print(f"\n{passed} passed, {failed} failed")
     sys.exit(1 if failed else 0)
+
+
+# --- grouped triggers (2026-09-14) -----------------------------------------
+# The 2026-09-14 article states its 警戒 triggers as three labelled groups with
+# DIFFERENT counts and fires on any ONE group, and its Tail Risk as two AND legs
+# whose members are "または" alternatives. Flattening either shape silently
+# changed what fires: one CSV leg satisfied a group the article needs two for,
+# and the Tail Risk OR-legs collapsed into a single AND chain.
+
+BLOG_0914 = FIXTURES / "2026-09-14-weekly-strategy.md"
+
+
+def _groups(blog_path, scenario):
+    return _scenarios(blog_path)[scenario]["trigger_groups"]
+
+
+def test_0914_bear_keeps_each_group_with_its_own_count():
+    groups = _groups(BLOG_0914, "bear")
+    assert [(g["rule"], g["min_legs"], len(g["legs"])) for g in groups] == [
+        ("any", 1, 4),        # 単日確定系 (1本成立)
+        ("any", 1, 3),        # 終値2日連続系 (1本成立)
+        ("at_least", 2, 3),   # CSV 系 (2本成立)  <- the count that was lost
+    ]
+    assert "CSV" in groups[2]["label"]
+
+
+def test_0914_bear_csv_group_needs_two_legs_not_one():
+    """One CSV leg must NOT fire the group the article needs two for."""
+    csv_group = _groups(BLOG_0914, "bear")[2]
+    meta = {"group": "bear#g2", "rule": csv_group["rule"],
+            "min_legs": csv_group["min_legs"],
+            "leg_total": len(csv_group["legs"]), "unevaluated": 0}
+
+    one_met = [{"condition_met": True}, {"condition_met": False},
+               {"condition_met": False}]
+    two_met = [{"condition_met": True}, {"condition_met": True},
+               {"condition_met": False}]
+    assert bps._evaluate_group(meta, one_met)["satisfied"] is False
+    assert bps._evaluate_group(meta, two_met)["satisfied"] is True
+
+
+def test_0914_tail_risk_is_and_of_or_groups():
+    groups = _groups(BLOG_0914, "tail_risk")
+    assert _scenarios(BLOG_0914)["tail_risk"]["satisfaction_rule"] == "all"
+    assert [(g["rule"], g["min_legs"], len(g["legs"])) for g in groups] == [
+        ("any", 1, 2),   # 脚1: VIX または SPX
+        ("any", 1, 3),   # 脚2: WTI または 10年債 または (TLT かつ 30年債)
+    ]
+    # The inner AND must survive as ONE leg, not two independent alternatives.
+    assert any("かつ" in leg for leg in groups[1]["legs"])
+
+
+def test_0914_russell_level_is_not_the_index_name():
+    """'Russell 2000 2,883.0' must read 2883.0, not the 2000 in the name."""
+    legs = [e for e in _all_entries(BLOG_0914, date(2026, 9, 14))
+            if e["indicator"] == "Russell 2000"]
+    assert legs, "no Russell leg was evaluated"
+    assert all(e["target"] != 2000.0 for e in legs), legs
+    assert any(e["target"] == 2883.0 for e in legs), legs
+
+
+def test_0914_every_leg_is_evaluated():
+    for blk in _distances(BLOG_0914, date(2026, 9, 14)):
+        assert not blk["unevaluated_legs"], (
+            f"{blk['scenario']}: {blk['unevaluated_legs']}")
+
+
+# --- 2026-09-28 review: relative EMA leg and the VIX intraday escalation ---
+
+
+_EMA_LEG = ("Breadth 生値が同じデータ点の EMA(8) を上回る状態を CSV 2データ点連続 "
+            "(現在 生値 47.70%、EMA(8) 52.59%、差 +4.89pt)")
+
+
+def _single(trigger, breadth):
+    scen = {"bull": {"probability": 16, "triggers": [trigger],
+                     "satisfaction_rule": "all", "min_legs": 0}}
+    return bps._compute_trigger_distance(
+        scen, MARKET, breadth, "post-market", TODAY)[0]
+
+
+def test_ema_leg_compares_raw_with_same_point_ema_not_a_quoted_number():
+    """The 47.70% in the parenthesis is a snapshot, not the threshold."""
+    blk = _single(_EMA_LEG, dict(BREADTH, breadth_raw=48.0, breadth_8ma=52.0))
+    (entry,) = blk["trigger_distances"]
+    assert entry["target"] == 52.0, entry
+    assert entry["current"] == 48.0
+    assert entry["met_close"] is False, "raw below its EMA(8) must not be met"
+    assert entry["required_days"] == 2
+
+
+def test_ema_leg_above_is_met_today_but_consecutiveness_stays_undecided():
+    blk = _single(_EMA_LEG, dict(BREADTH, breadth_raw=55.0, breadth_8ma=52.0))
+    (entry,) = blk["trigger_distances"]
+    assert entry["met_close"] is True
+    assert entry["condition_met"] is not True, "one CSV point is not two"
+    assert blk["scenario_satisfied"] is not True
+
+
+def test_vix_intraday_escalation_is_its_own_route():
+    """'VIX 23超を終値2日連続 (26超はザラ場で確認し即時扱い)' is two routes."""
+    leg = "VIX 23超を終値2日連続 (26超はザラ場で確認し即時扱い)"
+    legs = bps._split_vix_intraday_escalation(leg)
+    assert len(legs) == 2, legs
+    close_meta = bps._parse_trigger_metadata(legs[0])
+    fast_meta = bps._parse_trigger_metadata(legs[1])
+    assert (close_meta["time_basis"], close_meta["required_days"]) == ("daily_close", 2)
+    assert (fast_meta["time_basis"], fast_meta["required_days"]) == ("intraday", 1)
+
+
+def test_0928_tail_fires_on_intraday_vix_27_with_10y_held():
+    """Prior VIX 14.87 -> 27 intraday, 10Y 5.17%: Tail must fire directly."""
+    scen = {"tail_risk": {
+        "probability": 12, "triggers": [],
+        "satisfaction_rule": "all", "min_legs": 0,
+        "trigger_groups": [
+            {"label": "脚1", "rule": "any", "min_legs": 1, "legs": [
+                "VIX 23超を終値2日連続 (26超はザラ場で確認し即時扱い)",
+                "SPX 7,232.1 を終値2日連続割れ"]},
+            {"label": "脚2", "rule": "any", "min_legs": 1, "legs": [
+                "脚1 が成立した日の終値で 10年債 5.15% 以上 (現在 5.170%)",
+                "WTI $100 終値上抜け"]},
+        ]}}
+    market = dict(MARKET, vix={"price": 27.0, "prev_close": 14.87},
+                  us10y={"value": 5.17, "prev_close": 5.17})
+    blk = bps._compute_trigger_distance(
+        scen, market, BREADTH, "post-market", TODAY)[0]
+    vix = [e for e in blk["trigger_distances"] if e["indicator"] == "VIX"]
+    assert sorted(e["target"] for e in vix) == [23.0, 26.0], vix
+    assert any(e["target"] == 26.0 and e["condition_met"] is True for e in vix)
+    assert blk["scenario_satisfied"] is True
+    g0 = blk["trigger_groups"][0]
+    assert g0["leg_total"] == 3, "VIX close + VIX intraday + SPX"
+    assert g0["met_legs"] + g0["undecided_legs"] <= g0["leg_total"], g0
+
+
+# --- 2026-09-28 review round 2: intraday before the close, CSV prior points --
+
+
+def _fetcher():
+    fspec = importlib.util.spec_from_file_location(
+        "fb", ROOT / ".claude/skills/breadth-chart-analyst/scripts/fetch_breadth_csv.py")
+    fb = importlib.util.module_from_spec(fspec)
+    fspec.loader.exec_module(fb)
+    return fb
+
+
+def test_fetcher_carries_the_previous_csv_point():
+    fb = _fetcher()
+    rows = [
+        fb.BreadthData(date="2026-09-23", sp500_price=770.0, breadth_raw=0.499,
+                       breadth_200ma=0.632, breadth_8ma=0.537,
+                       breadth_50_raw=0.2934, trend="-1"),
+        fb.BreadthData(date="2026-09-24", sp500_price=771.0, breadth_raw=0.477,
+                       breadth_200ma=0.6303, breadth_8ma=0.5259,
+                       breadth_50_raw=0.2635, trend="-1"),
+    ]
+    ups = [fb.UptrendData(date="2026-09-24", ratio=0.1368, ma_10=0.1375,
+                          slope=0.001, trend="up"),
+           fb.UptrendData(date="2026-09-25", ratio=0.1385, ma_10=0.1379,
+                          slope=0.0004, trend="up")]
+    r = fb.analyze(rows, ups, [])
+    assert r.prev_breadth_date == "2026-09-23"
+    assert r.prev_breadth_raw == 49.9
+    assert r.prev_breadth_8ma == 53.7
+    assert r.prev_uptrend_date == "2026-09-24"
+    assert r.prev_uptrend_ratio == 13.68
+
+
+_BULL_LEGS = [
+    _EMA_LEG,
+    "Breadth 生値 45% 以上を CSV 2データ点連続",
+    "Uptrend Ratio 15.52% 超を CSV 2データ点連続 (色ではなく水準で判定、現在 13.85%)",
+]
+
+
+def _bull(breadth, timing="pre-market"):
+    scen = {"bull": {"probability": 16, "triggers": list(_BULL_LEGS),
+                     "satisfaction_rule": "all", "min_legs": 0}}
+    return bps._compute_trigger_distance(scen, MARKET, breadth, timing, TODAY)[0]
+
+
+def test_csv_partial_restore_confirms_two_points_each_against_its_own_ema():
+    """Each point is compared with ITS OWN EMA(8); CSV points are settled data,
+    so the verdict does not wait for a post-market run."""
+    breadth = dict(BREADTH, breadth_raw=55.0, breadth_8ma=52.0, uptrend_ratio=16.0,
+                   breadth_raw_prev=54.0, breadth_8ma_prev=53.0,
+                   uptrend_ratio_prev=15.9)
+    blk = _bull(breadth)
+    flags = [e["condition_met"] for e in blk["trigger_distances"]]
+    assert flags == [True, True, True], blk["trigger_distances"]
+    assert blk["scenario_satisfied"] is True
+
+
+def test_csv_prior_point_below_its_own_ema_breaks_the_run():
+    # Prior raw 54 is above TODAY's EMA 52 but below its own EMA 55.
+    breadth = dict(BREADTH, breadth_raw=55.0, breadth_8ma=52.0, uptrend_ratio=16.0,
+                   breadth_raw_prev=54.0, breadth_8ma_prev=55.0,
+                   uptrend_ratio_prev=15.9)
+    blk = _bull(breadth)
+    ema = blk["trigger_distances"][0]
+    assert ema["met_prev"] is False
+    assert ema["condition_met"] is False
+    assert blk["scenario_satisfied"] is False
+
+
+def test_csv_without_prior_point_stays_undecided():
+    breadth = dict(BREADTH, breadth_raw=55.0, breadth_8ma=52.0, uptrend_ratio=16.0)
+    blk = _bull(breadth)
+    assert all(e["condition_met"] is None for e in blk["trigger_distances"])
+
+
+_TAIL_0928 = {"tail_risk": {
+    "probability": 12, "triggers": [],
+    "satisfaction_rule": "all", "min_legs": 0,
+    "trigger_groups": [
+        {"label": "脚1", "rule": "any", "min_legs": 1, "legs": [
+            "VIX 23超を終値2日連続 (26超はザラ場で確認し即時扱い)",
+            "SPX 7,232.1 を終値2日連続割れ"]},
+        {"label": "脚2", "rule": "any", "min_legs": 1, "legs": [
+            "10年債 5.15% 以上を脚1 成立日の終値で確認 "
+            "(脚1 が VIX 26 超のザラ場で成立した場合は前営業日終値で判定)",
+            "WTI $100 終値上抜け "
+            "(脚1 が VIX 26 超のザラ場で成立した場合は当日ザラ場の $100 超で判定)"]},
+    ]}}
+
+
+def _tail(market, timing):
+    return bps._compute_trigger_distance(
+        _TAIL_0928, market, BREADTH, timing, TODAY)[0]
+
+
+def test_intraday_vix_fires_before_the_close():
+    market = dict(MARKET, vix={"price": 27.0, "prev_close": 14.87},
+                  us10y={"value": 5.17, "prev_close": 5.17})
+    blk = _tail(market, "pre-market")
+    fast = [e for e in blk["trigger_distances"]
+            if e["indicator"] == "VIX" and e["target"] == 26.0]
+    assert fast and fast[0]["condition_met"] is True, fast
+    assert blk["scenario_satisfied"] is True
+
+
+def test_intraday_route_reads_the_prior_close_for_rates():
+    """Prior 10Y 5.17%, today 5.10%: the intraday route judges on the prior close."""
+    market = dict(MARKET, vix={"price": 27.0, "prev_close": 14.87},
+                  us10y={"value": 5.10, "prev_close": 5.17})
+    for timing in ("pre-market", "post-market"):
+        blk = _tail(market, timing)
+        leg2 = [e for e in blk["trigger_distances"]
+                if e["or_group"] == "tail_risk#g1"]
+        # Leg 2 must read rates and oil only — never the "VIX 26" it mentions.
+        assert {e["indicator"] for e in leg2} == {"US 10Y Yield", "WTI Oil"}, leg2
+        prior = [e for e in leg2 if e.get("route") == "intraday_partner"
+                 and e["indicator"] == "US 10Y Yield"]
+        assert prior and prior[0]["condition_met"] is True, leg2
+        assert blk["scenario_satisfied"] is True, timing
+
+
+def test_prior_close_rate_route_does_not_pair_with_the_closing_vix_route():
+    """VIX 23 closed twice, but no intraday 26 break: today's close decides rates."""
+    market = dict(MARKET, vix={"price": 24.0, "prev_close": 24.5},
+                  us10y={"value": 5.10, "prev_close": 5.17})
+    blk = _tail(market, "post-market")
+    leg2 = [e for e in blk["trigger_distances"] if e["or_group"] == "tail_risk#g1"]
+    assert {e["indicator"] for e in leg2} == {"US 10Y Yield", "WTI Oil"}, leg2
+    assert blk["scenario_satisfied"] is False, blk["trigger_distances"]
+
+
+def test_intraday_leg1_does_not_pair_with_the_closing_leg2():
+    """VIX 14.87 -> 27 intraday, 10Y 5.10 -> 5.17: the intraday route judges
+    rates on the PRIOR close (5.10), so Tail must not fire on today's 5.17."""
+    market = dict(MARKET, vix={"price": 27.0, "prev_close": 14.87},
+                  us10y={"value": 5.17, "prev_close": 5.10})
+    for timing in ("pre-market", "post-market"):
+        blk = _tail(market, timing)
+        assert blk["scenario_satisfied"] is False, (timing, blk["trigger_distances"])
+        assert blk["route_verdicts"]["intraday"] is False, blk["route_verdicts"]
+
+
+def test_closing_routes_still_fire_on_their_own():
+    """VIX 23 closed twice and 10Y closed above 5.15: the closing path fires."""
+    market = dict(MARKET, vix={"price": 24.0, "prev_close": 24.5},
+                  us10y={"value": 5.17, "prev_close": 5.10})
+    blk = _tail(market, "post-market")
+    assert blk["route_verdicts"]["close"] is True, blk["route_verdicts"]
+    assert blk["scenario_satisfied"] is True
+
+
+def test_intraday_oil_route_uses_the_live_quote():
+    market = dict(MARKET, vix={"price": 27.0, "prev_close": 14.87},
+                  us10y={"value": 5.10, "prev_close": 5.10},
+                  oil={"price": 101.0, "prev_close": 96.0})
+    blk = _tail(market, "pre-market")
+    oil = [e for e in blk["trigger_distances"]
+           if e["indicator"] == "WTI Oil" and e.get("route") == "intraday_partner"]
+    assert oil and oil[0]["condition_met"] is True, blk["trigger_distances"]
+    assert blk["scenario_satisfied"] is True

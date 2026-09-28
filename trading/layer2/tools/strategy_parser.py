@@ -12,7 +12,12 @@ import re
 from pathlib import Path
 from typing import Optional
 
-from trading.data.models import ScenarioSpec, StrategySpec, TradingLevel
+from trading.data.models import (
+    ScenarioSpec,
+    StrategySpec,
+    TradingLevel,
+    TriggerGroup,
+)
 
 
 # ---------------------------------------------------------------------------
@@ -287,8 +292,12 @@ _SCENARIO_HEADER_JP = re.compile(
 # The bold trigger label opens the leg list. The qualifier inside it states how
 # many legs must hold and is captured separately, because "all 5" and "any 1"
 # produce the same leg list but opposite verdicts.
+# The label may carry an adjective before the noun. The 2026-09-21 Risk-On
+# block writes "**必須トリガー (これ単独で執行...)**:", and requiring the bold
+# to open on "トリガー" matched nothing, so that scenario parsed to ZERO legs --
+# a scenario with no conditions reads as "nothing to satisfy" downstream.
 _SCENARIO_TRIGGER_LABEL = re.compile(
-    r"\*\*(?:トリガー(?:条件)?|発動条件|条件)([^*\n]*)\*\*"
+    r"\*\*(?:必須|主要|主|追加)?(?:トリガー(?:条件)?|発動条件|条件)([^*\n]*)\*\*"
 )
 
 # Prose may sit between the label and the colon that introduces the legs: the
@@ -297,7 +306,22 @@ _SCENARIO_TRIGGER_LABEL = re.compile(
 # legs while every coverage check still passed. Search forward for the colon
 # instead, bounded so an unrelated later paragraph can never be captured.
 _TRIGGER_COLON_WINDOW = 600
-_TRIGGER_BLOCK_END = re.compile(r"\n\n|\n###|\n---")
+# The leg list ends at a blank line, a new heading -- or at the next bold label
+# that starts a different kind of statement. The 2026-09-14 bull case puts
+# "**必須条件**: ..." on the line directly below its triggers with no blank line
+# between, so stopping only at "\n\n" swallowed that prose as a fifth leg. It is
+# already captured separately as a gate, and counting it as a leg made the
+# coverage gate demand an evaluation for a sentence no branch can measure.
+# "補強材料" is the dangerous one: the 2026-09-21 Risk-On block puts
+# "**補強材料 (単独では執行しません)**: ..." on the line directly below its one
+# executing trigger. Swallowed into an OR list, those five non-executing legs
+# each become sufficient on their own, so a bare "VIX 14.00 割れ" close would
+# fire a restoration the article does not authorise.
+_TRIGGER_BLOCK_END = re.compile(
+    r"\n\n|\n##|\n---"
+    r"|\n\*\*\s*(?:必須条件|必ず満たす条件|拒否権|補強材料|参考|アクション"
+    r"|想定レンジ|根拠|内容|注)"
+)
 
 
 def _find_trigger_block(block: str) -> tuple[str, str] | None:
@@ -329,6 +353,10 @@ def _find_trigger_block(block: str) -> tuple[str, str] | None:
     return qualifier, body
 
 _RULE_AT_LEAST = re.compile(r"(\d+)\s*(?:つ|本|脚)以上")
+# "1本成立" / "2本成立" / "2脚成立" — a group's own exact count, as opposed to
+# _RULE_AT_LEAST's "以上" form. The 2026-09-14 article states the CSV group as
+# "2本成立"; read as a bare OR it fires on one leg.
+_RULE_EXACT_COUNT = re.compile(r"(\d+)\s*(?:つ|本|脚)成立")
 
 
 def _parse_satisfaction_rule(block: str) -> tuple[str, int]:
@@ -536,6 +564,21 @@ def _parse_scenario_etf_detail(block: str) -> dict[str, float]:
     return etf_alloc
 
 
+# A level-2 heading closes the シナリオ別プラン section. Without this the LAST
+# scenario's block ran to end-of-file, so the 2026-09-21 Tail Risk block
+# absorbed マーケット状況 and まとめ -- pulling a gate out of the closing
+# summary and exposing every later percentage to the allocation parsers.
+_SECTION_BREAK = re.compile(r"^##[^#]", re.MULTILINE)
+
+
+def _scenario_block_end(text: str, start: int, next_header: int) -> int:
+    """End the block at the next scenario header, or the next ## section."""
+    brk = _SECTION_BREAK.search(text, start)
+    if brk and brk.start() < next_header:
+        return brk.start()
+    return next_header
+
+
 def _parse_scenarios(text: str) -> dict[str, ScenarioSpec]:
     """Parse the シナリオ別プラン section.
 
@@ -559,7 +602,9 @@ def _parse_scenarios(text: str) -> dict[str, ScenarioSpec]:
             name = _normalize_scenario_name_d(raw_name)
 
             start = header_match.end()
-            end = headers_d[idx + 1].start() if idx + 1 < len(headers_d) else len(text)
+            nxt = (headers_d[idx + 1].start()
+                   if idx + 1 < len(headers_d) else len(text))
+            end = _scenario_block_end(text, start, nxt)
             block = text[start:end]
 
             triggers = _parse_trigger_list(block)
@@ -579,6 +624,7 @@ def _parse_scenarios(text: str) -> dict[str, ScenarioSpec]:
                 name=name, probability=probability,
                 triggers=triggers, allocation=alloc,
                 satisfaction_rule=rule, min_legs=min_legs,
+                trigger_groups=_parse_trigger_groups(block),
                 gates=_parse_scenario_gates(block),
             )
 
@@ -615,7 +661,9 @@ def _parse_scenarios(text: str) -> dict[str, ScenarioSpec]:
             name = _normalize_scenario_name(raw_name)
 
             start = header_match.end()
-            end = headers_en[idx + 1].start() if idx + 1 < len(headers_en) else len(text)
+            nxt = (headers_en[idx + 1].start()
+                   if idx + 1 < len(headers_en) else len(text))
+            end = _scenario_block_end(text, start, nxt)
             block = text[start:end]
 
             triggers = _parse_trigger_list(block)
@@ -634,6 +682,7 @@ def _parse_scenarios(text: str) -> dict[str, ScenarioSpec]:
                 name=name, probability=probability,
                 triggers=triggers, allocation=alloc,
                 satisfaction_rule=rule, min_legs=min_legs,
+                trigger_groups=_parse_trigger_groups(block),
                 gates=_parse_scenario_gates(block),
             )
         return scenarios
@@ -651,7 +700,9 @@ def _parse_scenarios(text: str) -> dict[str, ScenarioSpec]:
             probability = int(header_match.group(3))
 
             start = header_match.end()
-            end = headers_jp[idx + 1].start() if idx + 1 < len(headers_jp) else len(text)
+            nxt = (headers_jp[idx + 1].start()
+                   if idx + 1 < len(headers_jp) else len(text))
+            end = _scenario_block_end(text, start, nxt)
             block = text[start:end]
 
             triggers = _parse_trigger_list(block)
@@ -697,7 +748,11 @@ def _has_indicator_keyword(text: str) -> bool:
     return any(kw in text for kw in _INDICATOR_KEYWORDS)
 
 
-_TRIGGER_SEPARATOR = re.compile(r"\s+\+\s+|\s+or\s+|、")
+# "または" is the Japanese form of the "or" already listed here. It is split at
+# the same place because _split_trigger_parts protects parenthesised spans, and
+# a dated-hurdle leg keeps its alternatives inside brackets
+# ("(9/8 に 23.56% 超、…、または 9/11 に 22.63% 超)") -- one leg, not two.
+_TRIGGER_SEPARATOR = re.compile(r"\s+\+\s+|\s+or\s+|\s*または\s*|、")
 _OPEN_PARENS = "(（"
 _CLOSE_PARENS = ")）"
 
@@ -734,6 +789,104 @@ def _split_trigger_parts(raw: str) -> list[str]:
         i += 1
     parts.append(raw[start:])
     return parts
+
+
+# A bullet line inside a trigger list, e.g.
+#   "- **CSV 系 (2本成立)**: Uptrend Ratio 12.57% 割れ / Breadth ... / ..."
+# The label carries the group's own count; the body carries its legs.
+_TRIGGER_GROUP_LINE = re.compile(
+    r"^\s*[-*]\s+(?:\*\*)?(?P<label>[^:：\n]*?)(?:\*\*)?\s*[:：]\s*(?P<body>.+)$"
+)
+# Legs inside one group. "/" has always separated them; "または" is the article's
+# word for the same thing and was previously not a separator at all, so Tail
+# Risk's "(VIX ... または SPX ...)" stayed one leg and the OR was lost.
+_GROUP_LEG_SEPARATOR = re.compile(r"\s+/\s+|\s*または\s*")
+
+
+def _group_rule_from_label(label: str) -> tuple[str, int]:
+    """Read one group's satisfaction rule from its own label.
+
+    Falls back to ("any", 1) — a bare OR — which is how an unlabelled bullet
+    line has always been read.
+    """
+    exact = _RULE_EXACT_COUNT.search(label)
+    if exact:
+        n = int(exact.group(1))
+        return ("any", 1) if n <= 1 else ("at_least", n)
+    at_least = _RULE_AT_LEAST.search(label)
+    if at_least:
+        return "at_least", int(at_least.group(1))
+    if "すべて" in label or "全て" in label or "AND" in label or "かつ" in label:
+        return "all", 0
+    return "any", 1
+
+
+def _split_group_legs(body: str) -> list[str]:
+    """Split one group's body into legs, keeping parenthesised spans intact.
+
+    "(TLT $80.67 終値割れ かつ 30年債 5.40% ...)" is a single leg carrying an
+    inner AND; splitting inside the parentheses would turn it into two
+    independent OR legs and let TLT alone satisfy the group.
+    """
+    legs: list[str] = []
+    depth = 0
+    start = 0
+    i = 0
+    while i < len(body):
+        ch = body[i]
+        if ch in _OPEN_PARENS:
+            depth += 1
+            i += 1
+            continue
+        if ch in _CLOSE_PARENS:
+            depth = max(0, depth - 1)
+            i += 1
+            continue
+        if depth == 0:
+            m = _GROUP_LEG_SEPARATOR.match(body, i)
+            if m:
+                legs.append(body[start:i])
+                i = m.end()
+                start = i
+                continue
+        i += 1
+    legs.append(body[start:])
+    out = []
+    for leg in legs:
+        cleaned = re.sub(r"\*\*", "", leg).strip().strip("[]［］").strip()
+        if cleaned:
+            out.append(cleaned)
+    return out
+
+
+def _parse_trigger_groups(block: str) -> list[TriggerGroup]:
+    """Split a scenario's trigger list into the article's own bullet groups.
+
+    Returns [] when the trigger list is a single flat line, which leaves the
+    existing flat-leg behaviour untouched for every article that predates the
+    grouped form.
+    """
+    found = _find_trigger_block(block)
+    if not found:
+        return []
+    groups: list[TriggerGroup] = []
+    for line in found[1].splitlines():
+        m = _TRIGGER_GROUP_LINE.match(line)
+        if not m:
+            continue
+        label = re.sub(r"\*\*", "", m.group("label")).strip()
+        legs = _split_group_legs(m.group("body"))
+        if not legs:
+            continue
+        rule, min_legs = _group_rule_from_label(label)
+        # A group cannot require more legs than it lists. Trusting the label
+        # over the legs would make the group permanently unsatisfiable, which
+        # reads as "never fires" rather than as the parse error it is.
+        if rule == "at_least" and min_legs > len(legs):
+            rule, min_legs = "all", 0
+        groups.append(TriggerGroup(legs=legs, rule=rule, min_legs=min_legs,
+                                   label=label))
+    return groups if len(groups) > 1 else []
 
 
 def _parse_trigger_list(block: str) -> list[str]:
@@ -777,8 +930,16 @@ def _parse_trigger_list(block: str) -> list[str]:
 # put "**必ず満たす条件**: 9/11(金) の CPI 発表後の終値でも..." in its own
 # paragraph, so reading only the leg list made the scenario look satisfiable on
 # price alone, days before the article allows any execution.
+# Anchored to the start of a line (optionally behind a list marker) and
+# requiring the colon that introduces the condition. Unanchored, the 2026-09-21
+# article's prose "③**拒否権3本がすべて成立中**で、最も遠い 10年債は..." matched
+# mid-sentence, so both Bull and Tail Risk carried a 400-character paragraph as
+# a "gate" -- permanently unevaluated, which silently pinned those scenarios to
+# "cannot fire" for a reason no reader of the article would recognise.
 _SCENARIO_GATE_LABEL = re.compile(
-    r"\*\*\s*(必須条件[^*\n]*|必ず満たす条件[^*\n]*|拒否権[^*\n]*)\*\*[：:]?\s*"
+    r"^[ \t]*(?:[-*]\s*)?"
+    r"\*\*\s*(必須条件[^*\n]*|必ず満たす条件[^*\n]*|拒否権[^*\n]*)\*\*[：:]\s*",
+    re.MULTILINE,
 )
 
 
@@ -1158,7 +1319,7 @@ def _parse_vix_triggers(text: str) -> dict[str, float]:
 # --- Yield triggers -------------------------------------------------------
 
 _YIELD_THRESHOLDS = re.compile(
-    r"\*?\*?10Y(?:\s*/\s*30Y)?\s*利回り\*?\*?\s*\|[^|]*\|\s*"
+    r"\*?\*?10Y(?:\s*/\s*\d+Y)?\s*利回り\*?\*?\s*\|[^|]*\|\s*"
     r"(\d+\.\d+)%?\s*\(下限\)\s*/\s*"
     r"(\d+\.\d+)%?\s*\(警戒\)\s*/\s*"
     r"(\d+\.\d+)%?\s*\(赤\)"
@@ -1167,10 +1328,11 @@ _YIELD_THRESHOLDS = re.compile(
 # Fallback: slash-separated values without labels, with optional space in "10Y 利回り"
 # Format: | **10Y 利回り** | current | 4.11% / 4.36% / 4.50% / 4.60% | note
 # Bold/decorator text between values is tolerated, e.g. "4.11% / **4.36%突破** / **4.50%** / 4.60%"
-# Combined row headers like "10Y / 30Y 利回り" are tolerated; thresholds are read
+# Combined row headers like "10Y / 30Y 利回り" or "10Y / 5Y 利回り" are tolerated
+# (any secondary tenor); thresholds are read
 # from the 3rd cell so the combined current-value cell (4.750% / 5.270%) is skipped.
 _YIELD_THRESHOLDS_SLASH = re.compile(
-    r"\*?\*?10Y(?:\s*/\s*30Y)?\s*利回り\*?\*?\s*\|[^|]*\|\s*"
+    r"\*?\*?10Y(?:\s*/\s*\d+Y)?\s*利回り\*?\*?\s*\|[^|]*\|\s*"
     r"\*?\*?(\d+\.\d+)%?[^/|]*?/\s*"
     r"\*?\*?(\d+\.\d+)%?[^/|]*?/\s*"
     r"\*?\*?(\d+\.\d+)%?[^/|]*?/\s*"

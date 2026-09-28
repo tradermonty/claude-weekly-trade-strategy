@@ -116,6 +116,14 @@ class AnalysisResult:
     uptrend_trend: str
     # Sectors
     sectors: list
+    # Previous CSV data point. "CSV 2データ点連続" legs need it, and an EMA
+    # comparison needs the prior point's OWN EMA, not today's.
+    prev_breadth_date: Optional[str] = None
+    prev_breadth_raw: Optional[float] = None
+    prev_breadth_8ma: Optional[float] = None
+    prev_breadth_50_raw: Optional[float] = None
+    prev_uptrend_date: Optional[str] = None
+    prev_uptrend_ratio: Optional[float] = None
 
 
 # --- Classification helpers ---
@@ -262,6 +270,13 @@ def _float_or_none(val) -> Optional[float]:
 # --- Analysis ---
 
 
+def _pct(value: Optional[float]) -> Optional[float]:
+    """Decimal ratio -> percentage, rounded like the latest-point fields."""
+    if value is None:
+        return None
+    return round(value * 100.0 if value <= 1.0 else value, 2)
+
+
 def analyze(
     breadth_rows: list,
     uptrend_rows: list,
@@ -332,7 +347,17 @@ def analyze(
             }
         )
 
+    prev_breadth = breadth_rows[-2] if len(breadth_rows) >= 2 else None
+    prev_uptrend = uptrend_rows[-2] if len(uptrend_rows) >= 2 else None
+
     return AnalysisResult(
+        prev_breadth_date=prev_breadth.date if prev_breadth else None,
+        prev_breadth_raw=_pct(prev_breadth.breadth_raw) if prev_breadth else None,
+        prev_breadth_8ma=_pct(prev_breadth.breadth_8ma) if prev_breadth else None,
+        prev_breadth_50_raw=(
+            _pct(prev_breadth.breadth_50_raw) if prev_breadth else None),
+        prev_uptrend_date=prev_uptrend.date if prev_uptrend else None,
+        prev_uptrend_ratio=_pct(prev_uptrend.ratio) if prev_uptrend else None,
         breadth_date=latest_breadth.date,
         breadth_200ma=round(b200_pct, 2),
         breadth_200ma_class=classify_breadth_200ma(b200_pct),

@@ -286,7 +286,13 @@ _WEEKLY_CLOSE_RE = re.compile(
 # before numeric pairing; otherwise the first matching branch wins the whole
 # string and pairs a foreign number (e.g. the VIX branch taking the "7" of
 # "SPX 7,325" as target 7.0, leaving the real tail condition unevaluated).
-_AND_SEPARATOR = re.compile(r"\s*[—–―-]\s*かつ\s*[—–―-]\s*|\s*かつ\s*")
+# " + " joins the same way in the older articles' 必須-group form ("FOMC 通過 +
+# 10Y 4.50% 終値2日連続下抜け"). On the flat path the parser had already split
+# there, so this only takes effect inside a recovered trigger group -- where the
+# legs arrive unsplit and would otherwise hand the whole string to one branch.
+_AND_SEPARATOR = re.compile(
+    r"\s*[—–―-]\s*かつ\s*[—–―-]\s*|\s*かつ\s*|\s+\+\s+"
+)
 
 
 def _parse_trigger_metadata(trigger: str) -> dict:
@@ -406,6 +412,21 @@ _INSTRUMENT_NAMES = (
 )
 
 
+# Index names that contain a number of their own. "Russell 2000 2,883.0 終値割れ"
+# otherwise yields 2000 — above the 1000 scale filter, so it wins — and the stop
+# silently becomes a level 31% below spot that can never be reached. Earlier
+# articles wrote a bare "Russell 2,883.0", which is why this only surfaced when
+# the 2026-09-14 article spelled the index out in full.
+_INDEX_NAME_NUMERALS = re.compile(
+    r"(?:russell|ラッセル)\s*(?:2000|1000)\b"
+    r"|\bs&p\s*500\b"
+    r"|\bsp500\b"
+    r"|\bnasdaq\s*100\b"
+    r"|\bdow\s*(?:jones\s*)?30\b",
+    re.IGNORECASE,
+)
+
+
 def _first_index_level(trigger: str, minimum: float = 1000.0) -> Optional[float]:
     """First number in `trigger` at index scale.
 
@@ -413,7 +434,11 @@ def _first_index_level(trigger: str, minimum: float = 1000.0) -> Optional[float]
     non-level figure — "SPX EMA20 帯 7,398〜7,407 を終値で割れ" yields 20, which
     fails the scale filter, and the whole leg then goes unevaluated. Scanning
     for the first number that is actually at index scale keeps such legs.
+
+    Numbers that are part of the index's NAME are removed first, so spelling the
+    index out in full does not change the level that is read.
     """
+    trigger = _INDEX_NAME_NUMERALS.sub(" ", trigger)
     for m in re.finditer(r"([\d,]+(?:\.\d+)?)", trigger):
         try:
             value = float(m.group(1).replace(",", ""))
@@ -466,6 +491,9 @@ def _build_progress_string(
 
     # Pre-market: closing price not yet confirmed
     if not is_official:
+        if time_basis == "intraday" and required == 1:
+            # An intraday leg does not wait for the close.
+            return "ザラ場で到達（即時）" if met_quote else "ザラ場で監視中（未到達）"
         if required > 1:
             if met_prev:
                 return "前日条件充足（本日終値待ち）"
@@ -481,7 +509,7 @@ def _build_progress_string(
         if met_prev is None:
             # No prior observation on file (CSV series carry no prev_close),
             # so consecutiveness cannot be judged either way.
-            return f"0/{required}（前データ点なし・判定不可）"
+            return f"0/{required}日（前データ点なし・判定不可）"
         if met_close and met_prev:
             days_met = min(2, _MAX_CONFIRMED_DAYS)
             if days_met >= required:
@@ -501,18 +529,30 @@ def _build_progress_string(
     return ""
 
 
+# CSV data points are settled when published, so a pre-market run may decide
+# them; only live quotes must wait for the close.
+_CSV_SERIES_KEYS = frozenset({
+    "breadth_raw", "breadth_raw_vs_8ma", "breadth_50_raw", "uptrend_ratio",
+})
+
+
 def _enrich_trigger_entry(
     entry: dict, trigger: str, market: dict,
     indicator_key: str, timing: str, today: date,
+    prev_target: Optional[float] = None,
 ) -> None:
-    """Add metadata, condition-met flags, and progress to a trigger entry."""
+    """Add metadata, condition-met flags, and progress to a trigger entry.
+
+    `prev_target` is the level the PREVIOUS observation is compared with, for
+    legs whose threshold moves with the series (raw vs its own EMA(8)).
+    """
     meta = _parse_trigger_metadata(trigger)
     entry["time_basis"] = meta["time_basis"]
     entry["required_days"] = meta["required_days"]
     entry["direction"] = meta["direction"]
     entry["is_price_trigger"] = meta["is_price_trigger"]
 
-    is_official = timing == "post-market"
+    is_official = timing == "post-market" or indicator_key in _CSV_SERIES_KEYS
     target = entry["target"]
     current_val = entry["current"]
 
@@ -522,7 +562,8 @@ def _enrich_trigger_entry(
         prev_val = market.get(indicator_key, {}).get("prev_close")
         entry["met_prev"] = (
             _check_condition_met(
-                prev_val, target, meta["direction"], range_high, range_low,
+                prev_val, prev_target if prev_target is not None else target,
+                meta["direction"], range_high, range_low,
             )
             if prev_val is not None else None
         )
@@ -543,6 +584,37 @@ def _enrich_trigger_entry(
 
     entry["progress"] = _build_progress_string(entry, meta, today, is_official)
     entry["condition_met"] = _condition_fully_met(entry, meta, today, is_official)
+
+
+def _evaluate_group(group: dict, legs: list) -> dict:
+    """Verdict for one labelled trigger group.
+
+    Returns ``satisfied`` as True / False / None, where None means "not yet
+    decidable" — a leg no branch could evaluate, or an "all" group still
+    holding an undecided leg. None must never be read as False: a group that
+    cannot be judged is not a group that failed.
+    """
+    rule = group.get("rule", "any")
+    min_legs = group.get("min_legs", 1)
+    flags = [e.get("condition_met") for e in legs]
+    met = sum(1 for f in flags if f is True)
+    missing = int(group.get("unevaluated", 0) or 0)
+    undecided = sum(1 for f in flags if f is None) + missing
+    if rule == "all":
+        needed = group.get("leg_total", len(legs))
+        satisfied: object = met >= needed
+        if not satisfied and undecided:
+            satisfied = None
+    elif rule == "at_least":
+        satisfied = met >= min_legs
+        # Still reachable with the legs that could not be read? Then undecided.
+        if not satisfied and met + undecided >= min_legs:
+            satisfied = None
+    else:  # "any"
+        satisfied = met >= 1
+        if not satisfied and undecided:
+            satisfied = None
+    return {"met_legs": met, "undecided_legs": undecided, "satisfied": satisfied}
 
 
 def _collect_and_groups(distances: list) -> list:
@@ -595,6 +667,11 @@ def _condition_fully_met(
         return None
 
     if not is_official:
+        # An intraday single-day leg ("26超はザラ場で確認し即時扱い") exists to
+        # act BEFORE the close; waiting for post-market defeated it. A live
+        # quote over the level decides it; a quote under it is not yet a miss.
+        if meta["time_basis"] == "intraday" and meta["required_days"] == 1:
+            return True if entry.get("met_current_quote") else None
         return None  # provisional quote; the close has not printed yet
 
     if meta["required_days"] > 1:
@@ -635,6 +712,111 @@ def _split_trigger_lines(trigger: str) -> list[str]:
     return lines
 
 
+# "VIX 23超を終値2日連続 (26超はザラ場で確認し即時扱い)" is two routes: a closing
+# rule and a faster intraday one. Read as one leg, the parenthesis donated
+# "ザラ場" to the closing rule and the 26 was dropped, so a jump from 14.87 to
+# 27 never fired the Tail group (2026-09-28 review).
+_VIX_INTRADAY_ESCALATION = re.compile(
+    # The closing paren is optional: group legs arrive with their outer
+    # parentheses already stripped, which can take this one with them.
+    r"\s*[（(]\s*(?:VIX\s*)?(\d+(?:\.\d+)?)\s*超\s*は\s*ザラ場[^)）]*[)）]?"
+)
+
+
+_EMA8_REFERENCE = re.compile(r"EMA\s*[（(]\s*8\s*[)）]|8\s*日\s*(?:指数)?(?:平滑)?(?:移動)?平均|8MA", re.I)
+
+
+def _split_vix_intraday_escalation(leg: str) -> list[str]:
+    """Split a VIX leg's intraday escalation parenthesis into its own leg."""
+    if "VIX" not in leg.upper():
+        return [leg]
+    m = _VIX_INTRADAY_ESCALATION.search(leg)
+    if not m:
+        return [leg]
+    base = (leg[:m.start()] + leg[m.end():]).strip()
+    return [base, f"VIX {m.group(1)}超をザラ場で確認 (即時扱い)"]
+
+
+# A leg-2 partner of the intraday VIX route: "10年債 5.15% 以上を脚1 成立日の
+# 終値で確認 (脚1 が VIX 26 超のザラ場で成立した場合は前営業日終値で判定)".
+# Left in place, the parenthesis let the VIX branch claim the rate leg on its
+# "VIX 26" and fire it as a phantom VIX leg. Split it into the closing leg and
+# a partner route that is judged on the prior close (rates) or the live quote
+# (oil), and that counts only while an intraday route is met.
+_INTRADAY_PARTNER = re.compile(
+    r"\s*[（(]\s*脚\s*1\s*が[^)）]*?ザラ場で成立した場合は\s*"
+    r"(前営業日終値|当日ザラ場)[^)）]*[)）]?"
+)
+_PARTNER_TAG = " [ザラ場経路: {}]"
+_PARTNER_TAG_RE = re.compile(r" \[ザラ場経路: (前営業日終値|当日ザラ場)\]$")
+_INTRADAY_ROUTE_RE = re.compile(r"ザラ場で確認 \(即時扱い\)$")
+
+
+def _split_intraday_partner(leg: str) -> list[str]:
+    """Split a leg's intraday-route parenthesis into a tagged partner route."""
+    m = _INTRADAY_PARTNER.search(leg)
+    if not m:
+        return [leg]
+    base = (leg[:m.start()] + leg[m.end():]).strip()
+    return [base, base + _PARTNER_TAG.format(m.group(1))]
+
+
+def _apply_route(entry: dict, trigger: str, timing: str) -> None:
+    """Tag intraday routes and judge partner routes on their own basis."""
+    if _INTRADAY_ROUTE_RE.search(trigger):
+        entry["route"] = "intraday"
+        return
+    m = _PARTNER_TAG_RE.search(trigger)
+    if not m:
+        return
+    entry["route"] = "intraday_partner"
+    entry["partner_basis"] = m.group(1)
+    if m.group(1) == "前営業日終値":
+        entry["condition_met"] = entry.get("met_prev")
+        entry["progress"] = "前営業日終値で判定（ザラ場経路）"
+    elif timing == "post-market":
+        entry["condition_met"] = bool(entry.get("met_close"))
+        entry["progress"] = "当日値で判定（ザラ場経路）"
+    else:
+        entry["condition_met"] = True if entry.get("met_current_quote") else None
+        entry["progress"] = "当日ザラ場で判定（ザラ場経路）"
+
+
+def _combine_group_flags(group_flags: list, rule: str, min_legs: int) -> bool:
+    """Scenario verdict across group verdicts (True / False / None each)."""
+    g_met = sum(1 for f in group_flags if f is True)
+    if rule == "all":
+        return bool(group_flags) and all(f is True for f in group_flags)
+    if rule == "at_least":
+        return g_met >= max(min_legs, 1)
+    if rule == "any":
+        return g_met >= 1
+    return False
+
+
+def _route_legs(legs: list, group: str, path: str) -> list:
+    """The legs of `group` that belong to one firing path.
+
+    close:    every leg that is neither an intraday route nor its partner.
+    intraday: in a group holding intraday routes, only those; in a group
+              holding partner routes, only those; otherwise every leg.
+    """
+    in_group = [e for e in legs if e.get("or_group") == group]
+    if path == "close":
+        return [e for e in in_group
+                if e.get("route") not in ("intraday", "intraday_partner")]
+    for tag in ("intraday", "intraday_partner"):
+        tagged = [e for e in in_group if e.get("route") == tag]
+        if tagged:
+            return tagged
+    return in_group
+
+
+def _split_routes(leg: str) -> list[str]:
+    return [r2 for r1 in _split_vix_intraday_escalation(leg)
+            for r2 in _split_intraday_partner(r1)]
+
+
 # A leg can carry one threshold per date. The 2026-09-07 article wrote the
 # GREEN-flip hurdles as "9/8 に 23.56% 超、9/9 に 24.38% 超、9/10 に 22.46% 超、
 # または 9/11 に 22.63% 超": taking the first number applied Monday's hurdle to
@@ -662,7 +844,7 @@ def _dated_threshold(trigger: str, today: date) -> tuple[Optional[float], bool]:
 
 def _compute_trigger_distance(
     scenarios: dict, market: dict, breadth: dict,
-    timing: str, today: date,
+    timing: str, today: date, etfs: Optional[dict] = None,
 ) -> list[dict]:
     """Compute distance from current values to scenario triggers."""
     distances = []
@@ -682,6 +864,19 @@ def _compute_trigger_distance(
     cross_diff = breadth.get("cross_diff")
     breadth_50_raw = breadth.get("breadth_50_raw")
     breadth_raw = breadth.get("breadth_raw")
+    breadth_8ma = breadth.get("breadth_8ma")
+    # CSV series have no FMP prev_close; their previous DATA POINT plays that
+    # role. Without it every "CSV 2データ点連続" leg stayed undecided forever.
+    market = dict(market)
+    for key, prev_key in (("breadth_raw", "breadth_raw_prev"),
+                          ("breadth_raw_vs_8ma", "breadth_raw_prev"),
+                          ("breadth_50_raw", "breadth_50_raw_prev"),
+                          ("uptrend_ratio", "uptrend_ratio_prev")):
+        if key not in market and breadth.get(prev_key) is not None:
+            market[key] = {"prev_close": breadth.get(prev_key)}
+    breadth_8ma_prev = breadth.get("breadth_8ma_prev")
+    uptrend_color = (breadth.get("uptrend_color") or "").upper()
+    tlt = ((etfs or {}).get("TLT") or {}).get("price")
 
     for name, scenario in scenarios.items():
         triggers = scenario.get("triggers", [])
@@ -693,22 +888,51 @@ def _compute_trigger_distance(
         # tagged with a shared and_group so consumers know every leg must be
         # met (an OR leg alone is sufficient; an AND leg alone is not).
         segments: list = []
-        for idx, trigger in enumerate(triggers):
-            # A trigger blob may carry several bullet lines ("- 単日確定系: ... /
-            # WTI 77.79 終値割れ" then "- 終値2日系: VIX 17超..."). Splitting on
-            # "/" alone leaves the last leg of one line glued to the next line,
-            # so the VIX branch would read WTI's 77.79 as the VIX level.
-            for line in _split_trigger_lines(trigger):
-                for or_leg in re.split(r"\s+/\s+", line):
-                    or_leg = or_leg.strip()
-                    if not or_leg:
+        # When the parser recovered the article's own bullet groups, they are
+        # authoritative: each group carries its own count ("CSV 系 (2本成立)"),
+        # which a flat leg list cannot express. Legs are already split, so only
+        # the inner "かつ" needs handling here.
+        groups = scenario.get("trigger_groups") or []
+        if groups:
+            for gi, group in enumerate(groups):
+                for li, leg_text in enumerate(group.get("legs", [])):
+                    leg_text = (leg_text or "").strip().strip("()（）").strip()
+                    if not leg_text:
                         continue
-                    and_legs = [s.strip() for s in _AND_SEPARATOR.split(or_leg) if s.strip()]
-                    gid = f"{name}#{idx}" if len(and_legs) > 1 else None
-                    segments.extend((leg, gid) for leg in and_legs)
+                    and_legs = [s.strip() for s in _AND_SEPARATOR.split(leg_text) if s.strip()]
+                    gid = f"{name}#g{gi}l{li}" if len(and_legs) > 1 else None
+                    segments.extend(
+                        (route, gid, f"{name}#g{gi}")
+                        for leg in and_legs
+                        for route in _split_routes(leg)
+                    )
+        else:
+            for idx, trigger in enumerate(triggers):
+                # A trigger blob may carry several bullet lines ("- 単日確定系: ... /
+                # WTI 77.79 終値割れ" then "- 終値2日系: VIX 17超..."). Splitting on
+                # "/" alone leaves the last leg of one line glued to the next line,
+                # so the VIX branch would read WTI's 77.79 as the VIX level.
+                for line in _split_trigger_lines(trigger):
+                    # NOTE: "または" is deliberately NOT split here. This path
+                    # gets legs the parser already split, and the parser's
+                    # splitter protects parenthesised spans -- which matters,
+                    # because "(9/8 に 23.56% 超、…、または 9/11 に 22.63% 超)"
+                    # is one dated-hurdle leg, not two.
+                    for or_leg in re.split(r"\s+/\s+", line):
+                        or_leg = or_leg.strip()
+                        if not or_leg:
+                            continue
+                        and_legs = [s.strip() for s in _AND_SEPARATOR.split(or_leg) if s.strip()]
+                        gid = f"{name}#{idx}" if len(and_legs) > 1 else None
+                        segments.extend(
+                            (route, gid, None)
+                            for leg in and_legs
+                            for route in _split_routes(leg)
+                        )
         trigger_distances = []
         unevaluated = []
-        for trigger, and_group in segments:
+        unevaluated_groups: dict[str, int] = {}
+        for trigger, and_group, or_group in segments:
             n_before = len(trigger_distances)
             # VIX distance
             if vix and "VIX" in trigger.upper():
@@ -917,6 +1141,49 @@ def _compute_trigger_distance(
                         entry, trigger, market, "copper", timing, today,
                     )
                     trigger_distances.append(entry)
+            # Uptrend Ratio colour flip ("Uptrend Ratio が GREEN へ転換"). A
+            # state, not a level: the CSV's own colour is the whole condition,
+            # so there is no percentage to find. This must precede the numeric
+            # Uptrend branch below, which would otherwise claim the leg, fail to
+            # find a number, and leave it silently unevaluated.
+            elif ("GREEN" in trigger.upper()
+                  and ("UPTREND" in trigger.upper()
+                       or "上昇銘柄比率" in trigger
+                       or "値上がり銘柄比率" in trigger)
+                  # Only when the leg states the flip ALONE. The 2026-09-07 form
+                  # spells the same flip out as per-date percentage hurdles
+                  # ("9/8 に 23.56% 超、9/9 に 24.38% 超…"); those must keep going
+                  # to the dated-threshold branch below, which picks today's
+                  # number. Claiming them here would discard the hurdle.
+                  and not re.search(r"\d+(?:\.\d+)?\s*%", trigger)):
+                entry = {
+                    "trigger": trigger,
+                    "indicator": "Uptrend Ratio Color",
+                    "current": uptrend_color or None,
+                    "target": "GREEN",
+                    "diff": None,
+                }
+                # Run the standard enrichment so the row carries the same
+                # metadata keys as every other leg (#16 is fail-closed on the
+                # key set), then state the verdict from the colour itself:
+                # there is no level to compare, so the generic comparison
+                # cannot decide it.
+                _enrich_trigger_entry(
+                    entry, trigger, market, "uptrend_color", timing, today,
+                )
+                met_color = uptrend_color == "GREEN" if uptrend_color else None
+                entry["condition_met"] = met_color
+                # The CSV colour is a settled daily value, so on a post-market
+                # run it IS the close. Leaving met_close None would read as
+                # "not yet observed" for a series that has already printed.
+                if timing == "post-market":
+                    entry["met_close"] = met_color
+                else:
+                    entry["met_current_quote"] = met_color
+                entry["progress"] = (
+                    f"現在 {uptrend_color}" if uptrend_color else "判定不可"
+                )
+                trigger_distances.append(entry)
             # Uptrend Ratio ("Uptrend Ratio 17.81% 割れ"). A leading breadth
             # series the article treats as its primary internal gauge.
             elif uptrend_ratio is not None and ("UPTREND" in trigger.upper()
@@ -946,9 +1213,13 @@ def _compute_trigger_distance(
                     trigger_distances.append(entry)
             # Breadth-50 raw reading ("Breadth-50 生値 50% 割れ"). Quoted as a
             # percentage, unlike the 8MA-200MA spread which is quoted in pt.
+            # "50日線上の比率" is the same series written in Japanese, which the
+            # published wording now uses; without the alias the leg went to no
+            # branch at all and only the fail-closed coverage gate caught it.
             elif breadth_50_raw is not None and ("BREADTH-50" in trigger.upper()
                                                  or "BREADTH 50" in trigger.upper()
-                                                 or "BREADTH-50" in trigger):
+                                                 or "50日線上" in trigger
+                                                 or "50日移動平均線上" in trigger):
                 b50_m = re.search(r"(\d+(?:\.\d+)?)\s*%", trigger)
                 if b50_m:
                     target = float(b50_m.group(1))
@@ -969,6 +1240,34 @@ def _compute_trigger_distance(
             # percentage, because both averages are EMAs and the spread is
             # decided by the raw level. Quoted in %, so it must be claimed
             # before the spread branch, which reads a pt value.
+            # Breadth raw measured against its own EMA(8) at the same data point
+            # ("生値が同じデータ点の EMA(8) を上回る"). The threshold moves with
+            # the series; the "(現在 生値 47.70%、EMA(8) 52.59%)" note is a
+            # snapshot, and reading its first % as the level compared the raw
+            # value with itself (2026-09-28 review).
+            elif (breadth_raw is not None and breadth_8ma is not None
+                  and "BREADTH" in trigger.upper()
+                  and ("生値" in trigger or "RAW" in trigger.upper())
+                  and _EMA8_REFERENCE.search(trigger)
+                  and not re.search(r"(?<![\d.])\d+(?:\.\d+)?\s*%\s*(?:以上|以下|超|割れ|未満)",
+                                    trigger)):
+                entry = {
+                    "trigger": trigger,
+                    "indicator": "Breadth Raw vs EMA(8)",
+                    "current": breadth_raw,
+                    "target": breadth_8ma,
+                    "diff": round(breadth_raw - breadth_8ma, 2),
+                }
+                # The prior point is compared with ITS OWN EMA(8); with no
+                # prior EMA on file the run stays undecided.
+                _enrich_trigger_entry(
+                    entry, trigger,
+                    market if breadth_8ma_prev is not None
+                    else {k: v for k, v in market.items() if k != "breadth_raw_vs_8ma"},
+                    "breadth_raw_vs_8ma", timing, today,
+                    prev_target=breadth_8ma_prev,
+                )
+                trigger_distances.append(entry)
             elif (breadth_raw is not None and "BREADTH" in trigger.upper()
                   and ("生値" in trigger or "RAW" in trigger.upper())):
                 braw_m = re.search(r"(\d+(?:\.\d+)?)\s*%", trigger)
@@ -1001,6 +1300,25 @@ def _compute_trigger_distance(
                         entry, trigger, market, "cross_diff", timing, today,
                     )
                     trigger_distances.append(entry)
+            # TLT level ("TLT $80.67 終値割れ"). Long-duration Treasuries are the
+            # AND partner of Tail Risk's rate leg, so without this branch that
+            # group could never be judged -- and its partner alone looked like
+            # the whole condition.
+            elif tlt and "TLT" in trigger.upper():
+                tlt_m = re.search(r"\$\s*(\d{2,3}(?:\.\d+)?)", trigger)
+                if tlt_m:
+                    target = float(tlt_m.group(1))
+                    entry = {
+                        "trigger": trigger,
+                        "indicator": "TLT",
+                        "current": tlt,
+                        "target": target,
+                        "diff": round(tlt - target, 2),
+                    }
+                    _enrich_trigger_entry(
+                        entry, trigger, market, "tlt", timing, today,
+                    )
+                    trigger_distances.append(entry)
             # Oil distance ("WTI 93.50 終値上抜け" has no $ prefix). The bare
             # "$" fallback only applies when no other instrument is named:
             # blog legs routinely carry an ETF conversion ("(IWM ≈ $286.86)"),
@@ -1030,6 +1348,25 @@ def _compute_trigger_distance(
                 unevaluated.append(trigger)
             for e in trigger_distances[n_before:]:
                 e["and_group"] = and_group
+                e["or_group"] = or_group
+                _apply_route(e, trigger, timing)
+            if len(trigger_distances) == n_before and or_group:
+                # Keep an unevaluated leg attached to its group so the group's
+                # verdict can stay undecided rather than silently shrinking to
+                # the legs that happened to parse.
+                unevaluated_groups.setdefault(or_group, 0)
+                unevaluated_groups[or_group] += 1
+
+        # A partner route stands in for "the day leg 1 fired" only when leg 1
+        # fired INTRADAY. Paired with the closing VIX route it would judge rates
+        # on yesterday's close, which the article does not allow.
+        intraday_met = any(
+            e.get("route") == "intraday" and e.get("condition_met") is True
+            for e in trigger_distances)
+        for e in trigger_distances:
+            if e.get("route") == "intraday_partner" and not intraday_met:
+                e["condition_met"] = False
+                e["progress"] = "対象外（脚1 がザラ場経路で未成立）"
 
         distances.append({
             "scenario": name,
@@ -1038,6 +1375,20 @@ def _compute_trigger_distance(
             "source_leg_count": len(segments),
             "evaluated_leg_count": len(trigger_distances),
             "unevaluated_legs": unevaluated,
+            "trigger_groups": [
+                {
+                    "group": f"{name}#g{gi}",
+                    "label": g.get("label", ""),
+                    "rule": g.get("rule", "any"),
+                    "min_legs": g.get("min_legs", 1),
+                    # Count evaluated routes, not article bullets: a VIX leg
+                    # with an intraday escalation becomes two routes.
+                    "leg_total": sum(
+                        1 for s in segments if s[2] == f"{name}#g{gi}"),
+                    "unevaluated": unevaluated_groups.get(f"{name}#g{gi}", 0),
+                }
+                for gi, g in enumerate(groups)
+            ],
         })
 
 
@@ -1069,7 +1420,38 @@ def _compute_trigger_distance(
         flags = [e.get("condition_met") for e in legs]
         met = sum(1 for f in flags if f)
         undecided = any(f is None for f in flags)
-        if not legs:
+
+        # When the article stated its triggers as labelled groups, the rule
+        # applies ACROSS groups and each group is judged by its own count.
+        # Collapsing to a flat leg list made the 2026-09-14 bear case fire on
+        # one CSV leg where the article requires two of three.
+        groups = d.get("trigger_groups") or []
+        if groups:
+            group_flags = []
+            for g in groups:
+                g_legs = [e for e in legs if e.get("or_group") == g["group"]]
+                g_meta = _evaluate_group(g, g_legs)
+                g.update(g_meta)
+                group_flags.append(g_meta["satisfied"])
+            satisfied = _combine_group_flags(group_flags, rule, min_legs)
+            # A scenario with an intraday route has two ways to fire, each
+            # judged whole: closing leg 1 AND closing leg 2, or intraday leg 1
+            # AND its intraday partner in leg 2. Pooling the legs let an
+            # intraday VIX break pair with TODAY's closing rate, which the
+            # article replaces with the prior close on that route.
+            if any(e.get("route") == "intraday" for e in legs):
+                verdicts = {
+                    path: _combine_group_flags(
+                        [_evaluate_group(
+                            dict(g, leg_total=len(sel)), sel)["satisfied"]
+                         for g in groups
+                         for sel in [_route_legs(legs, g["group"], path)]],
+                        rule, min_legs)
+                    for path in ("close", "intraday")
+                }
+                d["route_verdicts"] = verdicts
+                satisfied = any(v is True for v in verdicts.values())
+        elif not legs:
             satisfied = False
         elif rule == "all":
             satisfied = all(f is True for f in flags)
@@ -1080,7 +1462,7 @@ def _compute_trigger_distance(
         else:
             satisfied = False
         # An "all" rule cannot be declared satisfied while a leg is undecided.
-        if rule == "all" and undecided:
+        if rule == "all" and undecided and not groups:
             satisfied = False
         if rule_missing:
             satisfied = False
@@ -1391,6 +1773,13 @@ def build_plan_state(
         "uptrend_class": breadth_json.get("uptrend_class", ""),
         "uptrend_slope": _safe_float(breadth_json.get("uptrend_slope")),
         "uptrend_trend": breadth_json.get("uptrend_trend", ""),
+        # Previous CSV data point, for "CSV 2データ点連続" legs.
+        "breadth_date_prev": breadth_json.get("prev_breadth_date"),
+        "breadth_raw_prev": _safe_float(breadth_json.get("prev_breadth_raw")),
+        "breadth_8ma_prev": _safe_float(breadth_json.get("prev_breadth_8ma")),
+        "breadth_50_raw_prev": _safe_float(breadth_json.get("prev_breadth_50_raw")),
+        "uptrend_date_prev": breadth_json.get("prev_uptrend_date"),
+        "uptrend_ratio_prev": _safe_float(breadth_json.get("prev_uptrend_ratio")),
     }
 
     # --- Blog data ---
@@ -1415,6 +1804,18 @@ def build_plan_state(
             "allocation": sc.allocation,
             "satisfaction_rule": getattr(sc, "satisfaction_rule", None),
             "min_legs": getattr(sc, "min_legs", None),
+            # The article's own bullet groups, each with its own count. Without
+            # them "CSV 系 (2本成立)" degrades to a plain OR at the entry point,
+            # however correctly the parser read it.
+            "trigger_groups": [
+                {
+                    "label": g.label,
+                    "rule": g.rule,
+                    "min_legs": g.min_legs,
+                    "legs": list(g.legs),
+                }
+                for g in getattr(sc, "trigger_groups", []) or []
+            ],
             "gates": list(getattr(sc, "gates", []) or []),
         }
 
@@ -1443,7 +1844,7 @@ def build_plan_state(
 
     # Trigger distances
     trigger_distances = _compute_trigger_distance(
-        scenarios, market, breadth, timing, today,
+        scenarios, market, breadth, timing, today, etfs,
     )
 
     # Coverage summary. verify_plan fails closed on this: every leg written in
