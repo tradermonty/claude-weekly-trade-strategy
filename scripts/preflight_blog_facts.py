@@ -93,6 +93,24 @@ VIX_MONTHLY_2026 = {
 }
 
 
+# VIX options are AM-settled on the expiration date and stop trading the business day
+# BEFORE it. An expiry dated the same day as an afternoon event (a 14:00 ET FOMC
+# statement, for example) is already gone by the time the event happens.
+VIX_SETTLEMENT_NOTE = (
+    "VIX options are AM-settled on the expiration date and stop trading on the "
+    "PRECEDING business day. A VIX expiry dated the same day as an afternoon event "
+    "(e.g. a 14:00 ET FOMC statement) does NOT cover that event — pick a later expiry."
+)
+
+
+def prev_business_day(d: date) -> date:
+    """Previous US market business day (skips weekends and 2026 market holidays)."""
+    cur = d - timedelta(days=1)
+    while cur.weekday() >= 5 or cur.isoformat() in US_MARKET_HOLIDAYS_2026:
+        cur -= timedelta(days=1)
+    return cur
+
+
 def fmp_quote_batch(symbols: list[str], api_key: str) -> dict[str, dict[str, Any]]:
     """Fetch FMP quote/full data for a list of symbols."""
     url = f"https://financialmodelingprep.com/api/v3/quote/{','.join(symbols)}?apikey={api_key}"
@@ -156,6 +174,8 @@ def get_option_expiries(target_year: int, target_month: int) -> dict[str, Any]:
         "equity_etf_standard": {},
         "vix_standard": {},
         "vix_weekly_wednesdays": [],
+        "vix_settlement_note": VIX_SETTLEMENT_NOTE,
+        "vix_last_trading_day": {},
         "warnings": [],
     }
 
@@ -185,6 +205,13 @@ def get_option_expiries(target_year: int, target_month: int) -> dict[str, Any]:
         if d.weekday() == 2:  # Wed
             out["vix_weekly_wednesdays"].append(d.isoformat())
         d += timedelta(days=1)
+
+    # AM settlement → the tradable window ends the business day before each expiry.
+    for expiry in list(out["vix_standard"].values()) + out["vix_weekly_wednesdays"]:
+        if expiry:
+            out["vix_last_trading_day"][expiry] = prev_business_day(
+                date.fromisoformat(expiry)
+            ).isoformat()
 
     return out
 

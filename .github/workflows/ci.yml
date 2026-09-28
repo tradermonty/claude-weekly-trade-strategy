@@ -22,6 +22,21 @@ jobs:
       - name: Run postflight smoke tests (no third-party deps required)
         run: python scripts/tests/test_postflight_blog_check.py
 
+      - name: Run preflight facts tests
+        run: python scripts/tests/test_preflight_blog_facts.py
+
+      # Guards the blog -> build_plan_state contract. Every High finding in the
+      # 2026-08-31 review was a trigger leg the downstream silently dropped or
+      # misassigned, and no other gate detects that class of defect.
+      - name: Run build_plan_state trigger regression tests
+        run: python scripts/tests/test_build_plan_state_triggers.py
+
+      # Fail-closed coverage and AND-group gates. Both defects they cover
+      # (a leg count mismatch, an AND group with a dropped partner) previously
+      # passed every gate in the pipeline.
+      - name: Run verify_plan coverage gate tests
+        run: python scripts/tests/test_verify_plan_coverage.py
+
   ir-manifest-validator:
     name: IR manifest schema validator
     runs-on: ubuntu-latest

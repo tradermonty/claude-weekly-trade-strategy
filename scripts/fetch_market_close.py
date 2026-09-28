@@ -35,6 +35,9 @@ INDICES = [
     ("^GSPC", "S&P 500"),
     ("^NDX", "Nasdaq 100"),
     ("^DJI", "Dow Jones"),
+    # Russell is referenced directly by scenario triggers ("Russell 2,883.0
+    # 終値割れ"); without it that leg cannot be evaluated downstream.
+    ("^RUT", "Russell 2000"),
 ]
 
 COMMODITIES = [
@@ -55,6 +58,7 @@ ETFS = [
     ("BIL", "BIL"),
     ("TLT", "TLT"),
     ("URA", "URA"),
+    ("IWM", "IWM"),
 ]
 
 TREASURY_KEYS = [
@@ -135,16 +139,26 @@ def fetch_treasury(api_key: str) -> dict[str, float]:
     data = _get_json(url)
     if not data:
         return {}
-    latest = data[0] if isinstance(data, list) else data
-    result = {}
-    for key, value in latest.items():
-        if key == "date":
-            result["_date"] = value
-            continue
-        try:
-            result[key] = float(value)
-        except (TypeError, ValueError):
-            pass
+    rows = data if isinstance(data, list) else [data]
+
+    def _row(row):
+        out = {}
+        for key, value in row.items():
+            if key == "date":
+                out["_date"] = value
+                continue
+            try:
+                out[key] = float(value)
+            except (TypeError, ValueError):
+                pass
+        return out
+
+    result = _row(rows[0])
+    # The previous business day's yields, so consumers can evaluate
+    # "終値2日連続" conditions on rates. Without this, a two-day yield trigger
+    # can never reach 2/2 no matter what the market does.
+    if len(rows) > 1:
+        result["_prev"] = _row(rows[1])
     return result
 
 

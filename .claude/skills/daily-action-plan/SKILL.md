@@ -91,6 +91,38 @@ Read `plan_state.json` and generate the action plan document in Japanese.
 - Determine which scenario is currently closest
 - Include evening checklist, tomorrow's focus
 
+**Reading triggers from `plan_state.json` (MANDATORY)**:
+
+**Whether a scenario has fired is a stored verdict. Never infer it from legs.**
+
+1. **Scenario verdict** — `analysis.trigger_coverage.scenario_rules[<name>]`:
+   ```
+   { "rule": "all" | "at_least" | "any", "min_legs": N,
+     "leg_count": N, "met_leg_count": N, "undecided_leg_count": N,
+     "satisfied": true|false }
+   ```
+   `rule` comes from the blog's own wording — `all` for 「すべて満たす」, `at_least`
+   with `min_legs` for 「2つ以上」, `any` for 「いずれか1つ」. **A scenario with
+   five legs and `rule: "all"` has NOT fired on one leg.** Report
+   `met_leg_count / leg_count` and `satisfied`, in that order.
+2. **AND legs within a scenario** (`and_group: "<scenario>#<n>"`) — read
+   `analysis.trigger_coverage.and_groups[].satisfied`; each leg also carries
+   `and_satisfied`. A group showing `met_count: 1, leg_count: 2,
+   satisfied: false` has **not** fired.
+3. **Per-leg state** — use `condition_met`, not `met_close`. `met_close` only
+   says the level is breached today; `condition_met` folds in the time basis, so
+   a 終値2日連続 leg is `false` on day one and `null` when it cannot be decided
+   (pre-market, or no previous close on file). `undecided_leg_count > 0` means
+   some legs are still unresolved — say so rather than implying a verdict.
+
+**Coverage is fail-closed.** `analysis.trigger_coverage` must satisfy
+`evaluated_leg_total + len(manual_only) == source_leg_total`, and the same
+identity per scenario. `verify_plan.py` check #18 fails otherwise — meaning a
+trigger written in the blog was not evaluated at all. **Do not write the action
+plan from a plan_state whose #18, #19 or #20 failed; rebuild it first.** A leg
+no branch can evaluate must be declared with `--manual-only-leg "<text>"` so it
+is visible, never left to disappear.
+
 ### Step 6: Self-Check
 
 Verify the generated plan against `plan_state.json`:
