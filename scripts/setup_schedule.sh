@@ -38,8 +38,8 @@ case "$ACTION" in
             # Unload existing job if loaded
             launchctl list "$job" &>/dev/null && launchctl unload "$dst" 2>/dev/null || true
 
-            # Copy and load
-            cp "$src" "$dst"
+            # Render machine-specific paths into the template, then load
+            sed -e "s|__PROJECT_ROOT__|$PROJECT_ROOT|g" -e "s|__HOME__|$HOME|g" "$src" > "$dst"
             launchctl load "$dst"
             echo "  Installed: $job"
         done
