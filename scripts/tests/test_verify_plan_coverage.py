@@ -252,6 +252,67 @@ def test_an_all_rule_is_not_satisfied_by_one_leg():
     assert _run(ps)[20] is False
 
 
+def _grouped_bear(ps):
+    """Rewrite the bear block as the article's own labelled groups.
+
+    Mirrors the 2026-09-21 blog: the 警戒 case fires on "any group", where the
+    CSV group needs 2 of 3. One met CSV leg must NOT fire the scenario.
+    """
+    for blk in ps["analysis"]["trigger_distances"]:
+        if blk["scenario"] != "bear":
+            continue
+        leg = blk["trigger_distances"][0]
+        legs = [dict(leg, or_group="bear#g0", condition_met=False),
+                dict(leg, or_group="bear#g1", condition_met=True),
+                dict(leg, or_group="bear#g1", condition_met=False),
+                dict(leg, or_group="bear#g1", condition_met=False)]
+        blk["trigger_distances"] = legs
+        blk["source_leg_count"] = blk["evaluated_leg_count"] = len(legs)
+        blk["trigger_groups"] = [
+            {"group": "bear#g0", "rule": "any", "min_legs": 1,
+             "leg_total": 1, "unevaluated": 0},
+            {"group": "bear#g1", "rule": "at_least", "min_legs": 2,
+             "leg_total": 3, "unevaluated": 0},
+        ]
+        cov = ps["analysis"]["trigger_coverage"]
+        cov["per_scenario"]["bear"] = {"source": len(legs), "evaluated": len(legs)}
+        cov["source_leg_total"] = sum(d["source_leg_count"]
+                                      for d in ps["analysis"]["trigger_distances"])
+        cov["evaluated_leg_total"] = sum(d["evaluated_leg_count"]
+                                         for d in ps["analysis"]["trigger_distances"])
+        cov["scenario_rules"]["bear"].update(
+            {"rule": "any", "min_legs": 1, "leg_count": len(legs),
+             "met_leg_count": 1, "undecided_leg_count": 0, "satisfied": False})
+    return ps
+
+
+def test_grouped_scenario_is_not_fired_by_one_leg_of_a_two_of_three_group():
+    """A group rule of "2 of 3" must not be flattened back into a plain OR.
+
+    The builder evaluates labelled groups; this check used to recompute the
+    verdict from the flat leg list and so called a correct plan_state broken
+    (and would equally have blessed a genuine early fire).
+    """
+    assert _run(_grouped_bear(_plan_state()))[20] is True
+
+
+def test_grouped_scenario_still_catches_a_verdict_that_does_not_follow():
+    ps = _grouped_bear(_plan_state())
+    ps["analysis"]["trigger_coverage"]["scenario_rules"]["bear"]["satisfied"] = True
+    assert _run(ps)[20] is False
+
+
+def test_grouped_scenario_fires_once_its_group_threshold_is_met():
+    ps = _grouped_bear(_plan_state())
+    for blk in ps["analysis"]["trigger_distances"]:
+        if blk["scenario"] == "bear":
+            blk["trigger_distances"][2]["condition_met"] = True   # 2 of 3
+    rules = ps["analysis"]["trigger_coverage"]["scenario_rules"]["bear"]
+    rules["met_leg_count"] = 2
+    rules["satisfied"] = True
+    assert _run(ps)[20] is True
+
+
 def test_scenario_rules_must_cover_every_scenario():
     ps = _plan_state()
     ps["analysis"]["trigger_coverage"]["scenario_rules"].pop("bear")

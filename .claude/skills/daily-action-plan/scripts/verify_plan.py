@@ -82,6 +82,36 @@ def _exact_match(plan_val, source_val, label: str) -> tuple[bool, str]:
     return False, f"{label}: plan={pv} != source={sv}"
 
 
+def _group_verdict(group: dict, legs: list):
+    """Independent verdict for one labelled trigger group (check #20).
+
+    Mirrors ``_evaluate_group`` in build_plan_state.py. Returns True / False /
+    None, where None means "not yet decidable" -- an undecided leg, or a leg no
+    branch could evaluate. None must never collapse to False: a group that
+    cannot be judged is not a group that failed.
+    """
+    rule = group.get("rule", "any")
+    min_legs = group.get("min_legs", 1)
+    flags = [e.get("condition_met") for e in legs]
+    met = sum(1 for f in flags if f is True)
+    undecided = (sum(1 for f in flags if f is None)
+                 + int(group.get("unevaluated", 0) or 0))
+    if rule == "all":
+        needed = group.get("leg_total", len(legs))
+        satisfied = met >= needed
+        if not satisfied and undecided:
+            return None
+    elif rule == "at_least":
+        satisfied = met >= min_legs
+        if not satisfied and met + undecided >= min_legs:
+            return None
+    else:  # "any"
+        satisfied = met >= 1
+        if not satisfied and undecided:
+            return None
+    return bool(satisfied)
+
+
 def verify(plan_state: dict, market_json: dict, breadth_json: dict) -> VerificationResult:
     """Run all verification checks."""
     result = VerificationResult()
@@ -508,16 +538,36 @@ def verify(plan_state: dict, market_json: dict, breadth_json: dict) -> Verificat
             met = sum(1 for f in flags if f)
             rule = stored.get("rule")
             min_legs = stored.get("min_legs", 1)
-            if rule == "all":
-                expected = bool(legs) and all(f is True for f in flags)
-            elif rule == "at_least":
-                expected = met >= min_legs
-            elif rule == "any":
-                expected = met >= 1
-            else:
+            if rule not in ("all", "at_least", "any"):
                 rule_ok = False
                 rule_errors.append(f"{name}: unknown rule {rule!r}")
                 continue
+            # When the article states its triggers as labelled groups
+            # ("単日確定系 1本" / "CSV系 2本"), the rule applies ACROSS groups
+            # and each group is judged by its own count. Collapsing to a flat
+            # leg list reads the bear case as fired on one CSV leg where the
+            # article requires two of three -- the same collapse the builder
+            # was fixed for. Mirror the group path here or this check reports
+            # a correct plan_state as broken.
+            groups = b.get("trigger_groups") or []
+            if groups:
+                units = [
+                    _group_verdict(g, [e for e in legs
+                                       if e.get("or_group") == g.get("group")])
+                    for g in groups
+                ]
+            else:
+                units = list(flags)
+            unit_met = sum(1 for f in units if f is True)
+            unit_undecided = any(f is None for f in units)
+            if rule == "all":
+                expected = bool(units) and all(f is True for f in units)
+            elif rule == "at_least":
+                expected = unit_met >= (max(min_legs, 1) if groups else min_legs)
+            else:  # "any"
+                expected = unit_met >= 1
+            if rule == "all" and unit_undecided:
+                expected = False
             # Two things override the leg arithmetic, in both the aggregator and
             # here: an independent condition the article states outside the leg
             # list, and a rule that never reached the aggregator at all.

@@ -94,6 +94,23 @@ class TradingLevel:
 
 
 @dataclass
+class TriggerGroup:
+    """One labelled bullet line of a scenario's trigger list.
+
+    The 2026-09-14 article gives each line its own count -- "単日確定系 (1本成立)",
+    "終値2日連続系 (1本成立)", "CSV 系 (2本成立)" -- and fires the scenario on any
+    ONE of those groups. Flattening the lines into a single leg list loses the
+    per-group count, and the scenario then fires on one CSV leg where the
+    article requires two. The same shape carries Tail Risk's "2脚の AND", whose
+    legs are themselves OR lists.
+    """
+    legs: list[str]
+    rule: str = "any"           # "all" / "any" / "at_least" (same vocabulary
+    min_legs: int = 1           # as ScenarioSpec.satisfaction_rule)
+    label: str = ""             # the article's own name for the group
+
+
+@dataclass
 class ScenarioSpec:
     name: str                   # "base" / "bull" / "bear" / "tail_risk"
     probability: int            # percentage (e.g. 45)
@@ -108,6 +125,10 @@ class ScenarioSpec:
     #   "at_least" - at least `min_legs` legs
     satisfaction_rule: str = "any"
     min_legs: int = 1
+    # The same trigger list, kept as the article's own bullet groups. Empty for
+    # articles that state a flat leg list; when present it is authoritative and
+    # `satisfaction_rule` applies ACROSS groups rather than across legs.
+    trigger_groups: list[TriggerGroup] = field(default_factory=list)
     # Conditions the article states OUTSIDE the leg list: an independent
     # mandatory condition ("CPI 発表後の終値でも条件が残っていること"), a veto,
     # or an execution-date limit. They are prose rather than levels, so a

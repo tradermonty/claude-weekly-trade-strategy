@@ -576,6 +576,25 @@ class TestYieldTriggers:
             "extreme": 4.60,
         }
 
+    def test_combined_10y_5y_row_header(self) -> None:
+        """2026-09-07 blog uses '10Y / 5Y 利回り' (belly-led week); any
+        secondary tenor in the row header must be tolerated, otherwise
+        yield_triggers is empty and verify_plan #15 fails."""
+        from trading.layer2.tools.strategy_parser import _parse_yield_triggers
+
+        text = (
+            "| **10Y / 5Y 利回り** | **4.780% / 4.540%** (9/4。週間 **10Y +5.0bp / 5Y +6.0bp**) "
+            "| 4.11% / 4.36% / 4.50% / 4.60% 極限 / **4.708% (拒否権、成立中)** "
+            "/ **4.806% (最重要、+2.6bp)** / 5年 **4.60% (+6.0bp)** | note |\n"
+        )
+        triggers = _parse_yield_triggers(text)
+        assert triggers == {
+            "lower": 4.11,
+            "warning": 4.36,
+            "red_line": 4.50,
+            "extreme": 4.60,
+        }
+
 
 # ---------------------------------------------------------------------------
 # Breadth
@@ -1254,3 +1273,106 @@ class TestTriggerLabelVariants:
             + "**アクション (合計 100%)**: コア 30%\n"
         )
         assert _parse_trigger_list(block) == []
+
+
+class TestBlockBoundariesAndLabelVariants:
+    """Regressions found on the 2026-09-21 article.
+
+    All three passed every mechanical gate in place at the time, and all
+    three changed what the downstream plan believed about a scenario.
+    """
+
+    def _parse(self, body: str):
+        from trading.layer2.tools.strategy_parser import _parse_scenarios
+        return _parse_scenarios(body)
+
+    def test_hissu_trigger_label_is_not_dropped(self) -> None:
+        """"必須トリガー" is a trigger label.
+
+        Requiring the bold to open on "トリガー" parsed the Risk-On
+        scenario to ZERO legs -- read downstream as "no conditions".
+        """
+        body = (
+            "### シナリオ 2 (Risk-On): 部分復元 — 筆者推定 **16%**\n\n"
+            "**必須トリガー (これ単独で執行、CSV データ点ベース)**: "
+            "**Breadth 生値 57.88% 超を CSV 2データ点連続**\n\n"
+        )
+        sc = self._parse(body)["bull"]
+        assert len(sc.triggers) == 1
+        assert "57.88" in sc.triggers[0]
+
+    def test_hokyou_zairyou_legs_are_not_folded_into_the_or(self) -> None:
+        """"補強材料 (単独では執行しません)" must stay out of the leg list.
+
+        Folded into an "any" list each of those legs becomes sufficient on
+        its own, so a bare VIX 14.00 close fires a restoration the article
+        explicitly refuses to execute on.
+        """
+        body = (
+            "### シナリオ 2 (Risk-On): 部分復元 — 筆者推定 **16%**\n\n"
+            "**必須トリガー (これ単独で執行)**: "
+            "**Breadth 生値 57.88% 超を CSV 2データ点連続**\n"
+            "**補強材料 (単独では執行しません)**: Uptrend Ratio **16.49% 超** / "
+            "NDX **30,839.1 終値上抜け** / VIX **14.00 を終値で下回る**\n\n"
+        )
+        sc = self._parse(body)["bull"]
+        assert len(sc.triggers) == 1, sc.triggers
+        assert not any("14.00" in t for t in sc.triggers)
+        assert not any("16.49" in t for t in sc.triggers)
+
+    def test_last_scenario_stops_at_the_next_section(self) -> None:
+        """The last scenario block ran to EOF, so Tail Risk absorbed the
+        closing summary and took a "gate" out of it."""
+        body = (
+            "### シナリオ 4 (Tail Risk): 同時進行 — 筆者推定 **10%**\n\n"
+            "**トリガー (2脚の AND)**: VIX **23超を終値2日連続**\n\n"
+            "## まとめ\n\n"
+            "**拒否権3本はすべて成立中**: 10年債の解除距離は -30.2bp へ拡大。\n"
+        )
+        sc = self._parse(body)["tail_risk"]
+        assert sc.gates == [], sc.gates
+
+    def test_inline_bold_in_prose_is_not_a_gate(self) -> None:
+        """"③**拒否権3本がすべて成立中**で、..." is prose, not a declaration.
+
+        Read as a gate it is permanently unevaluated, which pins the
+        scenario to "cannot fire" for a reason absent from the article.
+        """
+        body = (
+            "### シナリオ 2 (Risk-On): 部分復元 — 筆者推定 **16%**\n\n"
+            "**必須トリガー (これ単独で執行)**: Breadth 生値 **57.88% 超**\n\n"
+            "**16% に抑える理由は4つ**です。③**拒否権3本がすべて成立中**で、"
+            "最も遠い 10年債は解除まで **-30.2bp** あります。\n\n"
+        )
+        sc = self._parse(body)["bull"]
+        assert sc.gates == [], sc.gates
+
+    def test_a_real_gate_declaration_still_parses(self) -> None:
+        """Line-start label + colon is the form the articles actually use."""
+        body = (
+            "### シナリオ 2 (Risk-On): 部分復元 — 筆者推定 **16%**\n\n"
+            "**トリガー**: Breadth 生値 **57.88% 超**\n"
+            "**必ず満たす条件**: FOMC 通過後の終値2本で条件が維持されていること\n\n"
+        )
+        sc = self._parse(body)["bull"]
+        assert len(sc.gates) == 1
+        assert "FOMC" in sc.gates[0]
+
+
+def test_group_needing_more_legs_than_parsed_stays_unsatisfiable() -> None:
+    """A label that demands more legs than were parsed must not fire on the rest.
+
+    Downgrading "3本成立" with two parsed legs to "all of them" let two legs
+    authorise a scenario the article requires three for.
+    """
+    from trading.layer2.tools.strategy_parser import _parse_trigger_groups
+
+    block = (
+        "**トリガー (下記いずれか)**:\n"
+        "- **単日確定系 (1本成立)**: SPX **7,636.4 終値割れ** / 10年債 **5.000% 終値上抜け**\n"
+        "- **CSV 系 (3本成立)**: Uptrend Ratio **12.57% 割れ** / Breadth 生値 **50% 割れ**\n"
+    )
+    groups = _parse_trigger_groups(block)
+    csv = next(g for g in groups if g.label.startswith("CSV"))
+    assert len(csv.legs) == 2
+    assert (csv.rule, csv.min_legs) == ("at_least", 3)
