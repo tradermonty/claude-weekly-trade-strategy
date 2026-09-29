@@ -558,6 +558,93 @@ def test_check_21_rejects_gaps_of_the_wrong_type():
     assert _run21(ps) is False
 
 
+# --- #17 timing rules for CSV-settled legs ----------------------------------
+# A CSV data point is final once published, so the builder decides Breadth /
+# Uptrend legs in the pre-market run too. #17 used to apply the live-quote rule
+# ("pre-market never says 達成, met_close stays None") to them and failed every
+# pre-market plan whose article carried a CSV leg.
+
+FIXTURE_0914 = ROOT / "scripts/tests/fixtures/plan_state/2026-09-14-weekly-strategy.md"
+
+
+def _run17(ps):
+    result = vp.verify(ps, {}, {})
+    return {c["num"]: c for c in result.checks}[17]
+
+
+def _premarket_0914():
+    """Pre-market plan_state for the 9/14 fixture, which carries CSV legs."""
+    import dataclasses
+    from trading.layer2.tools.strategy_parser import parse_blog
+
+    spec = parse_blog(FIXTURE_0914)
+    scen = {name: dataclasses.asdict(sc) for name, sc in spec.scenarios.items()}
+    market = {
+        "vix": {"price": 16.07, "prev_close": 15.80},
+        "sp500": {"price": 7684.5, "prev_close": 7700.1},
+        "dow": {"price": 51481.5, "prev_close": 51600.0},
+        "russell": {"price": 2950.0, "prev_close": 2960.0},
+        "oil": {"price": 92.6, "prev_close": 91.0},
+        "us10y": {"value": 5.24, "prev_close": 5.17},
+        "us30y": {"value": 5.49, "prev_close": 5.45},
+    }
+    breadth = {
+        "breadth_200ma": 63.03, "breadth_8ma": 52.59, "uptrend_ratio": 13.85,
+        "breadth_50_raw": 26.35, "breadth_raw": 47.70,
+        "prev_uptrend_ratio": 14.10, "prev_breadth_raw": 49.90,
+        "prev_breadth_50_raw": 29.34, "prev_breadth_8ma": 53.0,
+    }
+    tds = bps._compute_trigger_distance(
+        scen, market, breadth, "pre-market", date(2026, 9, 15))
+    return {"meta": {"timing": "pre-market", "date": "2026-09-15"},
+            "analysis": {"trigger_distances": tds}}
+
+
+def _csv_legs(ps):
+    return [e for d in ps["analysis"]["trigger_distances"]
+            for e in d["trigger_distances"]
+            if e.get("indicator") in vp._CSV_SETTLED_INDICATORS]
+
+
+def test_17_premarket_csv_legs_may_be_decided():
+    ps = _premarket_0914()
+    # The fixture must actually exercise a decided CSV leg, or this passes
+    # vacuously.
+    assert any(e.get("met_close") is not None for e in _csv_legs(ps))
+    check = _run17(ps)
+    assert check["status"] == "PASS", check
+
+
+def test_17_builder_csv_labels_are_known_to_the_verifier():
+    # Every Breadth / Uptrend leg the builder decides in pre-market must carry
+    # a label the verifier recognises; an unknown label would silently fall
+    # back to the live-quote rules and fail every pre-market plan again.
+    # "Uptrend Ratio Color" is excluded on purpose: the builder keeps its
+    # pre-market verdict in met_current_quote, i.e. under the live-quote rules.
+    ps = _premarket_0914()
+    labels = {e.get("indicator") for d in ps["analysis"]["trigger_distances"]
+              for e in d["trigger_distances"]
+              if any(k in (e.get("indicator") or "") for k in ("Breadth", "Uptrend"))
+              and e.get("indicator") != "Uptrend Ratio Color"}
+    assert labels and labels <= vp._CSV_SETTLED_INDICATORS, labels
+
+
+def test_17_premarket_live_quote_still_cannot_say_achieved():
+    ps = _premarket_0914()
+    leg = next(e for d in ps["analysis"]["trigger_distances"]
+               for e in d["trigger_distances"]
+               if e.get("indicator") == "VIX" and e.get("is_price_trigger"))
+    leg["progress"] = "達成"
+    assert _run17(ps)["status"] == "FAIL"
+
+
+def test_17_premarket_csv_leg_with_a_value_must_be_decided():
+    ps = _premarket_0914()
+    leg = next(e for e in _csv_legs(ps) if e.get("current") is not None)
+    leg["met_close"] = None
+    assert _run17(ps)["status"] == "FAIL"
+
+
 # The runner must stay at the END of this file: CI executes it with
 # `python <file>`, and it enumerates globals() when it runs, so any test
 # defined below it would never execute.

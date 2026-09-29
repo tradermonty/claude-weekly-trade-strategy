@@ -69,6 +69,17 @@ def _safe_float(val) -> Optional[float]:
         return None
 
 
+# Indicators whose legs are judged on a published CSV data point rather than
+# on a live quote (check #17). Kept here, independent of the builder's own
+# list, so a leg the builder misclassifies still fails the timing rules.
+_CSV_SETTLED_INDICATORS = frozenset({
+    "Uptrend Ratio",
+    "Breadth-50 Raw",
+    "Breadth Raw vs EMA(8)",
+    "Breadth Raw (200MA basis)",
+})
+
+
 def _exact_match(plan_val, source_val, label: str) -> tuple[bool, str]:
     """Check exact match between plan_state and source values."""
     pv = _safe_float(plan_val)
@@ -299,6 +310,10 @@ def verify(plan_state: dict, market_json: dict, breadth_json: dict) -> Verificat
             tb = td.get("time_basis", "")
             req = td.get("required_days", 1)
             is_price = td.get("is_price_trigger", False)
+            # A CSV data point is settled once published, so it is decided at
+            # either timing; only a live quote must wait for the close.
+            leg_settled = is_official or (
+                is_price and td.get("indicator") in _CSV_SETTLED_INDICATORS)
 
             # Rule A: weekly_close must NOT say "達成" unless Friday post-market
             if tb == "weekly_close" and "達成" in progress:
@@ -310,29 +325,32 @@ def verify(plan_state: dict, market_json: dict, breadth_json: dict) -> Verificat
                             f"weekly '{td['trigger'][:25]}' says '達成' on non-Fri or pre-market"
                         )
 
-            # Rule B: pre-market must NEVER say "達成" for price triggers
-            if not is_official and is_price and "達成" in progress:
+            # Rule B: pre-market must NEVER say "達成" for live price triggers
+            if not leg_settled and is_price and "達成" in progress:
                 semantic_ok = False
                 semantic_errors.append(
                     f"pre-market '{td['trigger'][:25]}' says '達成' (closing not confirmed)"
                 )
 
-            # Rule C: consecutive-day trigger must show N/M format (post-market)
-            if req > 1 and td.get("met_close") is not None and is_official:
+            # Rule C: consecutive-day trigger must show N/M format once settled
+            if req > 1 and td.get("met_close") is not None and leg_settled:
                 if f"/{req}日" not in progress and "条件充足" not in progress:
                     semantic_ok = False
                     semantic_errors.append(
                         f"consecutive '{td['trigger'][:25]}' missing N/{req}日: '{progress}'"
                     )
 
-            # Rule D: met_close consistency with timing
+            # Rule D: met_close is decided exactly when the leg is settled. A
+            # settled leg with a value but no verdict was never evaluated.
             if is_price:
-                if is_official and td.get("met_close") is None:
+                if (leg_settled and td.get("met_close") is None
+                        and (is_official or td.get("current") is not None)):
                     semantic_ok = False
                     semantic_errors.append(
-                        f"post-market '{td['trigger'][:25]}' has met_close=None"
+                        f"{'post-market' if is_official else 'CSV'} "
+                        f"'{td['trigger'][:25]}' has met_close=None"
                     )
-                if not is_official and td.get("met_close") is not None:
+                if not leg_settled and td.get("met_close") is not None:
                     semantic_ok = False
                     semantic_errors.append(
                         f"pre-market '{td['trigger'][:25]}' has met_close={td.get('met_close')}"
