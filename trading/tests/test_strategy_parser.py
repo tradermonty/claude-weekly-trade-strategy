@@ -1357,3 +1357,22 @@ class TestBlockBoundariesAndLabelVariants:
         sc = self._parse(body)["bull"]
         assert len(sc.gates) == 1
         assert "FOMC" in sc.gates[0]
+
+
+def test_group_needing_more_legs_than_parsed_stays_unsatisfiable() -> None:
+    """A label that demands more legs than were parsed must not fire on the rest.
+
+    Downgrading "3本成立" with two parsed legs to "all of them" let two legs
+    authorise a scenario the article requires three for.
+    """
+    from trading.layer2.tools.strategy_parser import _parse_trigger_groups
+
+    block = (
+        "**トリガー (下記いずれか)**:\n"
+        "- **単日確定系 (1本成立)**: SPX **7,636.4 終値割れ** / 10年債 **5.000% 終値上抜け**\n"
+        "- **CSV 系 (3本成立)**: Uptrend Ratio **12.57% 割れ** / Breadth 生値 **50% 割れ**\n"
+    )
+    groups = _parse_trigger_groups(block)
+    csv = next(g for g in groups if g.label.startswith("CSV"))
+    assert len(csv.legs) == 2
+    assert (csv.rule, csv.min_legs) == ("at_least", 3)

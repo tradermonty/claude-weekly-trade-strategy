@@ -8,6 +8,7 @@ act on the strategy.
 
 from __future__ import annotations
 
+import logging
 import re
 from pathlib import Path
 from typing import Optional
@@ -18,6 +19,8 @@ from trading.data.models import (
     TradingLevel,
     TriggerGroup,
 )
+
+logger = logging.getLogger(__name__)
 
 
 # ---------------------------------------------------------------------------
@@ -879,11 +882,17 @@ def _parse_trigger_groups(block: str) -> list[TriggerGroup]:
         if not legs:
             continue
         rule, min_legs = _group_rule_from_label(label)
-        # A group cannot require more legs than it lists. Trusting the label
-        # over the legs would make the group permanently unsatisfiable, which
-        # reads as "never fires" rather than as the parse error it is.
+        # A label that demands more legs than were parsed means legs were lost
+        # in parsing. Keep the article's count so the group cannot fire: firing
+        # on "all of the legs we happened to parse" would authorise a scenario
+        # on fewer conditions than the article requires. Log it so the lost
+        # legs surface as a parse error instead of a silent "never fires".
         if rule == "at_least" and min_legs > len(legs):
-            rule, min_legs = "all", 0
+            logger.warning(
+                "Trigger group %r requires %d legs but only %d were parsed; "
+                "the group is kept unsatisfiable (fail-closed)",
+                label, min_legs, len(legs),
+            )
         groups.append(TriggerGroup(legs=legs, rule=rule, min_legs=min_legs,
                                    label=label))
     return groups if len(groups) > 1 else []

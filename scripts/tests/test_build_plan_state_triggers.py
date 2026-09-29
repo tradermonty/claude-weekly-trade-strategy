@@ -754,26 +754,6 @@ def test_audit_reports_a_count_mismatch_it_cannot_resolve():
     assert audit["gaps"], "2 article blocks vs 1 parsed scenario must not pass"
 
 
-# The runner must stay at the END of this file: CI executes it with
-# `python <file>`, and it enumerates globals() when it runs, so any test
-# defined below it would never execute.
-if __name__ == "__main__":
-    tests = [v for k, v in sorted(globals().items())
-             if k.startswith("test_") and callable(v)]
-    passed = failed = 0
-    for fn in tests:
-        try:
-            fn()
-            print(f"PASS: {fn.__name__}")
-            passed += 1
-        except AssertionError as e:
-            print(f"FAIL: {fn.__name__}: {e}")
-            failed += 1
-        except Exception as e:
-            print(f"ERROR: {fn.__name__}: {type(e).__name__}: {e}")
-            failed += 1
-    print(f"\n{passed} passed, {failed} failed")
-    sys.exit(1 if failed else 0)
 
 
 # --- grouped triggers (2026-09-14) -----------------------------------------
@@ -1071,3 +1051,33 @@ def test_intraday_oil_route_uses_the_live_quote():
            if e["indicator"] == "WTI Oil" and e.get("route") == "intraday_partner"]
     assert oil and oil[0]["condition_met"] is True, blk["trigger_distances"]
     assert blk["scenario_satisfied"] is True
+
+
+def test_group_short_of_its_label_count_never_fires():
+    # The parser keeps "3本成立" even when only two legs were parsed. With both
+    # parsed legs met, the group must still not be satisfied.
+    group = {"rule": "at_least", "min_legs": 3}
+    legs = [{"condition_met": True}, {"condition_met": True}]
+    assert bps._evaluate_group(group, legs)["satisfied"] is False
+
+
+# The runner must stay at the END of this file: CI executes it with
+# `python <file>`, and it enumerates globals() when it runs, so any test
+# defined below it would never execute.
+if __name__ == "__main__":
+    tests = [v for k, v in sorted(globals().items())
+             if k.startswith("test_") and callable(v)]
+    passed = failed = 0
+    for fn in tests:
+        try:
+            fn()
+            print(f"PASS: {fn.__name__}")
+            passed += 1
+        except AssertionError as e:
+            print(f"FAIL: {fn.__name__}: {e}")
+            failed += 1
+        except Exception as e:
+            print(f"ERROR: {fn.__name__}: {type(e).__name__}: {e}")
+            failed += 1
+    print(f"\n{passed} passed, {failed} failed")
+    sys.exit(1 if failed else 0)
