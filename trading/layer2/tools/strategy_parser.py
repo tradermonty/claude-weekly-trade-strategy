@@ -1351,10 +1351,12 @@ _YIELD_THRESHOLDS = re.compile(
 # Combined row headers like "10Y / 30Y 利回り" or "10Y / 5Y 利回り" are tolerated
 # (any secondary tenor); thresholds are read
 # from the 3rd cell so the combined current-value cell (4.750% / 5.270%) is skipped.
-# The cell may open with a label before the first level, e.g. "標準 4.11% / ..."
-# (2026-09-28), so a digit-free, slash-free prefix is skipped.
+# The cell may open with the label "標準" before the first level (2026-09-28:
+# "標準 4.11% / ..."). Only that label is skipped: accepting any prefix would
+# also read an "運用 4.708% / 5.000% / ..." cell of operating levels as the
+# standard ladder.
 _YIELD_THRESHOLDS_SLASH = re.compile(
-    r"\*?\*?10Y(?:\s*/\s*\d+Y)?\s*利回り\*?\*?\s*\|[^|]*\|\s*[^|/\d]*"
+    r"\*?\*?10Y(?:\s*/\s*\d+Y)?\s*利回り\*?\*?\s*\|[^|]*\|\s*(?:\*?\*?標準\*?\*?\s*)?"
     r"\*?\*?(\d+\.\d+)%?[^/|]*?/\s*"
     r"\*?\*?(\d+\.\d+)%?[^/|]*?/\s*"
     r"\*?\*?(\d+\.\d+)%?[^/|]*?/\s*"

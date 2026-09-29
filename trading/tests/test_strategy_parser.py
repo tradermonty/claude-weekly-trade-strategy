@@ -636,6 +636,19 @@ class TestYieldTriggers:
             "extreme": 4.60,
         }
 
+    def test_operating_levels_cell_is_not_read_as_the_ladder(self) -> None:
+        """Only the "標準" label may precede the ladder. An "運用" cell lists the
+        article's operating levels; reading it as the standard ladder would
+        replace 4.11/4.36/4.50/4.60 with unrelated thresholds.
+        """
+        from trading.layer2.tools.strategy_parser import _parse_yield_triggers
+
+        text = (
+            "| **10Y / 30Y 利回り** | **4.750% / 5.270%** "
+            "| 運用 4.708% / 5.000% / 5.228% / 5.400% | note |\n"
+        )
+        assert _parse_yield_triggers(text) == {}
+
 
 # ---------------------------------------------------------------------------
 # Breadth
