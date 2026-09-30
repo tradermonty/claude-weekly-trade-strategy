@@ -1939,6 +1939,25 @@ def build_plan_state(
     return plan_state
 
 
+def _output_path_allowed(path: str) -> bool:
+    """Check --output against DAP_ALLOWED_OUTPUT_DIRS (os.pathsep separated).
+
+    The unattended runner sets the variable so this script, which it is allowed
+    to run, cannot be pointed at a repository file. Unset means no restriction
+    (interactive use). Paths are resolved first, so "../" and symlinks cannot
+    step outside an allowed directory.
+    """
+    allowed = os.environ.get("DAP_ALLOWED_OUTPUT_DIRS")
+    if not allowed:
+        return True
+    target = os.path.realpath(path)
+    for root in filter(None, allowed.split(os.pathsep)):
+        root = os.path.realpath(root)
+        if os.path.commonpath([target, root]) == root:
+            return True
+    return False
+
+
 def main():
     parser = argparse.ArgumentParser(
         description="Build plan_state.json for daily action plan"
@@ -1975,6 +1994,13 @@ def main():
     )
 
     args = parser.parse_args()
+
+    if args.output and not _output_path_allowed(args.output):
+        print(
+            f"ERROR: --output {args.output} is outside DAP_ALLOWED_OUTPUT_DIRS",
+            file=sys.stderr,
+        )
+        sys.exit(2)
 
     # Parse date override
     today = date.today()
