@@ -57,7 +57,17 @@ python3 .claude/skills/daily-action-plan/scripts/verify_plan.py \
 ```
 
 - `PASS` → Continue to Step 5.
-- `FAIL` → Display errors. Investigate and fix if possible, otherwise stop.
+- `FAIL` → Display errors and investigate the cause, but **never modify code,
+  tests, skills, blogs or any other repository file** to make a check pass.
+  This run is unattended and its tool permissions are restricted to
+  `reports/`, `/tmp` and auto memory. Instead:
+  1. Continue to Step 5 and put the failed checks, their cause and their effect
+     on today's judgement at the top of the plan, so the reader sees them first.
+  2. If the cause looks like a parser or builder bug, describe it (file,
+     function, failing input) in the plan and record it in auto memory as an
+     unfixed issue. A human fixes it through a reviewed PR.
+  3. Stop only when the failure makes the plan's judgement unreliable (e.g.
+     prices or allocations cannot be trusted) and say so in the plan.
 
 ### Step 5: Generate Action Plan
 
@@ -187,5 +197,5 @@ reports/YYYY-MM-DD/daily-action-plan-{pre|post}.md
 | Breadth CSV fetch fails | Retry once, then stop |
 | No blog found | Print error, stop |
 | Blog parse fails | Print error with details, stop |
-| verify_plan.py FAIL | Show failed checks, investigate |
-| Self-check mismatch | Auto-correct, re-verify (max 3) |
+| verify_plan.py FAIL | Show failed checks, investigate, report in the plan. Never edit code (see Step 4) |
+| Self-check mismatch | Auto-correct the plan text only, re-verify (max 3) |

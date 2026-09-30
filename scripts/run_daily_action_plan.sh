@@ -104,15 +104,61 @@ fi
 # --- Run Claude with the daily-action-plan skill ---
 PROMPT="Run daily-action-plan --timing $TIMING"
 
-log "Invoking: claude -p '$PROMPT'"
+# The unattended run must not change the repository. It may only write the
+# plan (reports/), the pipeline's scratch JSON (/tmp) and its auto memory.
+# --setting-sources project keeps user/local allow rules (e.g. a broad
+# "Bash(python3:*)") from widening this list, and dontAsk denies anything
+# not listed. Only Edit(path) rules gate file writes (they cover Write too).
+MEMORY_DIR="$HOME/.claude/projects/$(echo "$PROJECT_ROOT" | sed 's|/|-|g')/memory"
+ALLOWED_TOOLS=(
+    "Read" "Glob" "Grep" "Skill" "WebSearch" "WebFetch"
+    # Read-only FMP market data (daily historical is canonical for WTI / GC)
+    "mcp__claude_ai_FMP"
+    "Edit(reports/**)" "Edit(//tmp/**)" "Edit(//private/tmp/**)"
+    "Edit(/${MEMORY_DIR}/**)"   # "//abs/path" = absolute path in rule syntax
+    "Bash(python3 scripts/fetch_market_close.py:*)"
+    "Bash(python3 .claude/skills/breadth-chart-analyst/scripts/fetch_breadth_csv.py:*)"
+    "Bash(python3 .claude/skills/daily-action-plan/scripts/build_plan_state.py:*)"
+    "Bash(python3 .claude/skills/daily-action-plan/scripts/verify_plan.py:*)"
+    "Bash(mkdir -p reports/:*)"
+    "Bash(date:*)" "Bash(cal:*)" "Bash(ls:*)"
+    "Bash(TZ=Asia/Tokyo date:*)" "Bash(TZ=America/New_York date:*)"
+)
+DISALLOWED_TOOLS=(
+    "Bash(git add:*)" "Bash(git commit:*)" "Bash(git push:*)"
+    "Bash(git checkout:*)" "Bash(git reset:*)" "Bash(git stash:*)"
+    "Edit(trading/**)" "Edit(scripts/**)" "Edit(.claude/**)"
+    "Edit(blogs/**)" "Edit(CLAUDE.md)"
+)
+
+# Anything outside reports/ and logs/ that changes during the run is a
+# repository change the run was not allowed to make.
+repo_state() {
+    git -C "$PROJECT_ROOT" status --porcelain --untracked-files=all -- . \
+        ':(exclude)reports' ':(exclude)logs' 2>/dev/null || true
+}
+REPO_BEFORE="$(repo_state)"
+
+log "Invoking: claude -p '$PROMPT' (restricted tools)"
 log "--- Claude output start ---"
 
 "$CLAUDE_BIN" -p "$PROMPT" \
-    --allowedTools "Bash,Read,Write,Edit,Glob,Grep,Skill,Agent,WebSearch,WebFetch" \
+    --setting-sources project \
+    --permission-mode dontAsk \
+    --allowedTools "${ALLOWED_TOOLS[@]}" \
+    --disallowedTools "${DISALLOWED_TOOLS[@]}" \
     2>&1 | tee -a "$LOG_FILE"
 
 EXIT_CODE=${PIPESTATUS[0]}
 log "--- Claude output end (exit=$EXIT_CODE) ---"
+
+REPO_AFTER="$(repo_state)"
+REPO_CHANGED=""
+if [ "$REPO_BEFORE" != "$REPO_AFTER" ]; then
+    REPO_CHANGED="$(diff <(echo "$REPO_BEFORE") <(echo "$REPO_AFTER") | grep '^>' || true)"
+    log "WARNING: the run changed repository files outside reports/ and logs/:"
+    echo "$REPO_CHANGED" | tee -a "$LOG_FILE"
+fi
 
 # --- Verify output was created ---
 REPORT_DIR="$PROJECT_ROOT/reports/$DATE"
@@ -124,6 +170,22 @@ fi
 
 if [ -f "$EXPECTED" ]; then
     log "Output created: $EXPECTED"
+
+    # Surface an unexpected repository change in the e-mailed plan itself.
+    if [ -n "$REPO_CHANGED" ]; then
+        {
+            echo ""
+            echo "---"
+            echo ""
+            echo "## 警告: 自動実行がリポジトリのファイルを変更しました"
+            echo ""
+            echo "自動実行はコードを変更しない設定です。以下の変更を確認してください。"
+            echo ""
+            echo '```'
+            echo "$REPO_CHANGED"
+            echo '```'
+        } >> "$EXPECTED"
+    fi
 
     # --- Send email notification (non-blocking) ---
     log "Sending email notification..."
