@@ -1058,14 +1058,18 @@ def test_output_path_confined_to_allowed_dirs(tmp_path=None):
     # usable to write a repository file when DAP_ALLOWED_OUTPUT_DIRS is set.
     import os
     import tempfile
+    # Two sibling directories under one temp base, so the test does not depend
+    # on where the platform puts temp files (/tmp on Linux CI, /var on macOS).
     base = Path(tempfile.mkdtemp())
     allowed = base / "reports"
+    scratch = base / "scratch"
     allowed.mkdir()
+    scratch.mkdir()
     old = os.environ.get("DAP_ALLOWED_OUTPUT_DIRS")
-    os.environ["DAP_ALLOWED_OUTPUT_DIRS"] = f"/tmp{os.pathsep}{allowed}"
+    os.environ["DAP_ALLOWED_OUTPUT_DIRS"] = f"{scratch}{os.pathsep}{allowed}"
     try:
         assert bps._output_path_allowed(str(allowed / "plan_state.json"))
-        assert bps._output_path_allowed("/tmp/plan_state.json")
+        assert bps._output_path_allowed(str(scratch / "plan_state.json"))
         assert not bps._output_path_allowed(str(base / "trading" / "x.json"))
         # "../" must not step out of an allowed directory
         assert not bps._output_path_allowed(str(allowed / ".." / "x.json"))
