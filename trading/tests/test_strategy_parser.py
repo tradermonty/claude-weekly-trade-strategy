@@ -540,6 +540,27 @@ class TestVixTriggers:
             "panic": 26.0,
         }
 
+    def test_ladder_row_wins_over_earlier_price_level_row(self) -> None:
+        """2026-09-28 blog carries a 買い/売り水準 VIX row before the
+        マーケット状況 ladder row. Taking the first row dropped risk_on 17 and
+        verify_plan #14 failed.
+        """
+        text = (
+            "| **VIX** | **14.00 (-5.85%)** "
+            "| **16.00 (+7.60%)** / **20.00 (+34.50%)** / **23.00 (+54.67%)** "
+            "/ 26.00 (+74.85%) | 週中高値 16.57 |\n"
+            "| **VIX** | **14.87** (週 +0.41%) "
+            "| 14.00 (-5.85%) / **16.00 (+7.60%)** / 17 / **20.00 (+34.50%、警戒)** "
+            "/ **23.00 (+54.67%、Tail 脚1)** / 26.00 (ザラ場即時扱い) | note |\n"
+        )
+
+        assert _parse_vix_triggers(text) == {
+            "risk_on": 17.0,
+            "caution": 20.0,
+            "stress": 23.0,
+            "panic": 26.0,
+        }
+
 
 # ---------------------------------------------------------------------------
 # Yield triggers
@@ -594,6 +615,39 @@ class TestYieldTriggers:
             "red_line": 4.50,
             "extreme": 4.60,
         }
+
+    def test_threshold_cell_opening_label(self) -> None:
+        """2026-09-28 blog opens the threshold cell with a label ('標準 4.11%')
+        because every standard level was already breached. A cell that does not
+        start with a digit left yield_triggers empty and verify_plan #15 failed.
+        """
+        from trading.layer2.tools.strategy_parser import _parse_yield_triggers
+
+        text = (
+            "| **10Y / 2Y 利回り** | **5.170% / 4.810%** (9/25。週間 **10Y +16.0bp**) "
+            "| 標準 4.11% / 4.36% / 4.50% / 4.60% 極限 (すべて上抜け済み、参照のみ) "
+            "／ 運用 **4.708% (拒否権、-46.2bp)** / **5.228% (警戒、+5.8bp)** | note |\n"
+        )
+        triggers = _parse_yield_triggers(text)
+        assert triggers == {
+            "lower": 4.11,
+            "warning": 4.36,
+            "red_line": 4.50,
+            "extreme": 4.60,
+        }
+
+    def test_operating_levels_cell_is_not_read_as_the_ladder(self) -> None:
+        """Only the "標準" label may precede the ladder. An "運用" cell lists the
+        article's operating levels; reading it as the standard ladder would
+        replace 4.11/4.36/4.50/4.60 with unrelated thresholds.
+        """
+        from trading.layer2.tools.strategy_parser import _parse_yield_triggers
+
+        text = (
+            "| **10Y / 30Y 利回り** | **4.750% / 5.270%** "
+            "| 運用 4.708% / 5.000% / 5.228% / 5.400% | note |\n"
+        )
+        assert _parse_yield_triggers(text) == {}
 
 
 # ---------------------------------------------------------------------------

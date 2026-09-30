@@ -1289,17 +1289,28 @@ _VIX_POSITIONAL_KEYS = ("risk_on", "caution", "stress", "panic")
 
 
 def _parse_vix_threshold_levels(text: str) -> list[float]:
-    """Return every numeric level listed in the VIX threshold cell, in order."""
-    m = _VIX_THRESHOLD_CELL.search(text)
-    if not m:
-        return []
+    """Return every numeric level listed in the VIX threshold cell, in order.
 
-    levels: list[float] = []
-    for segment in m.group(1).split("/"):
-        num = _VIX_LEVEL_IN_SEGMENT.search(segment)
-        if num:
-            levels.append(float(num.group()))
-    return levels
+    An article carries more than one VIX row: the 買い/売り水準 table lists price
+    levels, the マーケット状況 table lists the regime ladder. Taking the first row
+    dropped rungs the ladder row did carry (2026-09-28: risk_on 17). Score each
+    VIX row by how much of the standard ladder it holds and keep the richest.
+    """
+    ladder_values = {level for _, level in _VIX_LADDER}
+    best: list[float] = []
+    best_score = -1
+
+    for m in _VIX_THRESHOLD_CELL.finditer(text):
+        levels: list[float] = []
+        for segment in m.group(1).split("/"):
+            num = _VIX_LEVEL_IN_SEGMENT.search(segment)
+            if num:
+                levels.append(float(num.group()))
+        score = len(ladder_values & set(levels))
+        if score > best_score:
+            best, best_score = levels, score
+
+    return best
 
 
 def _parse_vix_triggers(text: str) -> dict[str, float]:
@@ -1340,8 +1351,12 @@ _YIELD_THRESHOLDS = re.compile(
 # Combined row headers like "10Y / 30Y 利回り" or "10Y / 5Y 利回り" are tolerated
 # (any secondary tenor); thresholds are read
 # from the 3rd cell so the combined current-value cell (4.750% / 5.270%) is skipped.
+# The cell may open with the label "標準" before the first level (2026-09-28:
+# "標準 4.11% / ..."). Only that label is skipped: accepting any prefix would
+# also read an "運用 4.708% / 5.000% / ..." cell of operating levels as the
+# standard ladder.
 _YIELD_THRESHOLDS_SLASH = re.compile(
-    r"\*?\*?10Y(?:\s*/\s*\d+Y)?\s*利回り\*?\*?\s*\|[^|]*\|\s*"
+    r"\*?\*?10Y(?:\s*/\s*\d+Y)?\s*利回り\*?\*?\s*\|[^|]*\|\s*(?:\*?\*?標準\*?\*?\s*)?"
     r"\*?\*?(\d+\.\d+)%?[^/|]*?/\s*"
     r"\*?\*?(\d+\.\d+)%?[^/|]*?/\s*"
     r"\*?\*?(\d+\.\d+)%?[^/|]*?/\s*"
