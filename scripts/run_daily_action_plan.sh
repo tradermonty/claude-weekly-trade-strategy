@@ -133,6 +133,9 @@ DISALLOWED_TOOLS=(
 
 # build_plan_state.py is allowed to run and takes --output; this confines it.
 export DAP_ALLOWED_OUTPUT_DIRS="/tmp:/private/tmp:$PROJECT_ROOT/reports"
+# Importing the allowed scripts would otherwise write __pycache__/*.pyc into
+# the repository.
+export PYTHONDONTWRITEBYTECODE=1
 
 # Anything outside reports/ and logs/ that changes during the run is a
 # repository change the run was not allowed to make. Hash every file git
