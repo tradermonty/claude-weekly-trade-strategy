@@ -131,13 +131,37 @@ DISALLOWED_TOOLS=(
     "Edit(blogs/**)" "Edit(CLAUDE.md)"
 )
 
+# build_plan_state.py is allowed to run and takes --output; this confines it.
+export DAP_ALLOWED_OUTPUT_DIRS="/tmp:/private/tmp:$PROJECT_ROOT/reports"
+
 # Anything outside reports/ and logs/ that changes during the run is a
-# repository change the run was not allowed to make.
+# repository change the run was not allowed to make. Hash every file git
+# reports as changed or untracked, plus the ignored files that matter, so a
+# file already dirty before the run is still caught if it changes again.
+WATCHED_IGNORED=(".env" ".claude/settings.local.json")
 repo_state() {
-    git -C "$PROJECT_ROOT" status --porcelain --untracked-files=all -- . \
-        ':(exclude)reports' ':(exclude)logs' 2>/dev/null || true
+    local f
+    {
+        git -C "$PROJECT_ROOT" status --porcelain -z --no-renames \
+            --untracked-files=all -- . ':(exclude)reports' ':(exclude)logs' \
+            2>/dev/null | tr '\0' '\n' | cut -c4- || true
+        printf '%s\n' "${WATCHED_IGNORED[@]}"
+    } | sort -u | while IFS= read -r f; do
+        [ -n "$f" ] || continue
+        if [ -f "$PROJECT_ROOT/$f" ]; then
+            echo "$(shasum "$PROJECT_ROOT/$f" | cut -d' ' -f1)  $f"
+        else
+            echo "absent  $f"
+        fi
+    done
 }
-REPO_BEFORE="$(repo_state)"
+if command -v git >/dev/null 2>&1; then
+    REPO_DETECT="on"
+    REPO_BEFORE="$(repo_state)"
+else
+    REPO_DETECT="off"
+    log "WARNING: git not found; repository change detection is disabled"
+fi
 
 log "Invoking: claude -p '$PROMPT' (restricted tools)"
 log "--- Claude output start ---"
@@ -152,12 +176,18 @@ log "--- Claude output start ---"
 EXIT_CODE=${PIPESTATUS[0]}
 log "--- Claude output end (exit=$EXIT_CODE) ---"
 
-REPO_AFTER="$(repo_state)"
 REPO_CHANGED=""
-if [ "$REPO_BEFORE" != "$REPO_AFTER" ]; then
-    REPO_CHANGED="$(diff <(echo "$REPO_BEFORE") <(echo "$REPO_AFTER") | grep '^>' || true)"
-    log "WARNING: the run changed repository files outside reports/ and logs/:"
-    echo "$REPO_CHANGED" | tee -a "$LOG_FILE"
+if [ "$REPO_DETECT" = "on" ]; then
+    REPO_AFTER="$(repo_state)"
+    if [ "$REPO_BEFORE" != "$REPO_AFTER" ]; then
+        # Paths whose hash, presence or dirty state differs between the two.
+        REPO_CHANGED="$(diff <(echo "$REPO_BEFORE") <(echo "$REPO_AFTER") \
+            | grep -E '^[<>] ' | sed -E 's/^[<>] [^ ]+  //' | sort -u || true)"
+        log "WARNING: the run changed repository files outside reports/ and logs/:"
+        echo "$REPO_CHANGED" | tee -a "$LOG_FILE"
+    fi
+else
+    REPO_CHANGED="(git が見つからず、変更の検知を実行できませんでした)"
 fi
 
 # --- Verify output was created ---

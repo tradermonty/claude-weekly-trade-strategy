@@ -1053,6 +1053,34 @@ def test_intraday_oil_route_uses_the_live_quote():
     assert blk["scenario_satisfied"] is True
 
 
+def test_output_path_confined_to_allowed_dirs(tmp_path=None):
+    # The unattended runner may execute this script, so --output must not be
+    # usable to write a repository file when DAP_ALLOWED_OUTPUT_DIRS is set.
+    import os
+    import tempfile
+    base = Path(tempfile.mkdtemp())
+    allowed = base / "reports"
+    allowed.mkdir()
+    old = os.environ.get("DAP_ALLOWED_OUTPUT_DIRS")
+    os.environ["DAP_ALLOWED_OUTPUT_DIRS"] = f"/tmp{os.pathsep}{allowed}"
+    try:
+        assert bps._output_path_allowed(str(allowed / "plan_state.json"))
+        assert bps._output_path_allowed("/tmp/plan_state.json")
+        assert not bps._output_path_allowed(str(base / "trading" / "x.json"))
+        # "../" must not step out of an allowed directory
+        assert not bps._output_path_allowed(str(allowed / ".." / "x.json"))
+        assert not bps._output_path_allowed(str(ROOT / "trading" / "x.json"))
+        del os.environ["DAP_ALLOWED_OUTPUT_DIRS"]
+        assert bps._output_path_allowed(str(ROOT / "trading" / "x.json"))
+    finally:
+        import shutil
+        shutil.rmtree(base, ignore_errors=True)
+        if old is None:
+            os.environ.pop("DAP_ALLOWED_OUTPUT_DIRS", None)
+        else:
+            os.environ["DAP_ALLOWED_OUTPUT_DIRS"] = old
+
+
 def test_group_short_of_its_label_count_never_fires():
     # The parser keeps "3本成立" even when only two legs were parsed. With both
     # parsed legs met, the group must still not be satisfied.

@@ -69,6 +69,10 @@ python3 .claude/skills/daily-action-plan/scripts/verify_plan.py \
   3. Stop only when the failure makes the plan's judgement unreliable (e.g.
      prices or allocations cannot be trusted) and say so in the plan.
 
+  Ad-hoc scripts cannot be run in this session. Do arithmetic from the values
+  in `plan_state.json` or by hand, and write nothing to `reports/` except the
+  plan file itself.
+
 ### Step 5: Generate Action Plan
 
 Read `plan_state.json` and generate the action plan document in Japanese.
