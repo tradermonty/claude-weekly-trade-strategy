@@ -586,6 +586,11 @@ def verify(plan_state: dict, market_json: dict, breadth_json: dict) -> Verificat
                 expected = unit_met >= 1
             if rule == "all" and unit_undecided:
                 expected = False
+            # A manual-only leg was never evaluated, so an "all" scenario cannot
+            # have fired on the evaluated legs alone. Recomputing from the
+            # evaluated legs only let #20 agree with the builder's 1/1 verdict.
+            if rule == "all" and not groups and b.get("unevaluated_legs"):
+                expected = False
             # Two things override the leg arithmetic, in both the aggregator and
             # here: an independent condition the article states outside the leg
             # list, and a rule that never reached the aggregator at all.
