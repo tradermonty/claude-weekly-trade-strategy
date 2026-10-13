@@ -252,6 +252,43 @@ def test_an_all_rule_is_not_satisfied_by_one_leg():
     assert _run(ps)[20] is False
 
 
+def _all_scenario_with_a_manual_leg(ps, stored_satisfied):
+    """tail_risk with both evaluated legs met plus one manual-only leg."""
+    leg = "執行前に新しいデータ点で崩れていないかを再確認します。"
+    cov = ps["analysis"]["trigger_coverage"]
+    for blk in ps["analysis"]["trigger_distances"]:
+        if blk["scenario"] == "tail_risk":
+            for e in blk["trigger_distances"]:
+                e["condition_met"] = True
+                e["and_satisfied"] = True
+            blk["source_leg_count"] += 1
+            blk["unevaluated_legs"] = [leg]
+    for g in cov["and_groups"]:
+        if g["group"].startswith("tail_risk"):
+            g["met_count"] = g["leg_count"]
+            g["satisfied"] = True
+    cov["source_leg_total"] += 1
+    cov["per_scenario"]["tail_risk"]["source"] += 1
+    cov["unevaluated"] = {"tail_risk": [leg]}
+    cov["manual_only"] = [leg]
+    rules = cov["scenario_rules"]["tail_risk"]
+    rules["met_leg_count"] = rules["leg_count"]
+    rules["satisfied"] = stored_satisfied
+    return ps
+
+
+def test_an_all_rule_is_not_satisfied_while_a_manual_leg_is_unchecked():
+    """2026-10-13: bull read satisfied on its one evaluated leg while three
+    manual-only legs were never part of the verdict, and #20 agreed."""
+    ps = _all_scenario_with_a_manual_leg(_plan_state(), stored_satisfied=True)
+    assert _run(ps) == {18: True, 19: True, 20: False}
+
+
+def test_an_all_rule_with_a_manual_leg_is_stored_as_not_satisfied():
+    ps = _all_scenario_with_a_manual_leg(_plan_state(), stored_satisfied=False)
+    assert _run(ps) == {18: True, 19: True, 20: True}
+
+
 def _grouped_bear(ps):
     """Rewrite the bear block as the article's own labelled groups.
 

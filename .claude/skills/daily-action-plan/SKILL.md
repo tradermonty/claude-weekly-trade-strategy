@@ -99,8 +99,11 @@ Read `plan_state.json` and generate the action plan document in Japanese.
    ```
    { "rule": "all" | "at_least" | "any", "min_legs": N,
      "leg_count": N, "met_leg_count": N, "undecided_leg_count": N,
-     "satisfied": true|false }
+     "unevaluated_leg_count": N, "satisfied": true|false }
    ```
+   `unevaluated_leg_count` counts legs no branch evaluated, i.e. the
+   `--manual-only-leg` legs. An `all` scenario with any of them is stored as
+   `satisfied: false`. Check those legs by hand before reporting it as fired.
    `rule` comes from the blog's own wording — `all` for 「すべて満たす」, `at_least`
    with `min_legs` for 「2つ以上」, `any` for 「いずれか1つ」. **A scenario with
    five legs and `rule: "all"` has NOT fired on one leg.** Report

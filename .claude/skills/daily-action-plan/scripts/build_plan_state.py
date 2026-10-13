@@ -1462,7 +1462,11 @@ def _compute_trigger_distance(
         else:
             satisfied = False
         # An "all" rule cannot be declared satisfied while a leg is undecided.
-        if rule == "all" and undecided and not groups:
+        # A leg no branch evaluated (declared manual-only) is undecided too:
+        # on 2026-10-13 bull fired on its one evaluated leg of four, so the
+        # three hand-checked legs could fail without changing the verdict.
+        unevaluated_n = len(d.get("unevaluated_legs") or [])
+        if rule == "all" and (undecided or unevaluated_n) and not groups:
             satisfied = False
         if rule_missing:
             satisfied = False
@@ -1483,6 +1487,7 @@ def _compute_trigger_distance(
         d["gates_unevaluated"] = bool(gates)
         d["met_leg_count"] = met
         d["undecided_leg_count"] = sum(1 for f in flags if f is None)
+        d["unevaluated_leg_count"] = unevaluated_n
         d["scenario_satisfied"] = satisfied
 
     return distances
@@ -1883,6 +1888,7 @@ def build_plan_state(
                 "leg_count": len(d["trigger_distances"]),
                 "met_leg_count": d["met_leg_count"],
                 "undecided_leg_count": d["undecided_leg_count"],
+                "unevaluated_leg_count": d["unevaluated_leg_count"],
                 "satisfied": d["scenario_satisfied"],
             }
             for d in trigger_distances
