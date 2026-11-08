@@ -18,6 +18,7 @@ from trading.data.models import (
     StrategySpec,
     TradingLevel,
     TriggerGroup,
+    TriggerPath,
 )
 
 logger = logging.getLogger(__name__)
@@ -323,19 +324,97 @@ _TRIGGER_COLON_WINDOW = 600
 _TRIGGER_BLOCK_END = re.compile(
     r"\n\n|\n##|\n---"
     r"|\n\*\*\s*(?:必須条件|必ず満たす条件|拒否権|補強材料|参考|アクション"
-    r"|想定レンジ|根拠|内容|注)"
+    r"|想定レンジ|根拠|内容|注|トリガー)"
 )
 
 
+# A trigger label that declares itself a further OR route to the scenario:
+# "**トリガー (経路B 株式内部経路、2脚の AND、経路A との OR)**:". It must name a
+# route AND say it is an alternative -- the primary label of the same article
+# reads "(経路A インフレ経路、2脚の AND)", which names a path but is not an
+# alternative to anything. The OR wording varies ("との OR", "と OR", "or",
+# "または", "並列"), and a narrow match silently dropped the route.
+# \b does not separate "と" from "OR" (both are word characters), so the ASCII
+# forms are bounded by "not another Latin letter" instead.
+_OR_WORD = re.compile(
+    r"(?<![A-Za-z])(?:OR|or)(?![A-Za-z])|ＯＲ|または|並列")
+_ALT_PATH_NAME = re.compile(r"経路\s*([A-Za-zＡ-Ｚ0-9０-９])")
+_QUALIFIER_CLAUSE = re.compile(r"[、,，]")
+
+
+def _is_alt_path_label(qualifier: str) -> bool:
+    """Whether a trigger label declares itself an OR route to ANOTHER route.
+
+    It must name a second route as well as an OR word: "(経路A インフレ経路、
+    2脚の AND)" names only itself, and "(経路A、脚1 または 脚2 のいずれか)" uses
+    "または" between its own legs. Neither is an alternative to anything.
+    """
+    names = _ALT_PATH_NAME.findall(qualifier)
+    return len(set(names)) > 1 and bool(_OR_WORD.search(qualifier))
+
+
+def _strip_route_relation(qualifier: str) -> str:
+    """Drop the clauses that relate this route to another one.
+
+    "経路B 株式内部経路、2脚の AND、経路A との OR" -> "経路B 株式内部経路、2脚の AND".
+    Works clause by clause: a pattern spanning clauses swallowed "2脚のAND" when
+    the label was written without spaces, and the route then fired on one leg.
+    """
+    names = _ALT_PATH_NAME.findall(qualifier)
+    own = names[0] if names else None
+    kept = []
+    for clause in _QUALIFIER_CLAUSE.split(qualifier):
+        # A clause naming another route ("経路A との OR", "OR (経路A と並列)",
+        # the "経路A" of "経路A、または") or holding nothing but an OR word
+        # describes the relation, not this route's legs.
+        if any(n != own for n in _ALT_PATH_NAME.findall(clause)):
+            continue
+        if not _OR_WORD.sub("", clause).strip(" ()（）"):
+            continue
+        kept.append(clause)
+    return "、".join(kept)
+
+
+def _trigger_label_roles(block: str) -> tuple[re.Match | None, list[re.Match]]:
+    """(primary label, alternative-route labels) of a scenario block.
+
+    The primary is the first label that is not an OR route. When EVERY label
+    is written as an OR route ("経路A …、経路B との OR" and "経路B …、経路A との
+    OR"), the first one is the primary: otherwise the scenario keeps no primary
+    legs at all and its rule falls back to a bare OR.
+    """
+    labels = list(_SCENARIO_TRIGGER_LABEL.finditer(block))
+    primary = next((m for m in labels if not _is_alt_path_label(m.group(1))), None)
+    if primary is None and labels:
+        primary = labels[0]
+    alts = [m for m in labels
+            if m is not primary and _is_alt_path_label(m.group(1))]
+    return primary, alts
+
+
 def _find_trigger_block(block: str) -> tuple[str, str] | None:
-    """Locate the trigger label and its leg list inside a scenario block.
+    """Locate the PRIMARY trigger label and its leg list inside a scenario block.
 
     Returns (qualifier, legs_text), or None when the block carries no trigger
-    label or no colon introduces the legs.
+    label or no colon introduces the legs. Labels that declare an alternative
+    OR route are skipped; `_find_alt_path_blocks` reads those.
     """
-    m = _SCENARIO_TRIGGER_LABEL.search(block)
-    if not m:
-        return None
+    primary, _ = _trigger_label_roles(block)
+    return _read_trigger_body(block, primary) if primary else None
+
+
+def _find_alt_path_blocks(block: str) -> list[tuple[str, str]]:
+    """(qualifier, legs_text) for every alternative-route trigger label."""
+    out = []
+    for m in _trigger_label_roles(block)[1]:
+        found = _read_trigger_body(block, m)
+        if found:
+            out.append(found)
+    return out
+
+
+def _read_trigger_body(block: str, m: re.Match) -> tuple[str, str] | None:
+    """The leg list introduced by the label match `m`."""
     qualifier = m.group(1)
 
     rest = block[m.end():]
@@ -362,17 +441,23 @@ _RULE_AT_LEAST = re.compile(r"(\d+)\s*(?:つ|本|脚)以上")
 _RULE_EXACT_COUNT = re.compile(r"(\d+)\s*(?:つ|本|脚)成立")
 
 
-def _parse_satisfaction_rule(block: str) -> tuple[str, int]:
+def _parse_satisfaction_rule(
+    block: str, found: tuple[str, str] | None = None,
+) -> tuple[str, int]:
     """Read the scenario's satisfaction rule from its trigger label.
 
     Returns (rule, min_legs) where rule is "all" / "any" / "at_least".
     Defaults to ("any", 1) when the label carries no qualifier, which matches
-    how a bare "**トリガー**:" list has always been read.
+    how a bare "**トリガー**:" list has always been read. `found` selects a
+    label other than the primary one (an alternative route).
     """
-    found = _find_trigger_block(block)
+    if found is None:
+        found = _find_trigger_block(block)
     if not found:
         return "any", 1
-    qualifier = found[0]
+    # "…、経路A との OR" says how this route relates to the other one, not how
+    # its own legs combine; read the rule from the rest of the qualifier.
+    qualifier = _strip_route_relation(found[0])
     at_least = _RULE_AT_LEAST.search(qualifier)
     if at_least:
         return "at_least", int(at_least.group(1))
@@ -629,6 +714,7 @@ def _parse_scenarios(text: str) -> dict[str, ScenarioSpec]:
                 satisfaction_rule=rule, min_legs=min_legs,
                 trigger_groups=_parse_trigger_groups(block),
                 gates=_parse_scenario_gates(block),
+                alternative_paths=_parse_alternative_paths(block),
             )
 
         # Check for inline Tail Risk note (embedded as *Tail Risk（5%）:...*)
@@ -687,6 +773,7 @@ def _parse_scenarios(text: str) -> dict[str, ScenarioSpec]:
                 satisfaction_rule=rule, min_legs=min_legs,
                 trigger_groups=_parse_trigger_groups(block),
                 gates=_parse_scenario_gates(block),
+                alternative_paths=_parse_alternative_paths(block),
             )
         return scenarios
 
@@ -862,14 +949,17 @@ def _split_group_legs(body: str) -> list[str]:
     return out
 
 
-def _parse_trigger_groups(block: str) -> list[TriggerGroup]:
+def _parse_trigger_groups(
+    block: str, found: tuple[str, str] | None = None,
+) -> list[TriggerGroup]:
     """Split a scenario's trigger list into the article's own bullet groups.
 
     Returns [] when the trigger list is a single flat line, which leaves the
     existing flat-leg behaviour untouched for every article that predates the
     grouped form.
     """
-    found = _find_trigger_block(block)
+    if found is None:
+        found = _find_trigger_block(block)
     if not found:
         return []
     groups: list[TriggerGroup] = []
@@ -898,7 +988,31 @@ def _parse_trigger_groups(block: str) -> list[TriggerGroup]:
     return groups if len(groups) > 1 else []
 
 
-def _parse_trigger_list(block: str) -> list[str]:
+def _parse_alternative_paths(block: str) -> list[TriggerPath]:
+    """Every further OR route written under its own trigger label."""
+    paths: list[TriggerPath] = []
+    seen: set[str] = set()
+    for i, found in enumerate(_find_alt_path_blocks(block)):
+        name = _ALT_PATH_NAME.search(found[0])
+        label = f"経路{name.group(1)}" if name else found[0].strip(" ()（）")
+        # The label keys the route's legs downstream; two routes sharing one
+        # would merge their legs into a single verdict.
+        if label in seen:
+            label = f"{label}#{i + 1}"
+        seen.add(label)
+        rule, min_legs = _parse_satisfaction_rule(block, found)
+        paths.append(TriggerPath(
+            label=label,
+            triggers=_parse_trigger_list(block, found),
+            satisfaction_rule=rule, min_legs=min_legs,
+            trigger_groups=_parse_trigger_groups(block, found),
+        ))
+    return paths
+
+
+def _parse_trigger_list(
+    block: str, found: tuple[str, str] | None = None,
+) -> list[str]:
     """Extract trigger strings from a scenario block.
 
     Splits on `+`, `or`, `、` boundaries while requiring whitespace around `+` and
@@ -907,7 +1021,8 @@ def _parse_trigger_list(block: str) -> list[str]:
     name from the previous fragment so downstream consumers can identify the
     underlying asset.
     """
-    found = _find_trigger_block(block)
+    if found is None:
+        found = _find_trigger_block(block)
     triggers: list[str] = []
     if not found:
         return triggers

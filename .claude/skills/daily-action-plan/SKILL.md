@@ -119,6 +119,13 @@ Read `plan_state.json` and generate the action plan document in Japanese.
    with `min_legs` for 「2つ以上」, `any` for 「いずれか1つ」. **A scenario with
    five legs and `rule: "all"` has NOT fired on one leg.** Report
    `met_leg_count / leg_count` and `satisfied`, in that order.
+   A scenario with a second OR route (the 2026-11-09 Tail Risk 「経路B … 経路A
+   との OR」) also carries `primary_satisfied` and `alternative_paths[]`, each
+   with its own `label`, `satisfaction_rule`, `met_leg_count / leg_count` and
+   `satisfied`.
+   `satisfied` is already the OR of the routes. Name the route that fired
+   (「経路B で成立」), and report each route's progress separately — the legs of
+   one route never complete another. Legs of a route carry `path: "<label>"`.
 2. **AND legs within a scenario** (`and_group: "<scenario>#<n>"`) — read
    `analysis.trigger_coverage.and_groups[].satisfied`; each leg also carries
    `and_satisfied`. A group showing `met_count: 1, leg_count: 2,
