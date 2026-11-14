@@ -123,6 +123,67 @@ def _group_verdict(group: dict, legs: list):
     return bool(satisfied)
 
 
+def _route_select(legs: list, group_id, path: str) -> list:
+    """Mirror of build_plan_state._route_legs, kept independent on purpose."""
+    in_group = [e for e in legs if e.get("or_group") == group_id]
+    if path == "close":
+        return [e for e in in_group
+                if e.get("route") not in ("intraday", "intraday_partner")]
+    for tag in ("intraday", "intraday_partner"):
+        tagged = [e for e in in_group if e.get("route") == tag]
+        if tagged:
+            return tagged
+    return in_group
+
+
+def _primary_route_verdicts(rule, min_legs, groups: list, legs: list) -> dict:
+    """Recompute the close / intraday verdicts of a grouped primary path.
+
+    The builder judges a scenario with an intraday route as two whole paths
+    (closing legs, or intraday legs with their partners). Trusting its stored
+    `primary_satisfied` there made this check compare a value with itself.
+    """
+    out = {}
+    for path in ("close", "intraday"):
+        flags = []
+        for g in groups:
+            sel = _route_select(legs, g.get("group"), path)
+            flags.append(_group_verdict(dict(g, leg_total=len(sel)), sel))
+        met = sum(1 for f in flags if f is True)
+        if rule == "all":
+            out[path] = bool(flags) and all(f is True for f in flags)
+        elif rule == "at_least":
+            out[path] = met >= max(min_legs or 0, 1)
+        else:
+            out[path] = met >= 1
+    return out
+
+
+def _rule_verdict(rule, min_legs, groups: list, legs: list):
+    """Independent verdict for one OR route of a scenario (check #20).
+
+    Same arithmetic as the primary path below: the rule applies across the
+    route's groups when it has them, otherwise across its legs. Returns None
+    for a rule name it does not know, which the caller reports as a failure.
+    """
+    if rule not in ("all", "at_least", "any"):
+        return None
+    if not legs:
+        return False
+    if groups:
+        units = [_group_verdict(g, [e for e in legs
+                                    if e.get("or_group") == g.get("group")])
+                 for g in groups]
+    else:
+        units = [e.get("condition_met") for e in legs]
+    met = sum(1 for f in units if f is True)
+    if rule == "all":
+        return bool(units) and all(f is True for f in units)
+    if rule == "at_least":
+        return met >= max(min_legs or 0, 1)
+    return met >= 1
+
+
 def verify(plan_state: dict, market_json: dict, breadth_json: dict) -> VerificationResult:
     """Run all verification checks."""
     result = VerificationResult()
@@ -560,6 +621,29 @@ def verify(plan_state: dict, market_json: dict, breadth_json: dict) -> Verificat
                 rule_ok = False
                 rule_errors.append(f"{name}: unknown rule {rule!r}")
                 continue
+            # Legs of a further OR route carry `path`; the primary path is
+            # judged on the rest, each route on its own legs.
+            paths = b.get("alternative_paths") or []
+            path_labels = {leg.get("path") for leg in legs if leg.get("path")}
+            if path_labels != {p.get("label") for p in paths}:
+                rule_ok = False
+                rule_errors.append(
+                    f"{name}: legs tagged with routes {sorted(path_labels)} but "
+                    f"plan stores {sorted(p.get('label') for p in paths)}")
+            path_ok = []
+            for p in paths:
+                p_legs = [leg for leg in legs if leg.get("path") == p.get("label")]
+                p_expected = _rule_verdict(
+                    p.get("satisfaction_rule"), p.get("min_legs", 1),
+                    p.get("trigger_groups") or [], p_legs)
+                if p_expected is None or bool(p.get("satisfied")) != p_expected:
+                    rule_ok = False
+                    rule_errors.append(
+                        f"{name}/{p.get('label')}: stored satisfied="
+                        f"{p.get('satisfied')} but its legs give {p_expected}")
+                path_ok.append(bool(p_expected))
+            legs = [leg for leg in legs if not leg.get("path")]
+            flags = [leg.get("condition_met") for leg in legs]
             # When the article states its triggers as labelled groups
             # ("単日確定系 1本" / "CSV系 2本"), the rule applies ACROSS groups
             # and each group is judged by its own count. Collapsing to a flat
@@ -586,6 +670,30 @@ def verify(plan_state: dict, market_json: dict, breadth_json: dict) -> Verificat
                 expected = unit_met >= 1
             if rule == "all" and unit_undecided:
                 expected = False
+            if paths:
+                if b.get("route_verdicts") and groups:
+                    # The builder decides a primary path with an intraday
+                    # route as close-path OR intraday-path; recompute both
+                    # from the legs rather than trusting the stored value.
+                    routes = _primary_route_verdicts(rule, min_legs, groups, legs)
+                    stored_routes = b.get("route_verdicts") or {}
+                    for path_name, v in routes.items():
+                        if bool(stored_routes.get(path_name)) != v:
+                            rule_ok = False
+                            rule_errors.append(
+                                f"{name}: route_verdicts[{path_name}]="
+                                f"{stored_routes.get(path_name)} but legs give {v}")
+                    expected = any(routes.values())
+                if "primary_satisfied" not in b:
+                    rule_ok = False
+                    rule_errors.append(f"{name}: routes stored without primary_satisfied")
+                elif (not (stored.get("gates") or stored.get("rule_missing"))
+                      and bool(b["primary_satisfied"]) != expected):
+                    rule_ok = False
+                    rule_errors.append(
+                        f"{name}: primary_satisfied={b['primary_satisfied']} "
+                        f"but primary legs give {expected}")
+                expected = expected or any(path_ok)
             # Two things override the leg arithmetic, in both the aggregator and
             # here: an independent condition the article states outside the leg
             # list, and a rule that never reached the aggregator at all.
@@ -605,10 +713,11 @@ def verify(plan_state: dict, market_json: dict, breadth_json: dict) -> Verificat
                 rule_errors.append(
                     f"{name}: met_leg_count {stored.get('met_leg_count')} != {met}"
                 )
-            if stored.get("leg_count") != len(legs):
+            all_legs = len(b.get("trigger_distances", []))
+            if stored.get("leg_count") != all_legs:
                 rule_ok = False
                 rule_errors.append(
-                    f"{name}: leg_count {stored.get('leg_count')} != {len(legs)}"
+                    f"{name}: leg_count {stored.get('leg_count')} != {all_legs}"
                 )
 
     # A rule that never reached the aggregator is a broken contract, not an OR.
