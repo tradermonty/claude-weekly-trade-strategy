@@ -28,7 +28,9 @@ bps = _load("bps_alt", ".claude/skills/daily-action-plan/scripts/build_plan_stat
 vp = _load("vp_alt", ".claude/skills/daily-action-plan/scripts/verify_plan.py")
 
 FIXTURES = ROOT / "scripts/tests/fixtures/plan_state"
-BLOG = FIXTURES / "2026-11-09-weekly-strategy.md"
+# Kept outside plan_state/: that folder doubles as the timeline corpus in CI,
+# and this excerpt is not a complete article.
+BLOG = ROOT / "scripts/tests/fixtures/tail_path/2026-11-09-weekly-strategy.md"
 TODAY = date(2026, 11, 10)
 
 
