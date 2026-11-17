@@ -392,7 +392,7 @@ def _check_condition_met(
     for "4.60〜4.708%" is the upper bound — using it as the lower bound made
     every in-range value evaluate as unmet.
     """
-    if value is None:
+    if value is None or target is None:
         return None
     if direction == "below":
         return value < target
@@ -864,6 +864,10 @@ def _apply_csv_freshness(entry: dict, breadth: dict) -> None:
     state = breadth["freshness"][feed]
     entry["data_freshness"] = dict(state)
     reason = "有効な観測値なし" if entry.get("current") is None else None
+    if entry.get("target") is None:
+        reason = "観測日に適用できる閾値なし"
+        for key in ("met_close", "met_current_quote", "met_prev"):
+            entry[key] = None
     if not state["fresh"]:
         reason = describe_freshness(feed, state)
         for key in ("met_close", "met_current_quote", "met_prev"):
@@ -1237,25 +1241,35 @@ def _compute_trigger_distance(
             # series the article treats as its primary internal gauge.
             elif ("UPTREND" in trigger.upper()
                   or "上昇銘柄比率" in trigger):
-                dated_target, is_dated = _dated_threshold(trigger, today)
+                # Each hurdle belongs to the CSV session (ratio_t), which
+                # is normally yesterday in a pre-market report. Comparing that
+                # ratio with today's hurdle can invent or hide a GREEN flip.
+                threshold_day = today
+                if breadth.get("uptrend_date"):
+                    try:
+                        threshold_day = date.fromisoformat(breadth["uptrend_date"])
+                    except (TypeError, ValueError):
+                        pass  # Invalid observation dates are blocked by freshness.
+                dated_target, is_dated = _dated_threshold(trigger, threshold_day)
                 up_m = re.search(r"(\d+(?:\.\d+)?)\s*%", trigger)
-                if is_dated and dated_target is None:
-                    # Per-date hurdles with none for today: no threshold
-                    # applies. Claim nothing, so the fallback below records the
-                    # leg as unevaluated instead of a wrong verdict standing.
+                if is_dated and dated_target is None and "freshness" not in breadth:
+                    # Without session metadata, preserve the primitive
+                    # evaluator's existing unevaluated contract.
                     pass
                 elif is_dated or up_m:
                     target = (
-                        dated_target if dated_target is not None
-                        else float(up_m.group(1))
+                        dated_target if is_dated else float(up_m.group(1))
                     )
                     entry = {
                         "trigger": trigger,
                         "indicator": "Uptrend Ratio",
                         "current": uptrend_ratio,
                         "target": target,
-                        "diff": round(uptrend_ratio - target, 2) if uptrend_ratio is not None else None,
+                        "diff": (round(uptrend_ratio - target, 2)
+                                 if uptrend_ratio is not None and target is not None else None),
                     }
+                    if is_dated:
+                        entry["threshold_date"] = threshold_day.isoformat()
                     _enrich_trigger_entry(
                         entry, trigger, market, "uptrend_ratio", timing, today,
                     )

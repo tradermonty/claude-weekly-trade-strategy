@@ -253,3 +253,51 @@ def test_legacy_json_without_dates_cannot_satisfy_uptrend():
     assert plan["breadth"]["freshness"]["uptrend"]["state"] == "missing"
     assert csv_group(bear(plan))["satisfied"] is None
     assert bear(plan)["scenario_satisfied"] is False
+
+
+@pytest.mark.parametrize("report_day,observed,target,color,met", [
+    ("2026-09-09", "2026-09-08", 23.56, "up", True),
+    ("2026-09-10", "2026-09-09", 24.38, "down", False),
+    ("2026-09-14", "2026-09-11", 22.63, "up", True),
+])
+def test_dated_uptrend_hurdle_uses_observed_session_in_real_plan(
+        report_day, observed, target, color, met):
+    # Includes both false-negative and false-positive independent-review repros,
+    # plus Monday carry-forward where the report date has no listed hurdle.
+    b, _ = observations()
+    b = [b[-1]]
+    b[0].date = observed
+    result = fb.analyze(
+        b, [fb.UptrendData(observed, .24, .20, .01, color)], [],
+        expected=date.fromisoformat(observed))
+    fixture = ROOT / "scripts/tests/fixtures/plan_state/2026-09-07-weekly-strategy.md"
+    plan = bps.build_plan_state("pre-market", {}, asdict(result), str(fixture),
+                                today=date.fromisoformat(report_day))
+    bull = next(d for d in plan["analysis"]["trigger_distances"] if d["scenario"] == "bull")
+    up = next(e for e in bull["trigger_distances"] if e["indicator"] == "Uptrend Ratio")
+    assert up["data_freshness"]["fresh"] is True
+    assert up["threshold_date"] == observed
+    assert up["target"] == target
+    assert up["condition_met"] is met
+    # This fixture's CPI gate still blocks the overall scenario independently.
+    assert bull["scenario_satisfied"] is False
+
+
+@pytest.mark.parametrize("observed,report_day", [("2026-09-04", "2026-09-11"),
+                                                   ("2026-09-14", "2026-09-14")])
+def test_out_of_window_uptrend_observation_stays_explicitly_undecided(observed, report_day):
+    fixture = ROOT / "scripts/tests/fixtures/plan_state/2026-09-07-weekly-strategy.md"
+    # A September 4 row has no hurdle in this September 8-11 article.
+    source = asdict(analysis())
+    source["uptrend_date"] = observed
+    plan = bps.build_plan_state("post-market", {}, source, str(fixture), today=date.fromisoformat(report_day))
+    bull = next(d for d in plan["analysis"]["trigger_distances"] if d["scenario"] == "bull")
+    up = next(e for e in bull["trigger_distances"] if e["indicator"] == "Uptrend Ratio")
+    assert up["threshold_date"] == observed
+    assert up["target"] is None and up["diff"] is None
+    assert up["condition_met"] is None and up["met_close"] is None
+    assert "未判定" in up["progress"]
+    assert bull["scenario_satisfied"] is False
+    checks = {c["num"]: c for c in vp.verify(plan, {}, {}).checks}
+    assert checks[17]["status"] == "PASS", checks[17]
+    assert checks[23]["status"] == "PASS", checks[23]

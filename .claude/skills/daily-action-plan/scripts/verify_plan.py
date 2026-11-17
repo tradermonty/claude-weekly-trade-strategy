@@ -409,7 +409,8 @@ def verify(plan_state: dict, market_json: dict, breadth_json: dict) -> Verificat
             # settled leg with a value but no verdict was never evaluated.
             freshness_blocked = (
                 td.get("data_freshness", {}).get("fresh") is False
-                or ("data_freshness" in td and td.get("current") is None))
+                or ("data_freshness" in td
+                    and (td.get("current") is None or td.get("target") is None)))
             if is_price and not freshness_blocked:
                 if (leg_settled and td.get("met_close") is None
                         and (is_official or td.get("current") is not None)):
@@ -837,6 +838,7 @@ def verify(plan_state: dict, market_json: dict, breadth_json: dict) -> Verificat
                         if td.get("data_freshness") != state:
                             errors.append(f"{feed}: leg freshness mismatch")
                         blocked = (not state["fresh"] or td.get("current") is None
+                                   or td.get("target") is None
                                    or (td.get("required_days", 1) > 1 and not state["consecutive"]))
                         if blocked and td.get("condition_met") is not None:
                             errors.append(f"{feed}: unavailable observation has a verdict")
