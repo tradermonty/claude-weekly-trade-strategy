@@ -101,11 +101,29 @@ if [ "$MARKET_STATUS" = "CLOSED" ]; then
     exit 0
 fi
 
+# --- Per-run scratch directory ---
+# The pipeline's intermediate JSON goes to a fresh directory of its own, not
+# to /tmp at large: git worktrees of this and other repositories live under
+# /private/tmp, and the change detection below only watches this checkout.
+# pwd -P resolves /tmp -> /private/tmp and macOS's /var -> /private/var, so
+# the Edit rule and DAP_ALLOWED_OUTPUT_DIRS name the path tools will resolve.
+DAP_SCRATCH="$(cd "$(mktemp -d "${TMPDIR:-/tmp}/dap.XXXXXX")" && pwd -P)"
+trap 'rm -rf "$DAP_SCRATCH"' EXIT
+REAL_ROOT="$(cd "$PROJECT_ROOT" && pwd -P)"
+case "$DAP_SCRATCH/" in
+    "$REAL_ROOT"/*)
+        log "ERROR: scratch dir $DAP_SCRATCH is inside the repository; set TMPDIR elsewhere."
+        exit 1 ;;
+esac
+export DAP_SCRATCH
+log "Scratch directory: $DAP_SCRATCH"
+
 # --- Run Claude with the daily-action-plan skill ---
-PROMPT="Run daily-action-plan --timing $TIMING"
+PROMPT="Run daily-action-plan --timing $TIMING --scratch-dir $DAP_SCRATCH"
 
 # The unattended run must not change the repository. It may only write the
-# plan (reports/), the pipeline's scratch JSON (/tmp) and its auto memory.
+# plan (reports/), the pipeline's scratch JSON ($DAP_SCRATCH) and its auto
+# memory.
 # --setting-sources project keeps user/local allow rules (e.g. a broad
 # "Bash(python3:*)") from widening this list, and dontAsk denies anything
 # not listed. Only Edit(path) rules gate file writes (they cover Write too).
@@ -114,7 +132,7 @@ ALLOWED_TOOLS=(
     "Read" "Glob" "Grep" "Skill" "WebSearch" "WebFetch"
     # Read-only FMP market data (daily historical is canonical for WTI / GC)
     "mcp__claude_ai_FMP"
-    "Edit(reports/**)" "Edit(//tmp/**)" "Edit(//private/tmp/**)"
+    "Edit(reports/**)" "Edit(/${DAP_SCRATCH}/**)"
     "Edit(/${MEMORY_DIR}/**)"   # "//abs/path" = absolute path in rule syntax
     "Bash(python3 scripts/fetch_market_close.py:*)"
     "Bash(python3 .claude/skills/breadth-chart-analyst/scripts/fetch_breadth_csv.py:*)"
@@ -132,7 +150,7 @@ DISALLOWED_TOOLS=(
 )
 
 # build_plan_state.py is allowed to run and takes --output; this confines it.
-export DAP_ALLOWED_OUTPUT_DIRS="/tmp:/private/tmp:$PROJECT_ROOT/reports"
+export DAP_ALLOWED_OUTPUT_DIRS="$DAP_SCRATCH:$PROJECT_ROOT/reports"
 # Importing the allowed scripts would otherwise write __pycache__/*.pyc into
 # the repository.
 export PYTHONDONTWRITEBYTECODE=1
