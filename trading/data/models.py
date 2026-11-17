@@ -111,6 +111,24 @@ class TriggerGroup:
 
 
 @dataclass
+class TriggerPath:
+    """A second, independent way for a scenario to fire.
+
+    The 2026-11-09 Tail Risk is "(leg 1 AND leg 2) OR (VIX 26超2日 AND Breadth
+    生値 50% 未満2データ点)". The primary path lives on the ScenarioSpec itself;
+    each further path is written under its own trigger label whose qualifier
+    names it as an OR route ("**トリガー (経路B ..., 経路A との OR)**:"). Folding
+    those legs into the primary list would either AND them with path A (never
+    fires) or make every leg sufficient alone (fires on one).
+    """
+    label: str
+    triggers: list[str]
+    satisfaction_rule: str = "any"
+    min_legs: int = 1
+    trigger_groups: list[TriggerGroup] = field(default_factory=list)
+
+
+@dataclass
 class ScenarioSpec:
     name: str                   # "base" / "bull" / "bear" / "tail_risk"
     probability: int            # percentage (e.g. 45)
@@ -134,6 +152,10 @@ class ScenarioSpec:
     # or an execution-date limit. They are prose rather than levels, so a
     # scenario carrying one cannot be declared fired on its price legs alone.
     gates: list[str] = field(default_factory=list)
+    # Further OR routes to the same scenario, each judged on its own rule. The
+    # scenario fires when the primary path OR any of these fires; gates still
+    # apply to the scenario as a whole.
+    alternative_paths: list[TriggerPath] = field(default_factory=list)
 
 
 @dataclass

@@ -43,6 +43,7 @@ _ensure_venv()
 sys.path.insert(0, _PROJECT_ROOT)
 
 from trading.core.holidays import USMarketCalendar
+from trading.core.feed_freshness import expected_session, feed_freshness, describe_freshness
 from trading.layer2.tools.strategy_parser import find_latest_blog, parse_blog
 
 # --- Monty Style Thresholds ---
@@ -391,6 +392,8 @@ def _check_condition_met(
     for "4.60〜4.708%" is the upper bound — using it as the lower bound made
     every in-range value evaluate as unmet.
     """
+    if value is None or target is None:
+        return None
     if direction == "below":
         return value < target
     elif direction == "above":
@@ -842,6 +845,56 @@ def _dated_threshold(trigger: str, today: date) -> tuple[Optional[float], bool]:
     return None, True
 
 
+_CSV_FEEDS = {
+    "Uptrend Ratio": "uptrend", "Uptrend Ratio Color": "uptrend",
+    "Breadth-50 Raw": "breadth", "Breadth Raw vs EMA(8)": "breadth",
+    "Breadth Raw (200MA basis)": "breadth", "Breadth 8MA-200MA": "breadth",
+}
+
+
+def _apply_csv_freshness(entry: dict, breadth: dict) -> None:
+    """Apply the build boundary's session contract before group verdicts.
+
+    Consumes independently recomputed feed metadata from build_plan_state.
+    Values remain visible as reference observations when a verdict is blocked.
+    """
+    feed = _CSV_FEEDS.get(entry.get("indicator"))
+    if feed is None or "freshness" not in breadth:
+        return
+    state = breadth["freshness"][feed]
+    entry["data_freshness"] = dict(state)
+    reason = "有効な観測値なし" if entry.get("current") is None else None
+    if entry.get("target") is None:
+        reason = "観測日に適用できる閾値なし"
+        for key in ("met_close", "met_current_quote", "met_prev"):
+            entry[key] = None
+    if not state["fresh"]:
+        reason = describe_freshness(feed, state)
+        for key in ("met_close", "met_current_quote", "met_prev"):
+            entry[key] = None
+    elif entry.get("required_days", 1) > 1:
+        if not state["consecutive"]:
+            reason = f"連続取引日の観測不足（前回 {state['previous_observation_date'] or '不明'}、必要 {state['expected_previous_session']}）"
+            entry["met_prev"] = None
+        elif entry["indicator"] == "Uptrend Ratio Color":
+            previous = breadth.get("uptrend_color_prev")
+            entry["met_prev"] = previous == "GREEN" if previous in ("GREEN", "RED") else None
+            entry["condition_met"] = (
+                bool(entry.get("condition_met")) and entry["met_prev"]
+                if entry["met_prev"] is not None and entry["required_days"] == 2 else None)
+            if entry["condition_met"] is None:
+                reason = "色の連続観測不足"
+            else:
+                progress_entry = dict(entry, met_close=entry["current"] == "GREEN")
+                entry["progress"] = _build_progress_string(
+                    progress_entry, entry, date.fromisoformat(state["expected_session"]), True)
+    if entry["indicator"] == "Uptrend Ratio Color" and entry.get("current") not in ("GREEN", "RED"):
+        reason = reason or "Uptrend色の有効な観測なし"
+    if reason:
+        entry["condition_met"] = None
+        entry["progress"] = f"未判定（{reason}）"
+
+
 def _compute_trigger_distance(
     scenarios: dict, market: dict, breadth: dict,
     timing: str, today: date, etfs: Optional[dict] = None,
@@ -1186,27 +1239,37 @@ def _compute_trigger_distance(
                 trigger_distances.append(entry)
             # Uptrend Ratio ("Uptrend Ratio 17.81% 割れ"). A leading breadth
             # series the article treats as its primary internal gauge.
-            elif uptrend_ratio is not None and ("UPTREND" in trigger.upper()
-                                                or "上昇銘柄比率" in trigger):
-                dated_target, is_dated = _dated_threshold(trigger, today)
+            elif ("UPTREND" in trigger.upper()
+                  or "上昇銘柄比率" in trigger):
+                # Each hurdle belongs to the CSV session (ratio_t), which
+                # is normally yesterday in a pre-market report. Comparing that
+                # ratio with today's hurdle can invent or hide a GREEN flip.
+                threshold_day = today
+                if breadth.get("uptrend_date"):
+                    try:
+                        threshold_day = date.fromisoformat(breadth["uptrend_date"])
+                    except (TypeError, ValueError):
+                        pass  # Invalid observation dates are blocked by freshness.
+                dated_target, is_dated = _dated_threshold(trigger, threshold_day)
                 up_m = re.search(r"(\d+(?:\.\d+)?)\s*%", trigger)
-                if is_dated and dated_target is None:
-                    # Per-date hurdles with none for today: no threshold
-                    # applies. Claim nothing, so the fallback below records the
-                    # leg as unevaluated instead of a wrong verdict standing.
+                if is_dated and dated_target is None and "freshness" not in breadth:
+                    # Without session metadata, preserve the primitive
+                    # evaluator's existing unevaluated contract.
                     pass
                 elif is_dated or up_m:
                     target = (
-                        dated_target if dated_target is not None
-                        else float(up_m.group(1))
+                        dated_target if is_dated else float(up_m.group(1))
                     )
                     entry = {
                         "trigger": trigger,
                         "indicator": "Uptrend Ratio",
                         "current": uptrend_ratio,
                         "target": target,
-                        "diff": round(uptrend_ratio - target, 2),
+                        "diff": (round(uptrend_ratio - target, 2)
+                                 if uptrend_ratio is not None and target is not None else None),
                     }
+                    if is_dated:
+                        entry["threshold_date"] = threshold_day.isoformat()
                     _enrich_trigger_entry(
                         entry, trigger, market, "uptrend_ratio", timing, today,
                     )
@@ -1350,6 +1413,7 @@ def _compute_trigger_distance(
                 e["and_group"] = and_group
                 e["or_group"] = or_group
                 _apply_route(e, trigger, timing)
+                _apply_csv_freshness(e, breadth)
             if len(trigger_distances) == n_before and or_group:
                 # Keep an unevaluated leg attached to its group so the group's
                 # verdict can stay undecided rather than silently shrinking to
@@ -1490,7 +1554,69 @@ def _compute_trigger_distance(
         d["unevaluated_leg_count"] = unevaluated_n
         d["scenario_satisfied"] = satisfied
 
+        paths = sc.get("alternative_paths") or []
+        if paths:
+            _merge_alternative_paths(
+                d, paths, market, breadth, timing, today, etfs,
+                blocked=bool(gates) or rule_missing,
+            )
+
     return distances
+
+
+def _merge_alternative_paths(
+    d: dict, paths: list, market: dict, breadth: dict,
+    timing: str, today: date, etfs: Optional[dict], blocked: bool,
+) -> None:
+    """Judge each further OR route on its own and fold it into the scenario.
+
+    Each route is evaluated exactly like a scenario of its own, so its legs get
+    the same time-basis, CSV and intraday handling as the primary path. Its legs
+    are then appended to the scenario's list (tagged with `path`) so coverage
+    counts them, and the scenario fires when the primary path OR any route does.
+    Pooling the legs instead would let one route's met leg complete the other's.
+    """
+    name = d["scenario"]
+    d["primary_satisfied"] = d["scenario_satisfied"]
+    d["alternative_paths"] = []
+    any_path = False
+    for p in paths:
+        label = p.get("label") or "alt"
+        key = f"{name}@{label}"
+        sub = {key: {
+            "probability": d.get("probability"),
+            "triggers": p.get("triggers", []),
+            "satisfaction_rule": p.get("satisfaction_rule"),
+            "min_legs": p.get("min_legs"),
+            "trigger_groups": p.get("trigger_groups", []),
+            "gates": [],
+        }}
+        pd = _compute_trigger_distance(sub, market, breadth, timing, today, etfs)[0]
+        for e in pd["trigger_distances"]:
+            e["path"] = label
+        d["trigger_distances"].extend(pd["trigger_distances"])
+        d["source_leg_count"] += pd["source_leg_count"]
+        d["evaluated_leg_count"] += pd["evaluated_leg_count"]
+        d["unevaluated_legs"].extend(pd["unevaluated_legs"])
+        d["alternative_paths"].append({
+            "label": label,
+            "key": key,
+            "satisfaction_rule": pd["satisfaction_rule"],
+            "min_legs": pd["min_legs"],
+            "rule_missing": pd["rule_missing"],
+            "trigger_groups": pd["trigger_groups"],
+            "leg_count": len(pd["trigger_distances"]),
+            "met_leg_count": pd["met_leg_count"],
+            "satisfied": pd["scenario_satisfied"],
+        })
+        any_path = any_path or pd["scenario_satisfied"] is True
+
+    flags = [e.get("condition_met") for e in d["trigger_distances"]]
+    d["met_leg_count"] = sum(1 for f in flags if f)
+    d["undecided_leg_count"] = sum(1 for f in flags if f is None)
+    # Gates and a missing rule bind the scenario as a whole, whichever path.
+    d["scenario_satisfied"] = (
+        False if blocked else bool(d["primary_satisfied"]) or any_path)
 
 
 # --- Source-text audit ------------------------------------------------------
@@ -1506,6 +1632,21 @@ _RAW_SCENARIO_HEADING = re.compile(
     r"^#{2,4}\s*(シナリオ\s*[0-9０-９A-Za-z][^\n]*)$", re.M
 )
 _RAW_TRIGGER_LABEL = re.compile(r"\*\*(?:トリガー(?:条件)?|発動条件|条件)[^*\n]*\*\*")
+# Any bold span that names a route and an alternative ("経路B … 経路A との OR",
+# "経路A と並列", "または"). Deliberately broader than the parser's own match:
+# an audit that reuses the parser's string can only confirm what was parsed.
+_RAW_ALT_PATH_LABEL = re.compile(
+    r"\*\*[^*\n]*経路[^*\n]*"
+    r"(?:(?<![A-Za-z])(?:OR|or)(?![A-Za-z])|ＯＲ|または|並列)[^*\n]*\*\*\s*[:：]"
+)
+# A trigger LABEL is bold text followed by the colon that introduces its legs.
+# The same words also appear bold mid-sentence ("**トリガー条件を 2 日連続で確認
+# 後**", "**発動条件として使います**"); counting those flagged four old articles.
+_RAW_TRIGGER_LABEL_COLON = re.compile(
+    # "必須" etc. only as a prefix of トリガー: "**必須条件**:" is a gate,
+    # which the parser reads separately, not a second trigger list.
+    r"\*\*(?:(?:必須|主要|主|追加)?トリガー(?:条件)?|発動条件|条件)[^*\n]*\*\*\s*[:：]"
+)
 
 # Whether a block STATES conditions, judged without reference to the label:
 # a heading the parser does not know ("**判定基準**:") leaves the legs in the
@@ -1633,6 +1774,31 @@ def _audit_source_triggers(blog_text: str, spec_scenarios: dict) -> dict:
                     "trigger block in the article, 0 legs parsed"
                 ),
             })
+        # Every trigger label, and every bold route-with-OR span outside one, is
+        # a set of conditions the article states. The parser keeps one primary
+        # label plus its OR routes; anything beyond that never reaches the plan.
+        # The 2026-11-09 article first wrote its path B as prose under a bold
+        # label, and every coverage count still matched.
+        trig = list(_RAW_TRIGGER_LABEL_COLON.finditer(block))
+        loose = [m for m in _RAW_ALT_PATH_LABEL.finditer(block)
+                 if not any(t.start() <= m.start() < t.end() for t in trig)]
+        declared = len(trig) + len(loose)
+        parsed_paths = [p for _, sc in candidates
+                        for p in (getattr(sc, "alternative_paths", None) or [])]
+        if declared > 1 + len(parsed_paths):
+            gaps.append({
+                "heading": heading[:70],
+                "reason": (
+                    f"{declared} trigger/OR route label(s) in the article, "
+                    f"1 primary + {len(parsed_paths)} OR route(s) parsed"
+                ),
+            })
+        for p in parsed_paths:
+            if not p.triggers:
+                gaps.append({
+                    "heading": heading[:70],
+                    "reason": f"OR route {p.label}: 0 legs parsed",
+                })
 
     return {
         "applicable": True,
@@ -1787,6 +1953,19 @@ def build_plan_state(
         "uptrend_ratio_prev": _safe_float(breadth_json.get("prev_uptrend_ratio")),
     }
 
+    # Recompute for this report: cached producer freshness can itself be old.
+    expected = expected_session(today, timing)
+    breadth["freshness"] = {
+        feed: feed_freshness(breadth.get(f"{feed}_date"),
+                             breadth.get(f"{feed}_date_prev"), expected)
+        for feed in ("breadth", "uptrend")
+    }
+    breadth["uptrend_color_prev"] = breadth_json.get("prev_uptrend_color")
+    breadth["freshness_summary"] = [
+        describe_freshness(name, state)
+        for name, state in breadth["freshness"].items()
+    ]
+
     # --- Blog data ---
     blog_allocation = spec.current_allocation
     allocation_categories = {}
@@ -1822,6 +2001,22 @@ def build_plan_state(
                 for g in getattr(sc, "trigger_groups", []) or []
             ],
             "gates": list(getattr(sc, "gates", []) or []),
+            # Further OR routes ("経路B ... 経路A との OR"). Dropped here, the
+            # scenario could only ever fire on its primary path.
+            "alternative_paths": [
+                {
+                    "label": p.label,
+                    "triggers": list(p.triggers),
+                    "satisfaction_rule": p.satisfaction_rule,
+                    "min_legs": p.min_legs,
+                    "trigger_groups": [
+                        {"label": g.label, "rule": g.rule,
+                         "min_legs": g.min_legs, "legs": list(g.legs)}
+                        for g in p.trigger_groups
+                    ],
+                }
+                for p in getattr(sc, "alternative_paths", []) or []
+            ],
         }
 
     # Trading levels
@@ -1890,6 +2085,15 @@ def build_plan_state(
                 "undecided_leg_count": d["undecided_leg_count"],
                 "unevaluated_leg_count": d["unevaluated_leg_count"],
                 "satisfied": d["scenario_satisfied"],
+                **({
+                    "primary_satisfied": d["primary_satisfied"],
+                    "alternative_paths": [
+                        {k: p[k] for k in ("label", "satisfaction_rule",
+                                           "min_legs", "leg_count",
+                                           "met_leg_count", "satisfied")}
+                        for p in d["alternative_paths"]
+                    ],
+                } if d.get("alternative_paths") else {}),
             }
             for d in trigger_distances
         },
@@ -1945,6 +2149,25 @@ def build_plan_state(
     return plan_state
 
 
+def _output_path_allowed(path: str) -> bool:
+    """Check --output against DAP_ALLOWED_OUTPUT_DIRS (os.pathsep separated).
+
+    The unattended runner sets the variable so this script, which it is allowed
+    to run, cannot be pointed at a repository file. Unset means no restriction
+    (interactive use). Paths are resolved first, so "../" and symlinks cannot
+    step outside an allowed directory.
+    """
+    allowed = os.environ.get("DAP_ALLOWED_OUTPUT_DIRS")
+    if not allowed:
+        return True
+    target = os.path.realpath(path)
+    for root in filter(None, allowed.split(os.pathsep)):
+        root = os.path.realpath(root)
+        if os.path.commonpath([target, root]) == root:
+            return True
+    return False
+
+
 def main():
     parser = argparse.ArgumentParser(
         description="Build plan_state.json for daily action plan"
@@ -1981,6 +2204,13 @@ def main():
     )
 
     args = parser.parse_args()
+
+    if args.output and not _output_path_allowed(args.output):
+        print(
+            f"ERROR: --output {args.output} is outside DAP_ALLOWED_OUTPUT_DIRS",
+            file=sys.stderr,
+        )
+        sys.exit(2)
 
     # Parse date override
     today = date.today()

@@ -16,6 +16,25 @@ from trading.layer2.tools.strategy_intent import parse_strategy_intent
 logger = logging.getLogger(__name__)
 
 
+def _route_text(rule: str, min_legs: int, groups: list, triggers: list) -> str:
+    """One route's conditions with its combining rule spelled out.
+
+    Grouped routes are written group by group, because the rule applies
+    ACROSS groups while each group is usually an OR of its own legs: printing
+    the flat leg list under "all required" would demand every alternative.
+    """
+    units = ([f"[{g.label}: {' OR '.join(g.legs)}]" if len(g.legs) > 1
+              else f"[{g.label}: {g.legs[0]}]" for g in groups if g.legs]
+             or list(triggers))
+    if not units:
+        return "none"
+    if rule == "all":
+        return " AND ".join(units)
+    if rule == "at_least":
+        return f"at least {min_legs} of: " + "; ".join(units)
+    return " OR ".join(units)
+
+
 class AgentRunner:
     """Runs the Claude agent to interpret strategy and emit intent.
 
@@ -114,10 +133,26 @@ class AgentRunner:
         for name, sc in strategy_spec.scenarios.items():
             alloc_str = ", ".join(f"{s}: {p}%" for s, p in sorted(sc.allocation.items()))
             triggers_str = "; ".join(sc.triggers) if sc.triggers else "none"
+            paths = getattr(sc, "alternative_paths", []) or []
+            if paths:
+                # With an OR route present, each route's own rule must be
+                # visible: an unlabelled "a; b" reads as an OR of legs, which
+                # would make one leg of an AND route look sufficient.
+                triggers_str = _route_text(
+                    sc.satisfaction_rule, sc.min_legs,
+                    sc.trigger_groups, sc.triggers)
             scenarios_section += (
                 f"  {name} ({sc.probability}%): [{alloc_str}] "
                 f"Triggers: {triggers_str}\n"
             )
+            # A further OR route is a second, independent way to fire. Leaving
+            # it out showed the agent only path A, so path B could never fire.
+            for path in paths:
+                scenarios_section += (
+                    f"    OR {path.label}: " + _route_text(
+                        path.satisfaction_rule, path.min_legs,
+                        path.trigger_groups, path.triggers) + "\n"
+                )
 
         strategy_section = (
             f"Blog Date: {strategy_spec.blog_date}\n"

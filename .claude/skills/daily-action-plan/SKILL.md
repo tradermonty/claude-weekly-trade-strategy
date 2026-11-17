@@ -32,7 +32,7 @@ Fetch market data and breadth data in parallel:
 
 ```bash
 python3 scripts/fetch_market_close.py --json > /tmp/dap_market.json
-python3 .claude/skills/breadth-chart-analyst/scripts/fetch_breadth_csv.py --json > /tmp/dap_breadth.json
+python3 .claude/skills/breadth-chart-analyst/scripts/fetch_breadth_csv.py --json --date YYYY-MM-DD --timing {pre-market|post-market} > /tmp/dap_breadth.json
 ```
 
 **CRITICAL**: These scripts must complete successfully. If either fails, report the error and stop.
@@ -42,6 +42,7 @@ python3 .claude/skills/breadth-chart-analyst/scripts/fetch_breadth_csv.py --json
 ```bash
 python3 .claude/skills/daily-action-plan/scripts/build_plan_state.py \
     --timing {pre-market|post-market} \
+    --date YYYY-MM-DD \
     --market-json /tmp/dap_market.json \
     --breadth-json /tmp/dap_breadth.json \
     --output /tmp/plan_state.json
@@ -57,7 +58,21 @@ python3 .claude/skills/daily-action-plan/scripts/verify_plan.py \
 ```
 
 - `PASS` → Continue to Step 5.
-- `FAIL` → Display errors. Investigate and fix if possible, otherwise stop.
+- `FAIL` → Display errors and investigate the cause, but **never modify code,
+  tests, skills, blogs or any other repository file** to make a check pass.
+  This run is unattended and its tool permissions are restricted to
+  `reports/`, `/tmp` and auto memory. Instead:
+  1. Continue to Step 5 and put the failed checks, their cause and their effect
+     on today's judgement at the top of the plan, so the reader sees them first.
+  2. If the cause looks like a parser or builder bug, describe it (file,
+     function, failing input) in the plan and record it in auto memory as an
+     unfixed issue. A human fixes it through a reviewed PR.
+  3. Stop only when the failure makes the plan's judgement unreliable (e.g.
+     prices or allocations cannot be trusted) and say so in the plan.
+
+  Ad-hoc scripts cannot be run in this session. Do arithmetic from the values
+  in `plan_state.json` or by hand, and write nothing to `reports/` except the
+  plan file itself.
 
 ### Step 5: Generate Action Plan
 
@@ -78,6 +93,17 @@ Read `plan_state.json` and generate the action plan document in Japanese.
 7. Phase status from blog must be prominently displayed
 8. Trigger status must use `progress` field from plan_state.json — never manually
    classify as "達成中" for weekly conditions or omit day-count for consecutive conditions
+
+**CSV freshness (MANDATORY)**:
+- Display every line of `breadth.freshness_summary`, including observation date,
+  expected US session and state, separately for Breadth and Uptrend.
+- Values remain last observations for reference. A non-`fresh` feed's dependent
+  ratio/color legs must be shown as 未判定 using stored `progress`; never infer
+  attainment from the displayed value, HTTP 200, or a current independent feed.
+- Consecutive CSV observations must cover the expected and previous exchange
+  sessions. Missing sessions are not bridged after publication resumes.
+- The builder recomputes freshness for the report date/timing even if the input
+  JSON was fetched earlier. Use the same date/timing for fetch and build.
 
 **Pre-market specifics**:
 - Data is extended-hours/pre-market quote; previous close is used for comparison only
@@ -108,6 +134,13 @@ Read `plan_state.json` and generate the action plan document in Japanese.
    with `min_legs` for 「2つ以上」, `any` for 「いずれか1つ」. **A scenario with
    five legs and `rule: "all"` has NOT fired on one leg.** Report
    `met_leg_count / leg_count` and `satisfied`, in that order.
+   A scenario with a second OR route (the 2026-11-09 Tail Risk 「経路B … 経路A
+   との OR」) also carries `primary_satisfied` and `alternative_paths[]`, each
+   with its own `label`, `satisfaction_rule`, `met_leg_count / leg_count` and
+   `satisfied`.
+   `satisfied` is already the OR of the routes. Name the route that fired
+   (「経路B で成立」), and report each route's progress separately — the legs of
+   one route never complete another. Legs of a route carry `path: "<label>"`.
 2. **AND legs within a scenario** (`and_group: "<scenario>#<n>"`) — read
    `analysis.trigger_coverage.and_groups[].satisfied`; each leg also carries
    `and_satisfied`. A group showing `met_count: 1, leg_count: 2,
@@ -190,5 +223,5 @@ reports/YYYY-MM-DD/daily-action-plan-{pre|post}.md
 | Breadth CSV fetch fails | Retry once, then stop |
 | No blog found | Print error, stop |
 | Blog parse fails | Print error with details, stop |
-| verify_plan.py FAIL | Show failed checks, investigate |
-| Self-check mismatch | Auto-correct, re-verify (max 3) |
+| verify_plan.py FAIL | Show failed checks, investigate, report in the plan. Never edit code (see Step 4) |
+| Self-check mismatch | Auto-correct the plan text only, re-verify (max 3) |
