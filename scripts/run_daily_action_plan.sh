@@ -116,7 +116,11 @@ if ! SCRATCH_MADE="$(mktemp -d "${SCRATCH_BASE%/}/dap.XXXXXX")" \
     log "ERROR: cannot create a scratch dir under $SCRATCH_BASE"
     exit 1
 fi
-DAP_SCRATCH="$(cd "$SCRATCH_MADE" && pwd -P)"
+if ! DAP_SCRATCH="$(cd "$SCRATCH_MADE" && pwd -P)" || [ -z "$DAP_SCRATCH" ]; then
+    log "ERROR: cannot resolve the scratch dir $SCRATCH_MADE"
+    rmdir "$SCRATCH_MADE" 2>/dev/null || true
+    exit 1
+fi
 REAL_ROOT="$(cd "$PROJECT_ROOT" && pwd -P)"
 case "$DAP_SCRATCH/" in
     "$REAL_ROOT"/*)
@@ -146,11 +150,13 @@ cleanup_scratch() {
             log "WARNING: could not keep the scratch JSON in $SCRATCH_KEEP"
         fi
     fi
-    rm -rf "$DAP_SCRATCH"
+    # The trap's own status must not replace the run's exit code.
+    rm -rf "$DAP_SCRATCH" || true
 }
 trap cleanup_scratch EXIT
 # Kept copies older than 30 days are pruned; the plans themselves stay in reports/.
-find "$LOG_DIR" -maxdepth 1 -type d -name 'dap-*.d' -mtime +30 -exec rm -rf {} + 2>/dev/null || true
+# The trailing slash makes find descend when logs/ is a symlink.
+find "$LOG_DIR"/ -maxdepth 1 -type d -name 'dap-*.d' -mtime +30 -exec rm -rf {} + 2>/dev/null || true
 export DAP_SCRATCH
 log "Scratch directory: $DAP_SCRATCH"
 
@@ -284,8 +290,14 @@ if [ -f "$EXPECTED" ]; then
     fi
 
     # --- Send email notification (non-blocking) ---
-    log "Sending email notification..."
-    $PYTHON "$PROJECT_ROOT/scripts/send_dap_email.py" "$EXPECTED" 2>&1 | tee -a "$LOG_FILE" || true
+    # A failed run may leave an earlier run's plan or a half-written one; do
+    # not mail it as today's plan (before set +e, a failed run never got here).
+    if [ "$EXIT_CODE" -ne 0 ]; then
+        log "WARNING: claude exited $EXIT_CODE; not e-mailing $EXPECTED"
+    else
+        log "Sending email notification..."
+        $PYTHON "$PROJECT_ROOT/scripts/send_dap_email.py" "$EXPECTED" 2>&1 | tee -a "$LOG_FILE" || true
+    fi
 else
     log "WARNING: Expected output not found: $EXPECTED"
 fi

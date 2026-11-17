@@ -78,6 +78,10 @@ FAKE_CLAUDE = """#!/bin/bash
   echo "OUTDIRS=$DAP_ALLOWED_OUTPUT_DIRS"
   for a in "$@"; do echo "ARG=$a"; done
 } > "$FAKE_RECORD"
+if [ -n "$FAKE_PLAN" ]; then
+  mkdir -p "reports/$(date +%Y-%m-%d)"
+  echo "# plan" > "reports/$(date +%Y-%m-%d)/daily-action-plan-post.md"
+fi
 if [ -z "$FAKE_NO_JSON" ]; then
   echo '{}' > "$DAP_SCRATCH/plan_state.json" || exit 9
 fi
@@ -104,18 +108,21 @@ def fake_project(tmp_path):
     _write_exec(proj / "scripts" / "run_daily_action_plan.sh", RUNNER.read_text())
     _write_exec(proj / ".claude/skills/daily-action-plan/scripts/build_plan_state.py",
                 "print('OPEN')\n")
+    _write_exec(proj / "scripts" / "send_dap_email.py",
+                "import sys\nopen(sys.argv[1] + '.mailed', 'w').write('x')\n")
     _write_exec(tmp_path / "bin" / "claude", FAKE_CLAUDE)
     return proj, tmp_path
 
 
-def _run(proj, tmp_path, fake_exit=0, tmpdir=None, create_tmpdir=True, no_json=False):
+def _run(proj, tmp_path, fake_exit=0, tmpdir=None, create_tmpdir=True, no_json=False,
+         plan=False):
     record = tmp_path / "record.txt"
     tmpdir = str(tmpdir) if tmpdir else str(tmp_path / "tmp")
     if create_tmpdir:
         Path(tmpdir).mkdir(parents=True, exist_ok=True)
     env = dict(os.environ, FMP_API_KEY="dummy", CLAUDE_BIN=str(tmp_path / "bin" / "claude"),
                FAKE_RECORD=str(record), FAKE_EXIT=str(fake_exit), TMPDIR=tmpdir,
-               FAKE_NO_JSON="1" if no_json else "")
+               FAKE_NO_JSON="1" if no_json else "", FAKE_PLAN="1" if plan else "")
     env.pop("DAP_ALLOWED_OUTPUT_DIRS", None)
     proc = subprocess.run([BASH, str(proj / "scripts" / "run_daily_action_plan.sh"),
                            "post-market"], env=env, capture_output=True, text=True,
@@ -177,6 +184,28 @@ def test_runner_survives_a_scratch_dir_it_cannot_create(fake_project):
     assert "cannot create a scratch dir" in proc.stdout
     assert "inside the repository" not in proc.stdout
     assert lines == []
+
+
+def _mailed(proj):
+    return list((proj / "reports").glob("*/daily-action-plan-post.md.mailed"))
+
+
+@needs_bash
+def test_runner_mails_the_plan_after_a_good_run(fake_project):
+    proj, tmp_path = fake_project
+    proc, _, _ = _run(proj, tmp_path, plan=True)
+    assert proc.returncode == 0, proc.stdout + proc.stderr
+    assert _mailed(proj)
+
+
+@needs_bash
+def test_runner_does_not_mail_a_plan_after_a_failed_run(fake_project):
+    """The plan file may be an earlier run's or half-written."""
+    proj, tmp_path = fake_project
+    proc, _, _ = _run(proj, tmp_path, fake_exit=3, plan=True)
+    assert proc.returncode == 3
+    assert not _mailed(proj)
+    assert "not e-mailing" in proc.stdout
 
 
 @needs_bash
