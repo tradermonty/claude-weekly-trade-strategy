@@ -1526,7 +1526,11 @@ def _compute_trigger_distance(
         else:
             satisfied = False
         # An "all" rule cannot be declared satisfied while a leg is undecided.
-        if rule == "all" and undecided and not groups:
+        # A leg no branch evaluated (declared manual-only) is undecided too:
+        # on 2026-10-13 bull fired on its one evaluated leg of four, so the
+        # three hand-checked legs could fail without changing the verdict.
+        unevaluated_n = len(d.get("unevaluated_legs") or [])
+        if rule == "all" and (undecided or unevaluated_n) and not groups:
             satisfied = False
         if rule_missing:
             satisfied = False
@@ -1547,6 +1551,7 @@ def _compute_trigger_distance(
         d["gates_unevaluated"] = bool(gates)
         d["met_leg_count"] = met
         d["undecided_leg_count"] = sum(1 for f in flags if f is None)
+        d["unevaluated_leg_count"] = unevaluated_n
         d["scenario_satisfied"] = satisfied
 
         paths = sc.get("alternative_paths") or []
@@ -1602,6 +1607,9 @@ def _merge_alternative_paths(
             "trigger_groups": pd["trigger_groups"],
             "leg_count": len(pd["trigger_distances"]),
             "met_leg_count": pd["met_leg_count"],
+            # The route's own count: d["unevaluated_legs"] now mixes routes, so
+            # verify needs this to judge the primary path on its own legs.
+            "unevaluated_leg_count": pd["unevaluated_leg_count"],
             "satisfied": pd["scenario_satisfied"],
         })
         any_path = any_path or pd["scenario_satisfied"] is True
@@ -2078,13 +2086,16 @@ def build_plan_state(
                 "leg_count": len(d["trigger_distances"]),
                 "met_leg_count": d["met_leg_count"],
                 "undecided_leg_count": d["undecided_leg_count"],
+                "unevaluated_leg_count": d["unevaluated_leg_count"],
                 "satisfied": d["scenario_satisfied"],
                 **({
                     "primary_satisfied": d["primary_satisfied"],
                     "alternative_paths": [
                         {k: p[k] for k in ("label", "satisfaction_rule",
                                            "min_legs", "leg_count",
-                                           "met_leg_count", "satisfied")}
+                                           "met_leg_count",
+                                           "unevaluated_leg_count",
+                                           "satisfied")}
                         for p in d["alternative_paths"]
                     ],
                 } if d.get("alternative_paths") else {}),

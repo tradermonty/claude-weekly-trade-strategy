@@ -163,16 +163,19 @@ def _primary_route_verdicts(rule, min_legs, groups: list, legs: list) -> dict:
     return out
 
 
-def _rule_verdict(rule, min_legs, groups: list, legs: list):
+def _rule_verdict(rule, min_legs, groups: list, legs: list, unevaluated: int = 0):
     """Independent verdict for one OR route of a scenario (check #20).
 
     Same arithmetic as the primary path below: the rule applies across the
     route's groups when it has them, otherwise across its legs. Returns None
     for a rule name it does not know, which the caller reports as a failure.
+    An ungrouped "all" route with a leg no branch evaluated cannot have fired.
     """
     if rule not in ("all", "at_least", "any"):
         return None
     if not legs:
+        return False
+    if rule == "all" and not groups and unevaluated:
         return False
     if groups:
         units = [_group_verdict(g, [e for e in legs
@@ -643,7 +646,8 @@ def verify(plan_state: dict, market_json: dict, breadth_json: dict) -> Verificat
                 p_legs = [leg for leg in legs if leg.get("path") == p.get("label")]
                 p_expected = _rule_verdict(
                     p.get("satisfaction_rule"), p.get("min_legs", 1),
-                    p.get("trigger_groups") or [], p_legs)
+                    p.get("trigger_groups") or [], p_legs,
+                    int(p.get("unevaluated_leg_count", 0) or 0))
                 if p_expected is None or bool(p.get("satisfied")) != p_expected:
                     rule_ok = False
                     rule_errors.append(
@@ -677,6 +681,17 @@ def verify(plan_state: dict, market_json: dict, breadth_json: dict) -> Verificat
             else:  # "any"
                 expected = unit_met >= 1
             if rule == "all" and unit_undecided:
+                expected = False
+            # A leg no branch evaluated (e.g. manual-only) was never judged, so
+            # an "all" scenario cannot have fired on the evaluated legs alone.
+            # Recomputing from the evaluated legs only let #20 agree with the
+            # builder's 1/1 verdict. The builder appends each OR route's
+            # unevaluated legs to the same list, so count the primary's own;
+            # this must run before the route OR below or it would veto a
+            # scenario that fired through another route.
+            primary_unevaluated = len(b.get("unevaluated_legs") or []) - sum(
+                int(p.get("unevaluated_leg_count", 0) or 0) for p in paths)
+            if rule == "all" and not groups and primary_unevaluated > 0:
                 expected = False
             if paths:
                 if b.get("route_verdicts") and groups:

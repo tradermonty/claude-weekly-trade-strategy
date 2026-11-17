@@ -194,6 +194,22 @@ def test_an_all_scenario_does_not_fire_on_one_leg():
     assert blk["scenario_satisfied"] is False
 
 
+def test_an_all_scenario_does_not_fire_while_a_leg_is_unevaluated():
+    """2026-10-13: bull needed all four legs, three of them manual-only. Only
+    the Uptrend leg was evaluated, so the verdict came out 1/1 satisfied and
+    the three hand-checked legs could fail without changing it."""
+    scen = {"bull": {"probability": 24, "satisfaction_rule": "all", "min_legs": 0,
+                     "triggers": ["生値 45% 以上を CSV 2データ点連続",
+                                  "VIX 17 を終値で上回らない",
+                                  "執行前に新しいデータ点で崩れていないかを再確認します。"]}}
+    blk = bps._compute_trigger_distance(
+        scen, MARKET, BREADTH, "post-market", TODAY)[0]
+    assert blk["unevaluated_legs"], "the fixture needs a leg no branch claims"
+    assert all(e["condition_met"] is True for e in blk["trigger_distances"])
+    assert blk["scenario_satisfied"] is False
+    assert blk["unevaluated_leg_count"] == len(blk["unevaluated_legs"])
+
+
 def test_at_least_rule_needs_its_minimum():
     scen = {"bull": {"probability": 22, "satisfaction_rule": "at_least", "min_legs": 2,
                      "triggers": ["SPX 7,636.4 を終値で維持",

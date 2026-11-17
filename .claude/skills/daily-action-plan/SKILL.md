@@ -125,8 +125,15 @@ Read `plan_state.json` and generate the action plan document in Japanese.
    ```
    { "rule": "all" | "at_least" | "any", "min_legs": N,
      "leg_count": N, "met_leg_count": N, "undecided_leg_count": N,
-     "satisfied": true|false }
+     "unevaluated_leg_count": N, "satisfied": true|false }
    ```
+   `unevaluated_leg_count` counts the primary path's legs that no branch
+   evaluated: the `--manual-only-leg` legs, and also any leg the parser could
+   not read. An ungrouped `all` scenario with any of them is stored as
+   `satisfied: false`; grouped scenarios already count them inside each group,
+   and `at_least` / `any` are unchanged. Each entry of `alternative_paths`
+   carries its own `unevaluated_leg_count` and follows the same rule. Check
+   those legs by hand before reporting the scenario as fired.
    `rule` comes from the blog's own wording — `all` for 「すべて満たす」, `at_least`
    with `min_legs` for 「2つ以上」, `any` for 「いずれか1つ」. **A scenario with
    five legs and `rule: "all"` has NOT fired on one leg.** Report
