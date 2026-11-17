@@ -78,11 +78,16 @@ FAKE_CLAUDE = """#!/bin/bash
   echo "OUTDIRS=$DAP_ALLOWED_OUTPUT_DIRS"
   for a in "$@"; do echo "ARG=$a"; done
 } > "$FAKE_RECORD"
-echo '{}' > "$DAP_SCRATCH/plan_state.json" || exit 9
+if [ -z "$FAKE_NO_JSON" ]; then
+  echo '{}' > "$DAP_SCRATCH/plan_state.json" || exit 9
+fi
 exit "${FAKE_EXIT:-0}"
 """
 
-needs_bash = pytest.mark.skipif(shutil.which("bash") is None or sys.platform == "win32",
+# launchd runs the script through its shebang, /bin/bash, which is 3.2 on
+# macOS. A bash 5 from PATH hid a 3.2-only failure that deleted the project.
+BASH = "/bin/bash" if os.path.exists("/bin/bash") else shutil.which("bash")
+needs_bash = pytest.mark.skipif(BASH is None or sys.platform == "win32",
                                 reason="needs bash")
 
 
@@ -103,14 +108,16 @@ def fake_project(tmp_path):
     return proj, tmp_path
 
 
-def _run(proj, tmp_path, fake_exit=0, tmpdir=None):
+def _run(proj, tmp_path, fake_exit=0, tmpdir=None, create_tmpdir=True, no_json=False):
     record = tmp_path / "record.txt"
     tmpdir = str(tmpdir) if tmpdir else str(tmp_path / "tmp")
-    Path(tmpdir).mkdir(parents=True, exist_ok=True)
+    if create_tmpdir:
+        Path(tmpdir).mkdir(parents=True, exist_ok=True)
     env = dict(os.environ, FMP_API_KEY="dummy", CLAUDE_BIN=str(tmp_path / "bin" / "claude"),
-               FAKE_RECORD=str(record), FAKE_EXIT=str(fake_exit), TMPDIR=tmpdir)
+               FAKE_RECORD=str(record), FAKE_EXIT=str(fake_exit), TMPDIR=tmpdir,
+               FAKE_NO_JSON="1" if no_json else "")
     env.pop("DAP_ALLOWED_OUTPUT_DIRS", None)
-    proc = subprocess.run(["bash", str(proj / "scripts" / "run_daily_action_plan.sh"),
+    proc = subprocess.run([BASH, str(proj / "scripts" / "run_daily_action_plan.sh"),
                            "post-market"], env=env, capture_output=True, text=True,
                           timeout=60)
     lines = record.read_text().splitlines() if record.exists() else []
@@ -154,6 +161,30 @@ def test_runner_keeps_the_json_and_exit_code_when_claude_fails(fake_project):
     assert not os.path.exists(scratch)
     assert list(Path(tmpdir).iterdir()) == []
     assert _kept(proj), "a failed run is exactly when the JSON is needed"
+    assert "Claude output end (exit=3)" in proc.stdout
+
+
+@needs_bash
+def test_runner_survives_a_scratch_dir_it_cannot_create(fake_project):
+    """mktemp failing must stop the run, never point the cleanup at the repo."""
+    proj, tmp_path = fake_project
+    sentinel = proj / "sentinel.txt"
+    sentinel.write_text("keep me")
+    proc, lines, _ = _run(proj, tmp_path, tmpdir=tmp_path / "does-not-exist",
+                          create_tmpdir=False)
+    assert proc.returncode == 1
+    assert sentinel.exists(), "the project must survive a failed mktemp"
+    assert "cannot create a scratch dir" in proc.stdout
+    assert "inside the repository" not in proc.stdout
+    assert lines == []
+
+
+@needs_bash
+def test_runner_warns_when_plan_state_never_reached_the_scratch_dir(fake_project):
+    proj, tmp_path = fake_project
+    proc, _, _ = _run(proj, tmp_path, no_json=True)
+    assert proc.returncode == 0, proc.stdout + proc.stderr
+    assert "plan_state.json was not written" in proc.stdout
 
 
 @needs_bash

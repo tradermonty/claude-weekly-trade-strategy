@@ -108,32 +108,49 @@ fi
 # pwd -P resolves /tmp -> /private/tmp and macOS's /var -> /private/var, so
 # the Edit rule and DAP_ALLOWED_OUTPUT_DIRS name the path tools will resolve.
 SCRATCH_BASE="${TMPDIR:-/tmp}"
-if ! DAP_SCRATCH="$(cd "$(mktemp -d "${SCRATCH_BASE%/}/dap.XXXXXX")" && pwd -P)"; then
+# mktemp runs on its own: nested inside `cd "$(mktemp ...)"`, a failure
+# becomes `cd ""`, which /bin/bash 3.2 (macOS, launchd) accepts as "stay
+# here", and the scratch dir would silently be the repository itself.
+if ! SCRATCH_MADE="$(mktemp -d "${SCRATCH_BASE%/}/dap.XXXXXX")" \
+        || [ -z "$SCRATCH_MADE" ] || [ ! -d "$SCRATCH_MADE" ]; then
     log "ERROR: cannot create a scratch dir under $SCRATCH_BASE"
     exit 1
 fi
-# The JSON is what you inspect when verify FAILs or a plan looks wrong, so
-# keep a copy next to the log (logs/ is outside the change detection) before
-# the directory goes.
-SCRATCH_KEEP="$LOG_DIR/dap-${DATE}-${TIMING}.d"
-cleanup_scratch() {
-    if compgen -G "$DAP_SCRATCH/*.json" >/dev/null; then
-        mkdir -p "$SCRATCH_KEEP" && cp "$DAP_SCRATCH"/*.json "$SCRATCH_KEEP"/ || true
-    fi
-    rm -rf "$DAP_SCRATCH"
-}
-trap cleanup_scratch EXIT
+DAP_SCRATCH="$(cd "$SCRATCH_MADE" && pwd -P)"
 REAL_ROOT="$(cd "$PROJECT_ROOT" && pwd -P)"
 case "$DAP_SCRATCH/" in
     "$REAL_ROOT"/*)
         log "ERROR: scratch dir $DAP_SCRATCH is inside the repository; set TMPDIR elsewhere."
+        rmdir "$SCRATCH_MADE" 2>/dev/null || true
         exit 1 ;;
     *[[:space:]:]*)
         # ":" would split DAP_ALLOWED_OUTPUT_DIRS; whitespace breaks the
         # model's unquoted command arguments.
         log "ERROR: scratch dir '$DAP_SCRATCH' contains whitespace or ':'; set TMPDIR elsewhere."
+        rmdir "$SCRATCH_MADE" 2>/dev/null || true
         exit 1 ;;
 esac
+# The JSON is what you inspect when verify FAILs or a plan looks wrong, so
+# keep a copy next to the log (logs/ is outside the change detection) before
+# the directory goes. Installed only after the checks above, and it refuses
+# anything that is not a dap.* directory outside the repository.
+SCRATCH_KEEP="$LOG_DIR/dap-${DATE}-${TIMING}.d"
+cleanup_scratch() {
+    case "$DAP_SCRATCH" in
+        */dap.??????) ;;
+        *) return 0 ;;
+    esac
+    case "$DAP_SCRATCH/" in "$REAL_ROOT"/*) return 0 ;; esac
+    if compgen -G "$DAP_SCRATCH/*.json" >/dev/null; then
+        if ! { mkdir -p "$SCRATCH_KEEP" && cp "$DAP_SCRATCH"/*.json "$SCRATCH_KEEP"/; }; then
+            log "WARNING: could not keep the scratch JSON in $SCRATCH_KEEP"
+        fi
+    fi
+    rm -rf "$DAP_SCRATCH"
+}
+trap cleanup_scratch EXIT
+# Kept copies older than 30 days are pruned; the plans themselves stay in reports/.
+find "$LOG_DIR" -maxdepth 1 -type d -name 'dap-*.d' -mtime +30 -exec rm -rf {} + 2>/dev/null || true
 export DAP_SCRATCH
 log "Scratch directory: $DAP_SCRATCH"
 
@@ -206,20 +223,23 @@ fi
 log "Invoking: claude -p '$PROMPT' (restricted tools)"
 log "--- Claude output start ---"
 
+# set -e would end the script on a failed claude run before the exit code,
+# the warning below and the change detection are logged.
+set +e
 "$CLAUDE_BIN" -p "$PROMPT" \
     --setting-sources project \
     --permission-mode dontAsk \
     --allowedTools "${ALLOWED_TOOLS[@]}" \
     --disallowedTools "${DISALLOWED_TOOLS[@]}" \
     2>&1 | tee -a "$LOG_FILE"
-
 EXIT_CODE=${PIPESTATUS[0]}
+set -e
 log "--- Claude output end (exit=$EXIT_CODE) ---"
 
 # Writes outside the scratch dir are denied silently under dontAsk, so a run
 # that put its JSON elsewhere only shows up as a missing file here.
 if [ ! -f "$DAP_SCRATCH/plan_state.json" ]; then
-    log "WARNING: $DAP_SCRATCH/plan_state.json was not written; the plan may not rest on build_plan_state output"
+    log "WARNING: $DAP_SCRATCH/plan_state.json was not written (market closed, a fetch failure, or a write that was denied)"
 fi
 
 REPO_CHANGED=""
