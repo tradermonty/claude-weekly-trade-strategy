@@ -32,7 +32,7 @@ Fetch market data and breadth data in parallel:
 
 ```bash
 python3 scripts/fetch_market_close.py --json > /tmp/dap_market.json
-python3 .claude/skills/breadth-chart-analyst/scripts/fetch_breadth_csv.py --json > /tmp/dap_breadth.json
+python3 .claude/skills/breadth-chart-analyst/scripts/fetch_breadth_csv.py --json --date YYYY-MM-DD --timing {pre-market|post-market} > /tmp/dap_breadth.json
 ```
 
 **CRITICAL**: These scripts must complete successfully. If either fails, report the error and stop.
@@ -42,6 +42,7 @@ python3 .claude/skills/breadth-chart-analyst/scripts/fetch_breadth_csv.py --json
 ```bash
 python3 .claude/skills/daily-action-plan/scripts/build_plan_state.py \
     --timing {pre-market|post-market} \
+    --date YYYY-MM-DD \
     --market-json /tmp/dap_market.json \
     --breadth-json /tmp/dap_breadth.json \
     --output /tmp/plan_state.json
@@ -92,6 +93,17 @@ Read `plan_state.json` and generate the action plan document in Japanese.
 7. Phase status from blog must be prominently displayed
 8. Trigger status must use `progress` field from plan_state.json — never manually
    classify as "達成中" for weekly conditions or omit day-count for consecutive conditions
+
+**CSV freshness (MANDATORY)**:
+- Display every line of `breadth.freshness_summary`, including observation date,
+  expected US session and state, separately for Breadth and Uptrend.
+- Values remain last observations for reference. A non-`fresh` feed's dependent
+  ratio/color legs must be shown as 未判定 using stored `progress`; never infer
+  attainment from the displayed value, HTTP 200, or a current independent feed.
+- Consecutive CSV observations must cover the expected and previous exchange
+  sessions. Missing sessions are not bridged after publication resumes.
+- The builder recomputes freshness for the report date/timing even if the input
+  JSON was fetched earlier. Use the same date/timing for fetch and build.
 
 **Pre-market specifics**:
 - Data is extended-hours/pre-market quote; previous close is used for comparison only
