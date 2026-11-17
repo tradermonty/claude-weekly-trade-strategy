@@ -107,12 +107,31 @@ fi
 # /private/tmp, and the change detection below only watches this checkout.
 # pwd -P resolves /tmp -> /private/tmp and macOS's /var -> /private/var, so
 # the Edit rule and DAP_ALLOWED_OUTPUT_DIRS name the path tools will resolve.
-DAP_SCRATCH="$(cd "$(mktemp -d "${TMPDIR:-/tmp}/dap.XXXXXX")" && pwd -P)"
-trap 'rm -rf "$DAP_SCRATCH"' EXIT
+SCRATCH_BASE="${TMPDIR:-/tmp}"
+if ! DAP_SCRATCH="$(cd "$(mktemp -d "${SCRATCH_BASE%/}/dap.XXXXXX")" && pwd -P)"; then
+    log "ERROR: cannot create a scratch dir under $SCRATCH_BASE"
+    exit 1
+fi
+# The JSON is what you inspect when verify FAILs or a plan looks wrong, so
+# keep a copy next to the log (logs/ is outside the change detection) before
+# the directory goes.
+SCRATCH_KEEP="$LOG_DIR/dap-${DATE}-${TIMING}.d"
+cleanup_scratch() {
+    if compgen -G "$DAP_SCRATCH/*.json" >/dev/null; then
+        mkdir -p "$SCRATCH_KEEP" && cp "$DAP_SCRATCH"/*.json "$SCRATCH_KEEP"/ || true
+    fi
+    rm -rf "$DAP_SCRATCH"
+}
+trap cleanup_scratch EXIT
 REAL_ROOT="$(cd "$PROJECT_ROOT" && pwd -P)"
 case "$DAP_SCRATCH/" in
     "$REAL_ROOT"/*)
         log "ERROR: scratch dir $DAP_SCRATCH is inside the repository; set TMPDIR elsewhere."
+        exit 1 ;;
+    *[[:space:]:]*)
+        # ":" would split DAP_ALLOWED_OUTPUT_DIRS; whitespace breaks the
+        # model's unquoted command arguments.
+        log "ERROR: scratch dir '$DAP_SCRATCH' contains whitespace or ':'; set TMPDIR elsewhere."
         exit 1 ;;
 esac
 export DAP_SCRATCH
@@ -196,6 +215,12 @@ log "--- Claude output start ---"
 
 EXIT_CODE=${PIPESTATUS[0]}
 log "--- Claude output end (exit=$EXIT_CODE) ---"
+
+# Writes outside the scratch dir are denied silently under dontAsk, so a run
+# that put its JSON elsewhere only shows up as a missing file here.
+if [ ! -f "$DAP_SCRATCH/plan_state.json" ]; then
+    log "WARNING: $DAP_SCRATCH/plan_state.json was not written; the plan may not rest on build_plan_state output"
+fi
 
 REPO_CHANGED=""
 if [ "$REPO_DETECT" = "on" ]; then

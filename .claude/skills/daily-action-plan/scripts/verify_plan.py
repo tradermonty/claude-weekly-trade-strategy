@@ -6,9 +6,9 @@ data, and that internal blog data is self-consistent.
 
 Usage:
     python3 .claude/skills/daily-action-plan/scripts/verify_plan.py \
-        --plan-state /tmp/plan_state.json \
-        --market-json /tmp/dap_market.json \
-        --breadth-json /tmp/dap_breadth.json
+        --plan-state <scratch>/plan_state.json \
+        --market-json <scratch>/dap_market.json \
+        --breadth-json <scratch>/dap_breadth.json
 """
 
 import argparse

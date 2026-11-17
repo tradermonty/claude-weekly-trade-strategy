@@ -11,9 +11,9 @@ Usage:
     # Full build
     python3 .claude/skills/daily-action-plan/scripts/build_plan_state.py \
         --timing post-market \
-        --market-json /tmp/dap_market.json \
-        --breadth-json /tmp/dap_breadth.json \
-        --output /tmp/plan_state.json
+        --market-json <scratch>/dap_market.json \
+        --breadth-json <scratch>/dap_breadth.json \
+        --output <scratch>/plan_state.json
 """
 
 import argparse

@@ -13,10 +13,13 @@ Generate a daily pre-market or post-market action plan by comparing the latest w
 - `--timing {pre-market|post-market}` (default: auto-detect based on current time)
   - pre-market: Before 9:30 AM ET (23:30 JST winter / 22:30 JST summer)
   - post-market: After 4:00 PM ET (6:00 JST winter / 5:00 JST summer)
-- `--scratch-dir DIR` (default: `/tmp`) — where the intermediate JSON goes.
-  Below, `<scratch>` means this directory. The unattended runner always passes
-  a fresh per-run directory and can write nowhere else outside `reports/` and
-  auto memory, so use exactly the path it gives, never `/tmp`.
+- `--scratch-dir DIR` — where the intermediate JSON goes. Below, `<scratch>`
+  means this directory. **When `--scratch-dir` is given, write the JSON only
+  there and never to `/tmp`**: the unattended runner passes a fresh per-run
+  directory and denies writes anywhere else outside `reports/` and auto memory.
+  Without the argument (interactive use), `<scratch>` is `/tmp`.
+  If a `> <scratch>/...` redirect is denied, run the script without the
+  redirect and save its stdout to the same path with the Write tool.
 
 ## Workflow
 
