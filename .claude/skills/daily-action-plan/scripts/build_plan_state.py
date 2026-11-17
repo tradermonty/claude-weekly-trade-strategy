@@ -1607,6 +1607,9 @@ def _merge_alternative_paths(
             "trigger_groups": pd["trigger_groups"],
             "leg_count": len(pd["trigger_distances"]),
             "met_leg_count": pd["met_leg_count"],
+            # The route's own count: d["unevaluated_legs"] now mixes routes, so
+            # verify needs this to judge the primary path on its own legs.
+            "unevaluated_leg_count": pd["unevaluated_leg_count"],
             "satisfied": pd["scenario_satisfied"],
         })
         any_path = any_path or pd["scenario_satisfied"] is True
@@ -2090,7 +2093,9 @@ def build_plan_state(
                     "alternative_paths": [
                         {k: p[k] for k in ("label", "satisfaction_rule",
                                            "min_legs", "leg_count",
-                                           "met_leg_count", "satisfied")}
+                                           "met_leg_count",
+                                           "unevaluated_leg_count",
+                                           "satisfied")}
                         for p in d["alternative_paths"]
                     ],
                 } if d.get("alternative_paths") else {}),

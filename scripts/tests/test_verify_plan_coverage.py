@@ -30,9 +30,9 @@ bps = importlib.util.module_from_spec(_bspec)
 _bspec.loader.exec_module(bps)
 
 
-def _plan_state():
+def _plan_state(scen=None):
     """A minimal post-market plan_state with one OR leg and one AND pair."""
-    scen = {
+    scen = scen or {
         "bear": {"probability": 28, "satisfaction_rule": "any", "min_legs": 1,
                  "triggers": ["VIX 17超を終値ベースで2日連続"]},
         "tail_risk": {
@@ -68,7 +68,8 @@ def _plan_state():
                                     "evaluated": d["evaluated_leg_count"]}
                     for d in tds
                 },
-                "unevaluated": {},
+                "unevaluated": {d["scenario"]: d["unevaluated_legs"]
+                                for d in tds if d["unevaluated_legs"]},
                 "manual_only": [],
                 "and_groups": and_groups,
                 "scenario_rules": {
@@ -287,6 +288,58 @@ def test_an_all_rule_is_not_satisfied_while_a_manual_leg_is_unchecked():
 def test_an_all_rule_with_a_manual_leg_is_stored_as_not_satisfied():
     ps = _all_scenario_with_a_manual_leg(_plan_state(), stored_satisfied=False)
     assert _run(ps) == {18: True, 19: True, 20: True}
+
+
+_MANUAL_LEG = "執行前に新しいデータ点で崩れていないかを再確認します。"
+
+
+def _ungrouped_all_with_route(primary, route):
+    """tail_risk as an ungrouped "all" primary plus one ungrouped "all" OR route."""
+    return {"tail_risk": {
+        "probability": 10, "satisfaction_rule": "all", "min_legs": 0,
+        "triggers": primary,
+        "alternative_paths": [{"label": "経路B", "satisfaction_rule": "all",
+                               "min_legs": 0, "triggers": route}],
+    }}
+
+
+def test_a_routes_manual_leg_does_not_veto_a_met_primary():
+    """The builder appends the route's unevaluated legs to the scenario's list.
+    #20 must judge the primary on its own legs, or a primary that really fired
+    is reported as broken."""
+    ps = _plan_state(_ungrouped_all_with_route(
+        ["VIX 17 を終値で上回らない"], ["VIX 17 を終値で上回らない", _MANUAL_LEG]))
+    blk = ps["analysis"]["trigger_distances"][0]
+    assert blk["primary_satisfied"] is True
+    assert blk["alternative_paths"][0]["unevaluated_leg_count"] == 1
+    assert blk["alternative_paths"][0]["satisfied"] is False
+    assert _run(ps)[20] is True
+
+
+def test_a_routes_own_manual_leg_keeps_the_route_unfired():
+    """An ungrouped "all" route with a manual leg is stored unfired; #20 must
+    agree instead of recomputing True from the route's evaluated legs."""
+    ps = _plan_state(_ungrouped_all_with_route(
+        ["VIX 17超を終値ベースで2日連続"], ["VIX 17 を終値で上回らない", _MANUAL_LEG]))
+    blk = ps["analysis"]["trigger_distances"][0]
+    assert blk["primary_satisfied"] is False
+    assert blk["alternative_paths"][0]["satisfied"] is False
+    assert _run(ps)[20] is True
+    bad = copy.deepcopy(ps)
+    bad["analysis"]["trigger_distances"][0]["alternative_paths"][0]["satisfied"] = True
+    assert _run(bad)[20] is False
+
+
+def test_a_primary_manual_leg_still_blocks_with_a_route_present():
+    ps = _plan_state(_ungrouped_all_with_route(
+        ["VIX 17 を終値で上回らない", _MANUAL_LEG], ["VIX 17超を終値ベースで2日連続"]))
+    blk = ps["analysis"]["trigger_distances"][0]
+    assert blk["primary_satisfied"] is False
+    assert _run(ps)[20] is True
+    bad = copy.deepcopy(ps)
+    bad["analysis"]["trigger_distances"][0]["primary_satisfied"] = True
+    bad["analysis"]["trigger_coverage"]["scenario_rules"]["tail_risk"]["satisfied"] = True
+    assert _run(bad)[20] is False
 
 
 def _grouped_bear(ps):
