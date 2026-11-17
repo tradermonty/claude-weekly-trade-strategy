@@ -17,6 +17,10 @@ import os
 import sys
 from datetime import date
 from typing import Optional
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[4]))
+from trading.core.feed_freshness import expected_session, feed_freshness
 
 
 class VerificationResult:
@@ -403,7 +407,11 @@ def verify(plan_state: dict, market_json: dict, breadth_json: dict) -> Verificat
 
             # Rule D: met_close is decided exactly when the leg is settled. A
             # settled leg with a value but no verdict was never evaluated.
-            if is_price:
+            freshness_blocked = (
+                td.get("data_freshness", {}).get("fresh") is False
+                or ("data_freshness" in td
+                    and (td.get("current") is None or td.get("target") is None)))
+            if is_price and not freshness_blocked:
                 if (leg_settled and td.get("met_close") is None
                         and (is_official or td.get("current") is not None)):
                     semantic_ok = False
@@ -805,6 +813,41 @@ def verify(plan_state: dict, market_json: dict, breadth_json: dict) -> Verificat
         else (f"{len(gated)} scenario(s) carry one: {sorted(gated)}"
               if gated else "no scenario carries one"),
     )
+
+    # Independently recompute the date contract; cached/edited freshness labels
+    # must not allow an old daily observation to satisfy a trigger.
+    csv = plan_state.get("breadth") or {}
+    if csv:
+        errors = []
+        try:
+            expected = expected_session(date.fromisoformat(plan_date_str), timing)
+            csv_feeds = {
+                "Uptrend Ratio": "uptrend", "Uptrend Ratio Color": "uptrend",
+                "Breadth-50 Raw": "breadth", "Breadth Raw vs EMA(8)": "breadth",
+                "Breadth Raw (200MA basis)": "breadth", "Breadth 8MA-200MA": "breadth",
+            }
+            for feed in ("breadth", "uptrend"):
+                state = feed_freshness(csv.get(f"{feed}_date"),
+                                       csv.get(f"{feed}_date_prev"), expected)
+                if csv.get("freshness", {}).get(feed) != state:
+                    errors.append(f"{feed}: freshness metadata mismatch")
+                for sd in plan_state.get("analysis", {}).get("trigger_distances", []):
+                    for td in sd.get("trigger_distances", []):
+                        if csv_feeds.get(td.get("indicator")) != feed:
+                            continue
+                        if td.get("data_freshness") != state:
+                            errors.append(f"{feed}: leg freshness mismatch")
+                        blocked = (not state["fresh"] or td.get("current") is None
+                                   or td.get("target") is None
+                                   or (td.get("required_days", 1) > 1 and not state["consecutive"]))
+                        if blocked and td.get("condition_met") is not None:
+                            errors.append(f"{feed}: unavailable observation has a verdict")
+                        if not state["fresh"] and any(td.get(k) is not None for k in ("met_close", "met_prev", "met_current_quote")):
+                            errors.append(f"{feed}: stale observation used in comparison")
+        except (TypeError, ValueError) as exc:
+            errors.append(f"invalid report session: {exc}")
+        result.check(23, "CSV session freshness", not errors,
+                     "; ".join(errors) if errors else "all OK")
 
     return result
 

@@ -37,6 +37,9 @@ jobs:
       - name: Run verify_plan coverage gate tests
         run: python scripts/tests/test_verify_plan_coverage.py
 
+      - name: Run CSV session freshness regression tests (Issue 17)
+        run: pytest scripts/tests/test_csv_freshness.py -q
+
   ir-manifest-validator:
     name: IR manifest schema validator
     runs-on: ubuntu-latest

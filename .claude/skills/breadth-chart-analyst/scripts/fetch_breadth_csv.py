@@ -15,10 +15,18 @@ import argparse
 import csv
 import io
 import json
+import math
+from datetime import date
+from pathlib import Path
 import sys
 import urllib.request
 from dataclasses import dataclass, asdict
 from typing import Optional
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[4]))
+from trading.core.feed_freshness import (
+    completed_session, expected_session, feed_freshness, describe_freshness,
+)
 
 # --- Constants ---
 
@@ -108,7 +116,7 @@ class AnalysisResult:
     breadth_trend: str
     # Uptrend
     uptrend_date: str
-    uptrend_ratio: float
+    uptrend_ratio: Optional[float]
     uptrend_color: str
     uptrend_class: str
     uptrend_ma10: float
@@ -124,6 +132,8 @@ class AnalysisResult:
     prev_breadth_50_raw: Optional[float] = None
     prev_uptrend_date: Optional[str] = None
     prev_uptrend_ratio: Optional[float] = None
+    prev_uptrend_color: Optional[str] = None
+    freshness: Optional[dict] = None
 
 
 # --- Classification helpers ---
@@ -264,7 +274,8 @@ def _float_or_none(val) -> Optional[float]:
     val = str(val).strip()
     if val == "" or val.lower() in ("na", "nan", "none", "null"):
         return None
-    return float(val)
+    value = float(val)
+    return value if math.isfinite(value) else None
 
 
 # --- Analysis ---
@@ -282,17 +293,24 @@ def analyze(
     uptrend_rows: list,
     sector_rows: list,
     days: int = 1,
+    expected: Optional[date] = None,
 ) -> AnalysisResult:
     """Analyze the latest breadth data and return structured result."""
+    expected = expected or completed_session()
+    # Repeated dates are revisions, not additional consecutive observations.
+    breadth_rows = sorted({r.date: r for r in breadth_rows}.values(), key=lambda r: r.date)
+    uptrend_rows = sorted({r.date: r for r in uptrend_rows}.values(), key=lambda r: r.date)
     # Latest breadth row(s)
     if not breadth_rows:
         raise ValueError("No breadth data available")
     latest_breadth = breadth_rows[-1]
 
+    # Retain the last valid observation when a newer CSV row is empty.
+    uptrend_rows = [r for r in uptrend_rows
+                    if r.ratio is not None and math.isfinite(r.ratio)]
     # Latest uptrend row(s)
-    if not uptrend_rows:
-        raise ValueError("No uptrend data available")
-    latest_uptrend = uptrend_rows[-1]
+    latest_uptrend = (uptrend_rows[-1] if uptrend_rows
+                      else UptrendData("", None, None, None, None))
 
     b200 = latest_breadth.breadth_200ma
     b8 = latest_breadth.breadth_8ma
@@ -304,9 +322,7 @@ def analyze(
     b8_pct = b8 * 100.0 if b8 <= 1.0 else b8
 
     ratio = latest_uptrend.ratio
-    if ratio is None:
-        raise ValueError(f"Missing uptrend ratio for {latest_uptrend.date}")
-    ratio_pct = ratio * 100.0 if ratio <= 1.0 else ratio
+    ratio_pct = _pct(ratio)
 
     ma10 = latest_uptrend.ma_10
     ma10_pct = (ma10 * 100.0 if ma10 <= 1.0 else ma10) if ma10 is not None else 0.0
@@ -356,6 +372,11 @@ def analyze(
         prev_breadth_8ma=_pct(prev_breadth.breadth_8ma) if prev_breadth else None,
         prev_breadth_50_raw=(
             _pct(prev_breadth.breadth_50_raw) if prev_breadth else None),
+        freshness={
+            "breadth": feed_freshness(latest_breadth.date, prev_breadth.date if prev_breadth else None, expected),
+            "uptrend": feed_freshness(latest_uptrend.date, prev_uptrend.date if prev_uptrend else None, expected),
+        },
+        prev_uptrend_color=uptrend_color(prev_uptrend.trend) if prev_uptrend else None,
         prev_uptrend_date=prev_uptrend.date if prev_uptrend else None,
         prev_uptrend_ratio=_pct(prev_uptrend.ratio) if prev_uptrend else None,
         breadth_date=latest_breadth.date,
@@ -369,9 +390,9 @@ def analyze(
         breadth_50_raw=None if b50_pct is None else round(b50_pct, 2),
         breadth_trend=latest_breadth.trend or "UNKNOWN",
         uptrend_date=latest_uptrend.date,
-        uptrend_ratio=round(ratio_pct, 2),
+        uptrend_ratio=ratio_pct,
         uptrend_color=uptrend_color(latest_uptrend.trend),
-        uptrend_class=classify_uptrend(ratio_pct),
+        uptrend_class=classify_uptrend(ratio_pct) if ratio_pct is not None else "UNKNOWN",
         uptrend_ma10=round(ma10_pct, 2),
         uptrend_slope=round(slope, 4),
         uptrend_trend=latest_uptrend.trend or "UNKNOWN",
@@ -390,6 +411,11 @@ def format_human(result: AnalysisResult) -> str:
     lines.append("=" * 60)
     lines.append("")
 
+    for name, freshness in (result.freshness or {}).items():
+        lines.append(describe_freshness(name, freshness))
+        if not freshness["fresh"]:
+            lines.append("依存条件は未判定（最終観測値は参考表示のみ）")
+    lines.append("")
     # Market Breadth
     lines.append("--- Market Breadth (S&P 500) ---")
     lines.append(
@@ -412,7 +438,7 @@ def format_human(result: AnalysisResult) -> str:
     # Uptrend Ratio
     lines.append("--- Uptrend Ratio (All Markets) ---")
     lines.append(
-        f"Current: {result.uptrend_ratio:.2f}% {result.uptrend_color} "
+        f"Last observation: {result.uptrend_ratio}% {result.uptrend_color} "
         f"({result.uptrend_class})"
     )
     lines.append(
@@ -506,14 +532,19 @@ def main():
         default=1,
         help="Number of recent days to analyze (default: 1)",
     )
+    parser.add_argument("--date", type=date.fromisoformat, help="Report date (US exchange local date)")
+    parser.add_argument("--timing", choices=["pre-market", "post-market"])
     args = parser.parse_args()
+    if bool(args.date) != bool(args.timing):
+        parser.error("--date and --timing must be supplied together")
 
     try:
         breadth_rows = fetch_breadth_data()
         uptrend_rows = fetch_uptrend_data()
         sector_rows = fetch_sector_data()
 
-        result = analyze(breadth_rows, uptrend_rows, sector_rows, days=args.days)
+        result = analyze(breadth_rows, uptrend_rows, sector_rows, days=args.days,
+                         expected=expected_session(args.date, args.timing) if args.date else None)
 
         if args.json:
             print(format_json(result))

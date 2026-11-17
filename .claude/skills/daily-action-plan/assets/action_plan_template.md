@@ -22,7 +22,11 @@
 | Gold(GC) | ${gold} | {gold_change_pct} | |
 | WTI Oil | ${oil} | {oil_change_pct} | |
 
-## Breadth（CSV最新）
+## Breadth（観測日・鮮度）
+
+{freshness_summary}
+
+*各系列の観測日・期待取引日・鮮度を個別表示。fresh 以外の値は参考値で、依存条件は未判定。連続条件には欠けていない取引日の観測が必要。*
 
 | 指標 | 値 | 評価 |
 |------|-----|------|
@@ -75,7 +79,11 @@
 | Gold(GC) | ${gold} | {gold_change} | {gold_change_pct} | |
 | WTI Oil | ${oil} | {oil_change} | {oil_change_pct} | |
 
-## Breadth（CSV最新）
+## Breadth（観測日・鮮度）
+
+{freshness_summary}
+
+*各系列の観測日・期待取引日・鮮度を個別表示。fresh 以外の値は参考値で、依存条件は未判定。連続条件には欠けていない取引日の観測が必要。*
 
 | 指標 | 値 | 評価 |
 |------|-----|------|

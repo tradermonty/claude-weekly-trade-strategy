@@ -43,6 +43,7 @@ _ensure_venv()
 sys.path.insert(0, _PROJECT_ROOT)
 
 from trading.core.holidays import USMarketCalendar
+from trading.core.feed_freshness import expected_session, feed_freshness, describe_freshness
 from trading.layer2.tools.strategy_parser import find_latest_blog, parse_blog
 
 # --- Monty Style Thresholds ---
@@ -391,6 +392,8 @@ def _check_condition_met(
     for "4.60〜4.708%" is the upper bound — using it as the lower bound made
     every in-range value evaluate as unmet.
     """
+    if value is None or target is None:
+        return None
     if direction == "below":
         return value < target
     elif direction == "above":
@@ -842,6 +845,56 @@ def _dated_threshold(trigger: str, today: date) -> tuple[Optional[float], bool]:
     return None, True
 
 
+_CSV_FEEDS = {
+    "Uptrend Ratio": "uptrend", "Uptrend Ratio Color": "uptrend",
+    "Breadth-50 Raw": "breadth", "Breadth Raw vs EMA(8)": "breadth",
+    "Breadth Raw (200MA basis)": "breadth", "Breadth 8MA-200MA": "breadth",
+}
+
+
+def _apply_csv_freshness(entry: dict, breadth: dict) -> None:
+    """Apply the build boundary's session contract before group verdicts.
+
+    Consumes independently recomputed feed metadata from build_plan_state.
+    Values remain visible as reference observations when a verdict is blocked.
+    """
+    feed = _CSV_FEEDS.get(entry.get("indicator"))
+    if feed is None or "freshness" not in breadth:
+        return
+    state = breadth["freshness"][feed]
+    entry["data_freshness"] = dict(state)
+    reason = "有効な観測値なし" if entry.get("current") is None else None
+    if entry.get("target") is None:
+        reason = "観測日に適用できる閾値なし"
+        for key in ("met_close", "met_current_quote", "met_prev"):
+            entry[key] = None
+    if not state["fresh"]:
+        reason = describe_freshness(feed, state)
+        for key in ("met_close", "met_current_quote", "met_prev"):
+            entry[key] = None
+    elif entry.get("required_days", 1) > 1:
+        if not state["consecutive"]:
+            reason = f"連続取引日の観測不足（前回 {state['previous_observation_date'] or '不明'}、必要 {state['expected_previous_session']}）"
+            entry["met_prev"] = None
+        elif entry["indicator"] == "Uptrend Ratio Color":
+            previous = breadth.get("uptrend_color_prev")
+            entry["met_prev"] = previous == "GREEN" if previous in ("GREEN", "RED") else None
+            entry["condition_met"] = (
+                bool(entry.get("condition_met")) and entry["met_prev"]
+                if entry["met_prev"] is not None and entry["required_days"] == 2 else None)
+            if entry["condition_met"] is None:
+                reason = "色の連続観測不足"
+            else:
+                progress_entry = dict(entry, met_close=entry["current"] == "GREEN")
+                entry["progress"] = _build_progress_string(
+                    progress_entry, entry, date.fromisoformat(state["expected_session"]), True)
+    if entry["indicator"] == "Uptrend Ratio Color" and entry.get("current") not in ("GREEN", "RED"):
+        reason = reason or "Uptrend色の有効な観測なし"
+    if reason:
+        entry["condition_met"] = None
+        entry["progress"] = f"未判定（{reason}）"
+
+
 def _compute_trigger_distance(
     scenarios: dict, market: dict, breadth: dict,
     timing: str, today: date, etfs: Optional[dict] = None,
@@ -1186,27 +1239,37 @@ def _compute_trigger_distance(
                 trigger_distances.append(entry)
             # Uptrend Ratio ("Uptrend Ratio 17.81% 割れ"). A leading breadth
             # series the article treats as its primary internal gauge.
-            elif uptrend_ratio is not None and ("UPTREND" in trigger.upper()
-                                                or "上昇銘柄比率" in trigger):
-                dated_target, is_dated = _dated_threshold(trigger, today)
+            elif ("UPTREND" in trigger.upper()
+                  or "上昇銘柄比率" in trigger):
+                # Each hurdle belongs to the CSV session (ratio_t), which
+                # is normally yesterday in a pre-market report. Comparing that
+                # ratio with today's hurdle can invent or hide a GREEN flip.
+                threshold_day = today
+                if breadth.get("uptrend_date"):
+                    try:
+                        threshold_day = date.fromisoformat(breadth["uptrend_date"])
+                    except (TypeError, ValueError):
+                        pass  # Invalid observation dates are blocked by freshness.
+                dated_target, is_dated = _dated_threshold(trigger, threshold_day)
                 up_m = re.search(r"(\d+(?:\.\d+)?)\s*%", trigger)
-                if is_dated and dated_target is None:
-                    # Per-date hurdles with none for today: no threshold
-                    # applies. Claim nothing, so the fallback below records the
-                    # leg as unevaluated instead of a wrong verdict standing.
+                if is_dated and dated_target is None and "freshness" not in breadth:
+                    # Without session metadata, preserve the primitive
+                    # evaluator's existing unevaluated contract.
                     pass
                 elif is_dated or up_m:
                     target = (
-                        dated_target if dated_target is not None
-                        else float(up_m.group(1))
+                        dated_target if is_dated else float(up_m.group(1))
                     )
                     entry = {
                         "trigger": trigger,
                         "indicator": "Uptrend Ratio",
                         "current": uptrend_ratio,
                         "target": target,
-                        "diff": round(uptrend_ratio - target, 2),
+                        "diff": (round(uptrend_ratio - target, 2)
+                                 if uptrend_ratio is not None and target is not None else None),
                     }
+                    if is_dated:
+                        entry["threshold_date"] = threshold_day.isoformat()
                     _enrich_trigger_entry(
                         entry, trigger, market, "uptrend_ratio", timing, today,
                     )
@@ -1350,6 +1413,7 @@ def _compute_trigger_distance(
                 e["and_group"] = and_group
                 e["or_group"] = or_group
                 _apply_route(e, trigger, timing)
+                _apply_csv_freshness(e, breadth)
             if len(trigger_distances) == n_before and or_group:
                 # Keep an unevaluated leg attached to its group so the group's
                 # verdict can stay undecided rather than silently shrinking to
@@ -1883,6 +1947,19 @@ def build_plan_state(
         "uptrend_date_prev": breadth_json.get("prev_uptrend_date"),
         "uptrend_ratio_prev": _safe_float(breadth_json.get("prev_uptrend_ratio")),
     }
+
+    # Recompute for this report: cached producer freshness can itself be old.
+    expected = expected_session(today, timing)
+    breadth["freshness"] = {
+        feed: feed_freshness(breadth.get(f"{feed}_date"),
+                             breadth.get(f"{feed}_date_prev"), expected)
+        for feed in ("breadth", "uptrend")
+    }
+    breadth["uptrend_color_prev"] = breadth_json.get("prev_uptrend_color")
+    breadth["freshness_summary"] = [
+        describe_freshness(name, state)
+        for name, state in breadth["freshness"].items()
+    ]
 
     # --- Blog data ---
     blog_allocation = spec.current_allocation
