@@ -101,11 +101,71 @@ if [ "$MARKET_STATUS" = "CLOSED" ]; then
     exit 0
 fi
 
+# --- Per-run scratch directory ---
+# The pipeline's intermediate JSON goes to a fresh directory of its own, not
+# to /tmp at large: git worktrees of this and other repositories live under
+# /private/tmp, and the change detection below only watches this checkout.
+# pwd -P resolves /tmp -> /private/tmp and macOS's /var -> /private/var, so
+# the Edit rule and DAP_ALLOWED_OUTPUT_DIRS name the path tools will resolve.
+SCRATCH_BASE="${TMPDIR:-/tmp}"
+# mktemp runs on its own: nested inside `cd "$(mktemp ...)"`, a failure
+# becomes `cd ""`, which /bin/bash 3.2 (macOS, launchd) accepts as "stay
+# here", and the scratch dir would silently be the repository itself.
+if ! SCRATCH_MADE="$(mktemp -d "${SCRATCH_BASE%/}/dap.XXXXXX")" \
+        || [ -z "$SCRATCH_MADE" ] || [ ! -d "$SCRATCH_MADE" ]; then
+    log "ERROR: cannot create a scratch dir under $SCRATCH_BASE"
+    exit 1
+fi
+if ! DAP_SCRATCH="$(cd "$SCRATCH_MADE" && pwd -P)" || [ -z "$DAP_SCRATCH" ]; then
+    log "ERROR: cannot resolve the scratch dir $SCRATCH_MADE"
+    rmdir "$SCRATCH_MADE" 2>/dev/null || true
+    exit 1
+fi
+REAL_ROOT="$(cd "$PROJECT_ROOT" && pwd -P)"
+case "$DAP_SCRATCH/" in
+    "$REAL_ROOT"/*)
+        log "ERROR: scratch dir $DAP_SCRATCH is inside the repository; set TMPDIR elsewhere."
+        rmdir "$SCRATCH_MADE" 2>/dev/null || true
+        exit 1 ;;
+    *[[:space:]:]*)
+        # ":" would split DAP_ALLOWED_OUTPUT_DIRS; whitespace breaks the
+        # model's unquoted command arguments.
+        log "ERROR: scratch dir '$DAP_SCRATCH' contains whitespace or ':'; set TMPDIR elsewhere."
+        rmdir "$SCRATCH_MADE" 2>/dev/null || true
+        exit 1 ;;
+esac
+# The JSON is what you inspect when verify FAILs or a plan looks wrong, so
+# keep a copy next to the log (logs/ is outside the change detection) before
+# the directory goes. Installed only after the checks above, and it refuses
+# anything that is not a dap.* directory outside the repository.
+SCRATCH_KEEP="$LOG_DIR/dap-${DATE}-${TIMING}.d"
+cleanup_scratch() {
+    case "$DAP_SCRATCH" in
+        */dap.??????) ;;
+        *) return 0 ;;
+    esac
+    case "$DAP_SCRATCH/" in "$REAL_ROOT"/*) return 0 ;; esac
+    if compgen -G "$DAP_SCRATCH/*.json" >/dev/null; then
+        if ! { mkdir -p "$SCRATCH_KEEP" && cp "$DAP_SCRATCH"/*.json "$SCRATCH_KEEP"/; }; then
+            log "WARNING: could not keep the scratch JSON in $SCRATCH_KEEP"
+        fi
+    fi
+    # The trap's own status must not replace the run's exit code.
+    rm -rf "$DAP_SCRATCH" || true
+}
+trap cleanup_scratch EXIT
+# Kept copies older than 30 days are pruned; the plans themselves stay in reports/.
+# The trailing slash makes find descend when logs/ is a symlink.
+find "$LOG_DIR"/ -maxdepth 1 -type d -name 'dap-*.d' -mtime +30 -exec rm -rf {} + 2>/dev/null || true
+export DAP_SCRATCH
+log "Scratch directory: $DAP_SCRATCH"
+
 # --- Run Claude with the daily-action-plan skill ---
-PROMPT="Run daily-action-plan --timing $TIMING"
+PROMPT="Run daily-action-plan --timing $TIMING --scratch-dir $DAP_SCRATCH"
 
 # The unattended run must not change the repository. It may only write the
-# plan (reports/), the pipeline's scratch JSON (/tmp) and its auto memory.
+# plan (reports/), the pipeline's scratch JSON ($DAP_SCRATCH) and its auto
+# memory.
 # --setting-sources project keeps user/local allow rules (e.g. a broad
 # "Bash(python3:*)") from widening this list, and dontAsk denies anything
 # not listed. Only Edit(path) rules gate file writes (they cover Write too).
@@ -114,7 +174,7 @@ ALLOWED_TOOLS=(
     "Read" "Glob" "Grep" "Skill" "WebSearch" "WebFetch"
     # Read-only FMP market data (daily historical is canonical for WTI / GC)
     "mcp__claude_ai_FMP"
-    "Edit(reports/**)" "Edit(//tmp/**)" "Edit(//private/tmp/**)"
+    "Edit(reports/**)" "Edit(/${DAP_SCRATCH}/**)"
     "Edit(/${MEMORY_DIR}/**)"   # "//abs/path" = absolute path in rule syntax
     "Bash(python3 scripts/fetch_market_close.py:*)"
     "Bash(python3 .claude/skills/breadth-chart-analyst/scripts/fetch_breadth_csv.py:*)"
@@ -132,7 +192,7 @@ DISALLOWED_TOOLS=(
 )
 
 # build_plan_state.py is allowed to run and takes --output; this confines it.
-export DAP_ALLOWED_OUTPUT_DIRS="/tmp:/private/tmp:$PROJECT_ROOT/reports"
+export DAP_ALLOWED_OUTPUT_DIRS="$DAP_SCRATCH:$PROJECT_ROOT/reports"
 # Importing the allowed scripts would otherwise write __pycache__/*.pyc into
 # the repository.
 export PYTHONDONTWRITEBYTECODE=1
@@ -169,15 +229,24 @@ fi
 log "Invoking: claude -p '$PROMPT' (restricted tools)"
 log "--- Claude output start ---"
 
+# set -e would end the script on a failed claude run before the exit code,
+# the warning below and the change detection are logged.
+set +e
 "$CLAUDE_BIN" -p "$PROMPT" \
     --setting-sources project \
     --permission-mode dontAsk \
     --allowedTools "${ALLOWED_TOOLS[@]}" \
     --disallowedTools "${DISALLOWED_TOOLS[@]}" \
     2>&1 | tee -a "$LOG_FILE"
-
 EXIT_CODE=${PIPESTATUS[0]}
+set -e
 log "--- Claude output end (exit=$EXIT_CODE) ---"
+
+# Writes outside the scratch dir are denied silently under dontAsk, so a run
+# that put its JSON elsewhere only shows up as a missing file here.
+if [ ! -f "$DAP_SCRATCH/plan_state.json" ]; then
+    log "WARNING: $DAP_SCRATCH/plan_state.json was not written (market closed, a fetch failure, or a write that was denied)"
+fi
 
 REPO_CHANGED=""
 if [ "$REPO_DETECT" = "on" ]; then
@@ -221,8 +290,14 @@ if [ -f "$EXPECTED" ]; then
     fi
 
     # --- Send email notification (non-blocking) ---
-    log "Sending email notification..."
-    $PYTHON "$PROJECT_ROOT/scripts/send_dap_email.py" "$EXPECTED" 2>&1 | tee -a "$LOG_FILE" || true
+    # A failed run may leave an earlier run's plan or a half-written one; do
+    # not mail it as today's plan (before set +e, a failed run never got here).
+    if [ "$EXIT_CODE" -ne 0 ]; then
+        log "WARNING: claude exited $EXIT_CODE; not e-mailing $EXPECTED"
+    else
+        log "Sending email notification..."
+        $PYTHON "$PROJECT_ROOT/scripts/send_dap_email.py" "$EXPECTED" 2>&1 | tee -a "$LOG_FILE" || true
+    fi
 else
     log "WARNING: Expected output not found: $EXPECTED"
 fi

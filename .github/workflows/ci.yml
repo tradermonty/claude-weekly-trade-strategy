@@ -40,6 +40,9 @@ jobs:
       - name: Run CSV session freshness regression tests (Issue 17)
         run: pytest scripts/tests/test_csv_freshness.py -q
 
+      - name: Run unattended runner scratch-dir confinement tests (Issue 19)
+        run: pytest scripts/tests/test_dap_runner_scratch.py -q
+
   ir-manifest-validator:
     name: IR manifest schema validator
     runs-on: ubuntu-latest

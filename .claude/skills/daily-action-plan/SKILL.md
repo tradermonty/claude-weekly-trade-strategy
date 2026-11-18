@@ -13,6 +13,13 @@ Generate a daily pre-market or post-market action plan by comparing the latest w
 - `--timing {pre-market|post-market}` (default: auto-detect based on current time)
   - pre-market: Before 9:30 AM ET (23:30 JST winter / 22:30 JST summer)
   - post-market: After 4:00 PM ET (6:00 JST winter / 5:00 JST summer)
+- `--scratch-dir DIR` — where the intermediate JSON goes. Below, `<scratch>`
+  means this directory. **When `--scratch-dir` is given, write the JSON only
+  there and never to `/tmp`**: the unattended runner passes a fresh per-run
+  directory and denies writes anywhere else outside `reports/` and auto memory.
+  Without the argument (interactive use), `<scratch>` is `/tmp`.
+  If a `> <scratch>/...` redirect is denied, run the script without the
+  redirect and save its stdout to the same path with the Write tool.
 
 ## Workflow
 
@@ -31,8 +38,8 @@ python3 .claude/skills/daily-action-plan/scripts/build_plan_state.py --check-onl
 Fetch market data and breadth data in parallel:
 
 ```bash
-python3 scripts/fetch_market_close.py --json > /tmp/dap_market.json
-python3 .claude/skills/breadth-chart-analyst/scripts/fetch_breadth_csv.py --json --date YYYY-MM-DD --timing {pre-market|post-market} > /tmp/dap_breadth.json
+python3 scripts/fetch_market_close.py --json > <scratch>/dap_market.json
+python3 .claude/skills/breadth-chart-analyst/scripts/fetch_breadth_csv.py --json --date YYYY-MM-DD --timing {pre-market|post-market} > <scratch>/dap_breadth.json
 ```
 
 **CRITICAL**: These scripts must complete successfully. If either fails, report the error and stop.
@@ -43,25 +50,25 @@ python3 .claude/skills/breadth-chart-analyst/scripts/fetch_breadth_csv.py --json
 python3 .claude/skills/daily-action-plan/scripts/build_plan_state.py \
     --timing {pre-market|post-market} \
     --date YYYY-MM-DD \
-    --market-json /tmp/dap_market.json \
-    --breadth-json /tmp/dap_breadth.json \
-    --output /tmp/plan_state.json
+    --market-json <scratch>/dap_market.json \
+    --breadth-json <scratch>/dap_breadth.json \
+    --output <scratch>/plan_state.json
 ```
 
 ### Step 4: Verify plan_state.json
 
 ```bash
 python3 .claude/skills/daily-action-plan/scripts/verify_plan.py \
-    --plan-state /tmp/plan_state.json \
-    --market-json /tmp/dap_market.json \
-    --breadth-json /tmp/dap_breadth.json
+    --plan-state <scratch>/plan_state.json \
+    --market-json <scratch>/dap_market.json \
+    --breadth-json <scratch>/dap_breadth.json
 ```
 
 - `PASS` → Continue to Step 5.
 - `FAIL` → Display errors and investigate the cause, but **never modify code,
   tests, skills, blogs or any other repository file** to make a check pass.
   This run is unattended and its tool permissions are restricted to
-  `reports/`, `/tmp` and auto memory. Instead:
+  `reports/`, `<scratch>` and auto memory. Instead:
   1. Continue to Step 5 and put the failed checks, their cause and their effect
      on today's judgement at the top of the plan, so the reader sees them first.
   2. If the cause looks like a parser or builder bug, describe it (file,
@@ -198,11 +205,11 @@ Key sections:
 ## Data Flow
 
 ```
-scripts/fetch_market_close.py --json → /tmp/dap_market.json
-fetch_breadth_csv.py --json         → /tmp/dap_breadth.json
+scripts/fetch_market_close.py --json → <scratch>/dap_market.json
+fetch_breadth_csv.py --json         → <scratch>/dap_breadth.json
 blogs/YYYY-MM-DD-weekly-strategy.md → (parsed by strategy_parser)
                                     ↓
-build_plan_state.py → /tmp/plan_state.json
+build_plan_state.py → <scratch>/plan_state.json
                     ↓
 verify_plan.py → PASS/FAIL
                 ↓

@@ -11,9 +11,9 @@ Usage:
     # Full build
     python3 .claude/skills/daily-action-plan/scripts/build_plan_state.py \
         --timing post-market \
-        --market-json /tmp/dap_market.json \
-        --breadth-json /tmp/dap_breadth.json \
-        --output /tmp/plan_state.json
+        --market-json <scratch>/dap_market.json \
+        --breadth-json <scratch>/dap_breadth.json \
+        --output <scratch>/plan_state.json
 """
 
 import argparse
@@ -2166,6 +2166,13 @@ def _output_path_allowed(path: str) -> bool:
     if not allowed:
         return True
     target = os.path.realpath(path)
+    # Inside the repository only reports/ is ever writable, even when an
+    # allowed root happens to contain the checkout (a worktree under /tmp).
+    repo = os.path.realpath(_PROJECT_ROOT)
+    if os.path.commonpath([target, repo]) == repo:
+        reports = os.path.join(repo, "reports")
+        if os.path.commonpath([target, reports]) != reports:
+            return False
     for root in filter(None, allowed.split(os.pathsep)):
         root = os.path.realpath(root)
         if os.path.commonpath([target, root]) == root:
